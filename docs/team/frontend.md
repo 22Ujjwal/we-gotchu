@@ -1,5 +1,8 @@
 # Frontend handoff
 
+Assigned teammate: Leo.
+Leo owns frontend under the shared ownership contract.
+
 You own the customer journey from event intake to cancellation and refund visibility.
 Read the [contract draft](../contracts-draft.md) and [ownership rules](ownership.md) before implementation.
 

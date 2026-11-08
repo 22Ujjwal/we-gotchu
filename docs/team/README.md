@@ -13,14 +13,15 @@ Coordinate shared route files through the transaction owner if UI and server cod
 
 Status: draft package ready for team review.
 There are four human owners: one pitch owner, one frontend developer, and two backend developers.
-Assign names to these roles before starting implementation.
+Tony owns agent workflow, Leo owns frontend, and Ujjwal owns transactions and integration.
+The fourth teammate owns pitch; their name has not been specified.
 
-| Role | Start document | Main deliverable |
-| --- | --- | --- |
-| Pitch owner | [Pitch brief](pitch.md) | Customer story, demo script, and evidence-backed presentation. |
-| Frontend developer | [Frontend brief](frontend.md) | Intake through cancellation and refund status. |
-| Agent-workflow developer | [Agent brief](agent-workflow.md) | Naive runtime, research, and supplier adapters. |
-| Transaction developer | [Transaction brief](transactions.md) | Shared contracts, state, approvals, payments, and worker execution. |
+| Role | Assigned teammate | Start document | Main deliverable |
+| --- | --- | --- | --- |
+| Pitch owner | Unassigned | [Pitch brief](pitch.md) | Customer story, demo script, and evidence-backed presentation. |
+| Frontend developer | Leo | [Frontend brief](frontend.md) | Intake through cancellation and refund status. |
+| Agent-workflow developer | Tony | [Agent brief](agent-workflow.md) | Naive runtime, research, and supplier adapters. |
+| Transaction developer | Ujjwal | [Transaction brief](transactions.md) | Shared contracts, state, approvals, payments, and worker execution. |
 
 Read the [product baseline](../product-spec.md), [architecture draft](../architecture-draft.md), [contract draft](../contracts-draft.md), and [ownership rules](ownership.md) before starting.
 Use the [demo acceptance checklist](../demo-acceptance.md) as the shared definition of working behavior.

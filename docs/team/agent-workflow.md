@@ -1,5 +1,8 @@
 # Agent-workflow handoff
 
+Assigned teammate: Tony.
+Tony owns agent workflow under the shared ownership contract.
+
 You own research, recommendation generation, the Naive runtime integration, and supplier interaction adapters.
 Read the [research index](../research-index.md), [architecture](../architecture-draft.md), and [contracts](../contracts-draft.md).
 
