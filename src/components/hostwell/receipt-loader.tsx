@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Brief } from '#/lib/hostwell/fixture'
 import './receipt-loader.css'
 
-const duration = 14000
+const duration = 28000
 
 function printed(text: string, elapsed: number) {
   const count = Math.max(0, Math.ceil(elapsed / 32))
@@ -82,7 +82,7 @@ export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 
       : <LiveActivityDial text={activity ?? title} />}
     <ol ref={strip} className="slip-strip" aria-label="Planning steps">
       {slips.map((slip, i) => {
-        const elapsed = duration * (percent / 100 - i / slips.length)
+        const elapsed = duration * (percent / 100 - i / slips.length) / 2
         return <li className="slip-slot" key={slip.name}>
         {i <= stage && <div className="slip-enter rise"><div className={`slip-paper paper-${slip.paper}`}>
           <strong>{printed(slip.name, elapsed)}</strong>
