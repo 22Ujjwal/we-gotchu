@@ -185,7 +185,7 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
           missingFields: [...FIELDS, ...(candidate.kind === 'supply' ? ['listingPrice', 'packSize'].filter(field => candidate.verification[field]?.status !== 'known') : [])], reason })
       }
       if (signal.aborted) {
-        check(source.url, 'absent', 'Detail not attempted because research stopped.')
+        check(source.url, 'absent', 'Detail not attempted because its budget or research cancellation stopped investigation.')
         continue
       }
       const original = publicUrl(source.url)
@@ -202,7 +202,7 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
       const matchedFields = new Set<string>()
       let target = candidate.kind === 'supply' ? new URL(`https://api.trychannel3.com/v1/products/${productId}`) : original
       for (let page = 0; page < (candidate.kind === 'supply' ? 1 : maxPages); page++) {
-        if (signal.aborted) { check(target.href, 'absent', 'Detail not attempted because research stopped.'); break }
+        if (signal.aborted) { check(target.href, 'absent', 'Detail not attempted because its budget or research cancellation stopped investigation.'); break }
         let runUrl: string | undefined
         const callSignal = AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
         try {

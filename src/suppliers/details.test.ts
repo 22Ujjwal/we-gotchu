@@ -191,3 +191,12 @@ test('a stalled second detail page preserves the first page and reserves time fo
   expect(result.sourceChecks.some(c => c.outcome === 'failed' && c.url.endsWith('/packages'))).toBe(true)
   expect(ctx.calls.some(c => c.endpoint === '/v1/products/{product_id}')).toBe(false)
 })
+
+
+test('the ranking reserve caps a larger configured detail budget', async () => {
+  const ctx = setup({ stallPage: true, researchOptions: { timeoutMs: 200, detailTimeoutMs: 1000, rankingReserveMs: 100 } })
+  const result = await ctx.run()
+  expect(result.recommendations).toHaveLength(2)
+  expect(ctx.recommend).toHaveBeenCalledTimes(1)
+  expect(result.sourceChecks.some(c => c.outcome === 'failed' && c.candidateId === 'venue:hall')).toBe(true)
+})
