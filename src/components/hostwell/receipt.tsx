@@ -51,10 +51,12 @@ export function Receipt({
   brief,
   currency = 'usd',
   researchSources,
+  researchTotal,
 }: {
   venue: Pick<Venue, 'freeCancellationUntil'>
   order: Order
   brief: Brief
+  researchTotal?: string
   researchSources?: Record<string, Array<{ label: string; value: string; sourceUrl: string }>>
   currency?: string
 }) {
@@ -104,14 +106,14 @@ export function Receipt({
         ))}
         <Rule />
         <div className="flex flex-col gap-1">
-          <Row left={researchSources ? "Estimated subtotal" : "Subtotal"} right={order.subtotal === null ? researchSources ? 'Pending' : 'Quote needed' : usd(order.subtotal)} />
+          <Row left={researchSources ? "Estimated subtotal" : "Subtotal"} right={researchTotal ?? (order.subtotal === null ? 'Quote needed' : usd(order.subtotal))} />
           {order.vat !== null && <Row left="VAT" right={usd(order.vat)} />}
           {order.total !== null && !researchSources && <Row left="Service fee" right="0.00" />}
         </div>
         <Rule solid />
         <div className="flex items-baseline justify-between font-bold">
-          <span className="text-[16px]">{`${order.total === null ? 'TOTAL' : 'ESTIMATED TOTAL'} ${currency.toUpperCase()}`}</span>
-          <span className="text-[20px] leading-6">{order.total === null ? researchSources ? 'Pending' : 'Quote needed' : usd(order.total)}</span>
+          <span className="text-[16px]">{`${order.total === null && !researchTotal ? 'TOTAL' : 'ESTIMATED TOTAL'} ${currency.toUpperCase()}`}</span>
+          <span className="text-[20px] leading-6">{researchTotal ?? (order.total === null ? 'Quote needed' : usd(order.total))}</span>
         </div>
         <Rule solid />
         {venue.freeCancellationUntil && (

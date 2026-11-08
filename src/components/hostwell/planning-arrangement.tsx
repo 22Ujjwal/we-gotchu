@@ -1,5 +1,5 @@
 import { interiorInspiration } from '../../lib/hostwell/interior-inspiration'
-import { researchPrice } from '../../lib/hostwell/research-price'
+import { researchPrice, totalResearchPrices, formatResearchEstimate } from '../../lib/hostwell/research-price'
 import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
 import type { PlanningVenueImage } from '../../lib/hostwell/planning-images'
 import { useState } from 'react'
@@ -41,17 +41,16 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
       {!supplies.size && <p className="text-stone">Ask for any extras in the message below the settings.</p>}
     </div>
   const researchLines = view.selections.map(option => ({ option, price: researchPrice(option) }))
-  const estimatedTotal = researchLines.length > 0 && researchLines.every(line => line.price.subtotal !== null && line.price.currency === 'USD')
-    ? Math.round(researchLines.reduce((sum, line) => sum + line.price.subtotal!, 0) * 100) / 100 : null
+  const estimatedTotal = totalResearchPrices(researchLines.map(line => line.price))
   const researchSources = offer ? undefined : Object.fromEntries(view.selections.map(option => [displayCopy(option.name),
     researchPrice(option).facts.map(fact => ({ label: fact.basis === 'estimate' ? 'Estimate' : 'Published price',
       value: displayFactValue(fact.value), sourceUrl: fact.sourceUrl }))]))
   const receipt = <div className="flex flex-col gap-5">
-      <Receipt researchSources={researchSources} currency={offer?.currency} venue={{ freeCancellationUntil: '' }} brief={view.brief ?? defaultBrief}
+      <Receipt researchSources={researchSources} researchTotal={!offer && estimatedTotal ? formatResearchEstimate(estimatedTotal) : undefined} currency={offer?.currency ?? estimatedTotal?.currency} venue={{ freeCancellationUntil: '' }} brief={view.brief ?? defaultBrief}
         order={{ lines: offer ? offer.lines.map((line, index) => ({ qty: line.units, item: displayCopy(line.option.name),
           amount: costs?.ok ? costs.amounts[index] / 10 ** paymentFractionDigits(offer.currency) : 'Quote needed' }))
           : researchLines.map(({ option, price }) => ({ qty: price.quantity, item: displayCopy(option.name), amount: price.amount })),
-          requests: [], subtotal: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : offer ? null : estimatedTotal, vat: null, total: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : offer ? null : estimatedTotal }} />
+          requests: [], subtotal: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : null, vat: null, total: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : null }} />
       {!offer && <p className="text-[14px] text-stone">Estimated from published sources, including third-party listings. Taxes, delivery and other fees may be extra.</p>}
     </div>
   const action = <div className="flex flex-col gap-4">
