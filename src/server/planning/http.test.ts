@@ -16,14 +16,14 @@ describe('planning HTTP seam', () => {
     const body = { requestId: 'create', message: 'Party' }
     const created = await planningCollectionPost(deps, request(body))
     expect(created.status).toBe(201)
-    expect(await created.json()).toEqual({ ...view, canReviewResearch: false })
+    expect(await created.json()).toEqual({ ...view, canReviewResearch: false, canArrange: false })
     expect(service.createPlanning).toHaveBeenCalledWith(deps, body)
     service.commandPlanning.mockResolvedValue(view)
     const command = { kind: 'select', requestId: 'select', expectedVersion: 3, optionId: 'cups' }
     expect((await planningPost(deps, 'conversation', request(command))).status).toBe(200)
     expect(service.commandPlanning).toHaveBeenCalledWith(deps, 'conversation', command)
     service.getPlanning.mockResolvedValue(view)
-    expect(await (await planningGet(deps, 'conversation')).json()).toEqual({ ...view, canReviewResearch: false })
+    expect(await (await planningGet(deps, 'conversation')).json()).toEqual({ ...view, canReviewResearch: false, canArrange: false })
   })
 
   it('returns the existing error envelope for authentication and invalid JSON', async () => {

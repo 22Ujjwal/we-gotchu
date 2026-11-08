@@ -19,7 +19,7 @@ beforeEach(() => {
 
 describe('planning runtime storage boundary', () => {
   it('continues background reply processing into offer preparation without a customer request', async () => {
-    const repository = { local: true }
+    const repository = { local: true, get: vi.fn().mockResolvedValue(null) }
     const offers = { save: vi.fn() }
     const interpret = vi.fn()
     const generate = vi.fn()
