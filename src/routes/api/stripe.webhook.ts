@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getDeps } from '../../server/events/deps'
+import { getRequestDeps } from '../../server/events/local-runtime'
 import { handle, json } from '../../server/events/errors'
 import { handleStripeWebhook } from '../../server/payments/webhook'
 
@@ -10,7 +10,7 @@ export const Route = createFileRoute('/api/stripe/webhook')({
       POST: ({ request }) =>
         handle(async () => {
           const raw = await request.text()
-          const outcome = await handleStripeWebhook(getDeps(), raw, request.headers.get('stripe-signature'))
+          const outcome = await handleStripeWebhook(await getRequestDeps(), raw, request.headers.get('stripe-signature'))
           return json({ received: true, outcome })
         }),
     },

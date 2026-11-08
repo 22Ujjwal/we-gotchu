@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getDeps } from '../../server/events/deps'
+import { getRequestDeps } from '../../server/events/local-runtime'
 import { handle, json, readJson } from '../../server/events/errors'
 import { updateBrief } from '../../server/events/service'
 
@@ -12,7 +12,7 @@ export const Route = createFileRoute('/api/events/$id/brief')({
         handle(async () => {
           const body = ((await readJson(request)) ?? {}) as Record<string, unknown>
           const { expectedBriefRevision, changes, ...rest } = body
-          return json(await updateBrief(getDeps(), params.id, expectedBriefRevision, changes ?? rest))
+          return json(await updateBrief(await getRequestDeps(), params.id, expectedBriefRevision, changes ?? rest))
         }),
     },
   },
