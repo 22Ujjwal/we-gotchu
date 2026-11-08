@@ -39,7 +39,7 @@ All four documented harnesses are hosted; the matrix explicitly says there is no
 Check `GET /v1/harnesses` in a separately authorized evaluation because deployment availability is authoritative.
 Source: [harness capability matrix and known gaps](https://usenaive.ai/docs/concepts/harness-capabilities.md).
 
-The proposed Next.js backend can control hosted sessions without keeping the customer's browser request open for the full workflow.
+The application backend can control hosted sessions without keeping the customer's browser request open for the full workflow.
 This is an architectural recommendation based on the documented hosted execution and resumable event interfaces, not a tested deployment claim.
 Sources: [runtime](https://usenaive.ai/docs/concepts/runtime.md), [streaming](https://usenaive.ai/docs/sdk/streaming.md).
 

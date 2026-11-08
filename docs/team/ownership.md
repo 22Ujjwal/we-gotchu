@@ -1,29 +1,24 @@
-# Proposed ownership and collaboration contract
+# Ownership and collaboration contract
 
-## Existing scaffold update
-
-The team has already added a TanStack Start scaffold under src on main.
-Preserve that implementation and its package manager.
-The earlier Next.js choice and apps/web paths below remain proposals, not migration instructions.
-Before editing, the developers must map the role boundaries to the existing src layout and agree on any framework change.
-Frontend owns UI routes and components; transactions owns server endpoints and shared configuration; agent workflow owns supplier and runtime modules.
-Coordinate shared route files through the transaction owner if UI and server code occupy the same file.
-
-## Original draft
-
-Status: draft for agreement by the four teammates.
-Paths below describe the earlier proposed layout; map them to the existing TanStack Start scaffold before editing.
+Status: team assignments and single-package layout baseline; detailed API schemas remain drafts.
+Preserve the existing TanStack Start application and Bun package.
+Paths below assign ownership of existing and planned files; planned directories are created during implementation.
 Each implementation task has one owner, one branch, and a declared file set.
 
 | Owner | Exclusive primary paths |
 | --- | --- |
-| Frontend, Leo | apps/web/src/app except its api subtree; apps/web/src/components; apps/web/src/features; apps/web/public; frontend journey tests. |
-| Agent workflow, Tony | packages/agent; packages/suppliers; agent and supplier adapter tests. |
-| Transactions and integration, Ujjwal | apps/web/src/app/api; apps/worker; packages/contracts; packages/db; packages/transactions; payment, worker, and contract tests. |
+| Frontend, Leo | src/routes except src/routes/api; src/components; src/features; src/styles.css; public; UI tests alongside owned code. |
+| Agent workflow, Tony | src/agent; src/suppliers; tests alongside owned code. |
+| Transactions and integration, Ujjwal | src/routes/api; src/server; src/worker; src/contracts; database migrations; tests alongside owned code. |
 | Pitch | docs/pitch; presentation assets under assets/pitch. |
 
-The transaction owner also coordinates root package manifests, lockfiles, TypeScript configuration, workspace configuration, CI, environment-variable documentation, migrations, and shared fixtures.
-The api subtree belongs to transactions even though its parent app directory belongs to frontend.
+The transaction owner also coordinates root package manifests, lockfiles, TypeScript configuration, build configuration, CI, environment-variable documentation, migrations, and shared fixtures.
+The src/routes/api subtree belongs to Ujji even though other route files belong to Leo.
+Keep server business logic out of UI route files and behind server-only modules.
+Ujji owns src/router.tsx, tsconfig.json, vite.config.ts, package.json, bun.lock, and CI configuration.
+Treat src/routeTree.gen.ts as generated output; coordinate route generation through the existing tooling.
+Shared schemas and fixtures in src/contracts must not import database clients, credentials, or server-only modules.
+Use relative imports initially; Ujji owns any shared alias changes.
 The root README and existing planning documents require coordination with the integration owner once implementation starts.
 
 ## Change process

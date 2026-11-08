@@ -3,7 +3,9 @@
 Version: 0.1 draft.
 Status: proposed, requiring team review before implementation.
 The transaction owner maintains the shared schemas and integration fixtures.
-All consumers use those schemas rather than separate copies.
+All consumers import the schemas from src/contracts rather than maintaining separate copies.
+Ujji creates them as part of the [foundation task](team/foundation.md).
+The route paths below are HTTP endpoints; their TanStack server route files live under src/routes/api.
 See [ownership](team/ownership.md) for changes and [architecture](architecture-draft.md) for system boundaries.
 
 ## Common conventions

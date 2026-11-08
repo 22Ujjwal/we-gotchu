@@ -44,7 +44,7 @@ Report which supplier integrations were exercised live and which remain simulate
 
 ## Copyable agent assignment
 
-Implement the agent and supplier-adapter role in the owned packages after contract agreement.
+Implement the agent and supplier-adapter role in the owned src/agent and src/suppliers directories after contract agreement.
 Consume the transaction service for permission checks and execution identity.
 Keep provider-specific behavior behind the shared interfaces and return evidence for every claimed external outcome.
 Do not modify payment, database, root configuration, or frontend files without the owning developer's coordination.
