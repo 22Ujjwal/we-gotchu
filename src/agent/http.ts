@@ -18,6 +18,6 @@ export async function requestJson(
   return response.json()
 }
 
-export async function pause(signal: AbortSignal, milliseconds = 1000) {
-  await setTimeout(milliseconds, undefined, { signal })
+export async function pause(signal: AbortSignal) {
+  await setTimeout(1000, undefined, { signal })
 }

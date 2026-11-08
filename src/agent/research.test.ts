@@ -81,3 +81,43 @@ test('a stalled provider is bounded by the research deadline', async () => {
   expect(result.outcome).toBe('failed')
   expect(result.warnings).toContain('Research stopped before completion.')
 })
+
+test('a missing currency or brief is reported as missing input instead of throwing', async () => {
+  const discover = vi.fn()
+  const { currency: _, ...withoutCurrency } = input.brief
+  const result = await researchEvent({ ...input, brief: withoutCurrency }, { discover, recommend: vi.fn() })
+  expect(result.outcome).toBe('awaiting_input')
+  expect(result.missing).toEqual(['currency'])
+  const noBrief = await researchEvent({ ...input, brief: undefined }, { discover, recommend: vi.fn() })
+  expect(noBrief.outcome).toBe('awaiting_input')
+  expect(noBrief.missing).toEqual(['brief'])
+  expect(discover).not.toHaveBeenCalled()
+})
+
+test('invalid or duplicate discovery results are skipped without discarding the rest', async () => {
+  const sourceChecks = [{ url: 'https://example.com/run', tool: 'test', outcome: 'ok' as const, missingFields: [] }]
+  const result = await researchEvent(input, {
+    discover: async () => ({ candidates: [...candidates, candidates[0], { ...candidates[1], candidateId: 'blank', name: '' }], sourceChecks }),
+    recommend: async () => ({ candidateIds: [candidates[0].candidateId] }),
+  })
+  expect(result.candidates).toEqual(candidates)
+  expect(result.sourceChecks).toEqual(sourceChecks)
+  expect(result.recommendations.map(r => r.candidateId)).toEqual(candidates.map(c => c.candidateId))
+  expect(result.warnings).toContain('2 invalid or duplicate discovery results were skipped.')
+})
+
+test('discovery warnings survive degraded outcomes', async () => {
+  const warnings = ['supply discovery was incomplete.']
+  const invalid = await researchEvent(input, {
+    discover: async () => ({ candidates, sourceChecks: [], warnings }), recommend: async () => ({ candidateIds: ['invented'] }),
+  })
+  expect(invalid.warnings).toContain('supply discovery was incomplete.')
+  const empty = await researchEvent(input, {
+    discover: async () => ({ candidates: [], sourceChecks: [], warnings }), recommend: vi.fn(),
+  })
+  expect(empty.warnings).toEqual(['supply discovery was incomplete.', 'No usable supplier candidates were found.'])
+  const failed = await researchEvent(input, {
+    discover: async () => ({ candidates, sourceChecks: [], warnings }), recommend: async () => { throw new Error('down') },
+  })
+  expect(failed.warnings).toContain('supply discovery was incomplete.')
+})

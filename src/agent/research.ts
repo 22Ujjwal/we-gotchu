@@ -12,13 +12,13 @@ export type ResearchProviders = {
 }
 export type ResearchOptions = {
   timeoutMs?: number
-  maxCandidates?: number
   signal?: AbortSignal
   onProgress?: (stage: 'discovering' | 'recommending' | 'finished') => void
 }
 
 // The model may select and order evidence, but cannot author supplier facts.
 export const Ranking = z.object({ candidateIds: z.array(z.string().min(1)).min(1) }).strict()
+const MAX_CANDIDATES = 12
 
 export async function researchEvent(
   rawInput: unknown,
@@ -28,13 +28,13 @@ export async function researchEvent(
   const identity = ResearchInput.omit({ brief: true }).parse(rawInput)
   const parsed = ResearchInput.safeParse(rawInput)
   const rawCurrency = (rawInput as { brief?: { currency?: unknown } }).brief?.currency
-  if (typeof rawCurrency !== 'string' || rawCurrency.length !== 3) {
-    throw new Error('A valid currency is required to represent a research result')
-  }
+  // XXX is the ISO 4217 code for "no currency". It only appears on awaiting_input results,
+  // because a brief without a valid currency always fails ResearchInput below.
+  const currency = typeof rawCurrency === 'string' && rawCurrency.length === 3 ? rawCurrency : 'XXX'
   const base: ResearchResult = {
     ...identity, outcome: 'failed', missing: [], candidates: [], recommendations: [],
     budgetFit: 'unknown', budgetBasis: 'Discovery does not establish final event costs.',
-    currency: rawCurrency, warnings: [], sourceChecks: [], superseded: false,
+    currency, warnings: [], sourceChecks: [], superseded: false,
     createdAt: new Date().toISOString(),
   }
   if (!parsed.success) {
@@ -46,13 +46,11 @@ export async function researchEvent(
   }
   const input = parsed.data
   const timeoutMs = options.timeoutMs ?? 120_000
-  const maxCandidates = options.maxCandidates ?? 12
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || !Number.isSafeInteger(maxCandidates) || maxCandidates <= 0) {
-    throw new Error('Research limits must be positive integers')
-  }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) throw new Error('Research timeout must be a positive integer')
   const deadline = AbortSignal.timeout(timeoutMs)
   const signal = options.signal ? AbortSignal.any([deadline, options.signal]) : deadline
   let evidence: Discovery = { candidates: [], sourceChecks: [] }
+  const withEvidenceWarnings = (...warnings: string[]) => [...(evidence.warnings ?? []), ...warnings]
   const progress = (stage: Parameters<NonNullable<ResearchOptions['onProgress']>>[0]) => options.onProgress?.(stage)
   // A provider must honor the signal; the race also bounds a faulty provider's wait.
   const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -69,13 +67,21 @@ export async function researchEvent(
     progress('discovering')
     const discovery = await bounded(() => providers.discover(input, signal))
     const ids = new Set<string>()
-    const candidates = discovery.candidates.slice(0, maxCandidates).map(candidate => Candidate.parse(candidate))
-    for (const candidate of candidates) {
-      if (ids.has(candidate.candidateId)) throw new Error('Duplicate candidate identity')
-      ids.add(candidate.candidateId)
+    const candidates: Candidate[] = []
+    let skipped = 0
+    // One malformed or repeated search result must not discard the rest of the evidence.
+    for (const raw of discovery.candidates) {
+      if (candidates.length >= MAX_CANDIDATES) break
+      const candidate = Candidate.safeParse(raw)
+      if (!candidate.success || ids.has(candidate.data.candidateId)) { skipped++; continue }
+      ids.add(candidate.data.candidateId)
+      candidates.push(candidate.data)
     }
-    evidence = { ...discovery, candidates }
-    if (!candidates.length) return { ...base, sourceChecks: evidence.sourceChecks, warnings: ['No usable supplier candidates were found.'] }
+    evidence = {
+      ...discovery, candidates,
+      warnings: [...(discovery.warnings ?? []), ...(skipped ? [`${skipped} invalid or duplicate discovery results were skipped.`] : [])],
+    }
+    if (!candidates.length) return { ...base, sourceChecks: evidence.sourceChecks, warnings: withEvidenceWarnings('No usable supplier candidates were found.') }
     progress('recommending')
     let ranking: z.infer<typeof Ranking> | undefined
     for (let turn = 0; turn < 2; turn++) {
@@ -87,7 +93,7 @@ export async function researchEvent(
       }
     }
     if (!ranking) {
-      return ResearchResult.parse({ ...base, ...evidence, outcome: 'partial', warnings: ['Recommendation output failed validation; only retrieved evidence is shown.'] })
+      return ResearchResult.parse({ ...base, ...evidence, outcome: 'partial', warnings: withEvidenceWarnings('Recommendation output failed validation; only retrieved evidence is shown.') })
     }
     // Include unranked evidence after the model selection, without inventing options.
     const ordered = [...ranking.candidateIds, ...candidates.map(c => c.candidateId).filter(id => !ranking.candidateIds.includes(id))]
@@ -97,7 +103,7 @@ export async function researchEvent(
         candidateId, rank: index + 1, matched: [], unmet: [],
         unchecked: ['Price, schedule, capacity, and cancellation terms need supplier-detail verification.'],
       })),
-      warnings: [...(evidence.warnings ?? []), 'Discovery candidates are not confirmed bookings or final quotes.'],
+      warnings: withEvidenceWarnings('Discovery candidates are not confirmed bookings or final quotes.'),
     })
     progress('finished')
     return result
@@ -106,7 +112,7 @@ export async function researchEvent(
     return ResearchResult.parse({
       ...base, ...evidence,
       outcome: options.signal?.aborted ? 'canceled' : evidence.candidates.length ? 'partial' : 'failed',
-      warnings: [signal.aborted ? 'Research stopped before completion.' : 'A research provider failed; remaining details are unverified.'],
+      warnings: withEvidenceWarnings(signal.aborted ? 'Research stopped before completion.' : 'A research provider failed; remaining details are unverified.'),
     })
   }
 }

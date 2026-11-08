@@ -7,15 +7,13 @@ const MonidRun = z.object({
   runId: z.string(), status: z.string(), output: z.unknown().optional(),
   providerResponse: z.object({ httpStatus: z.number().optional() }).nullish(),
 })
-const Places = z.object({ local_results: z.array(z.object({
-  title: z.string(), place_id: z.string(), website: z.string().optional(),
-})).default([]) })
-const Products = z.object({
-  products: z.array(z.object({
-    id: z.string(), title: z.string(),
-    offers: z.array(z.object({ url: z.string() })).default([]),
-  })).default([]),
-  disclosure: z.unknown().optional(),
+// Items are checked one at a time so a single malformed listing only drops itself.
+const Places = z.object({ local_results: z.array(z.unknown()).default([]) })
+const Place = z.object({ title: z.string().min(1), place_id: z.string().min(1), website: z.string().nullish() })
+const Products = z.object({ products: z.array(z.unknown()).default([]), disclosure: z.unknown().optional() })
+const Product = z.object({
+  id: z.string().min(1), title: z.string().min(1),
+  offers: z.array(z.object({ url: z.string().nullish() })).default([]),
 })
 const webUrl = z.url().refine(value => ['https:', 'http:'].includes(new URL(value).protocol))
 
@@ -58,7 +56,11 @@ export function createDiscovery(options: { apiKey: string; fetch?: typeof fetch;
         })
         const found: Candidate[] = []
         if (job.kind === 'venue') {
-          for (const place of Places.parse(run.output).local_results.slice(0, limit)) {
+          for (const item of Places.parse(run.output).local_results) {
+            if (found.length >= limit) break
+            const parsed = Place.safeParse(item)
+            if (!parsed.success || found.some(c => c.supplierId === parsed.data.place_id)) continue
+            const place = parsed.data
             const fallback = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.title)}&query_place_id=${encodeURIComponent(place.place_id)}`
             const source = webUrl.safeParse(place.website)
             found.push(make(place.place_id, place.title, source.success ? source.data : fallback))
@@ -66,7 +68,11 @@ export function createDiscovery(options: { apiKey: string; fetch?: typeof fetch;
         } else {
           const products = Products.parse(run.output)
           const disclosure = typeof products.disclosure === 'string' ? products.disclosure : products.disclosure ? JSON.stringify(products.disclosure) : undefined
-          for (const product of products.products.slice(0, limit)) {
+          for (const item of products.products) {
+            if (found.length >= limit) break
+            const parsed = Product.safeParse(item)
+            if (!parsed.success || found.some(c => c.supplierId === parsed.data.id)) continue
+            const product = parsed.data
             const source = webUrl.safeParse(product.offers[0]?.url)
             if (source.success) found.push(make(product.id, product.title, source.data, disclosure))
           }

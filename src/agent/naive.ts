@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Candidate, ResearchInput } from '../contracts'
+import type { Candidate, ResearchInput, Run } from '../contracts'
 import { Ranking } from './research'
 import { pause, requestJson } from './http'
 
@@ -9,20 +9,20 @@ const Session = z.object({
   structured_output: z.unknown().optional(), last_seq: z.number().optional(),
   consumed_micro_usd: z.number().optional(),
 })
-export type RuntimeCheckpoint = { agentId: string | null; sessionId: string | null; lastSequence: number; correctionsUsed: number }
+const Accepted = z.object({ accepted_seq: z.number().int().nonnegative().optional() })
+const BUDGET_MICRO_USD = 500_000
+export type RuntimeCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | 'correctionsUsed'> & { agentId: string | null }
 
 // One instance belongs to one research run. Persist checkpoints before allowing retries.
 export function createNaiveRanker(options: {
   apiKey: string
   model: string
-  budgetMicroUsd?: number
   fetch?: typeof fetch
   checkpoint?: (state: RuntimeCheckpoint) => void | Promise<void>
 }) {
   const fetcher = options.fetch ?? fetch
-  const budget = options.budgetMicroUsd ?? 500_000
-  if (!Number.isSafeInteger(budget) || budget <= 0) throw new Error('Naive budget must be a positive integer in micro-USD')
-  const state: RuntimeCheckpoint = { agentId: null, sessionId: null, lastSequence: 0, correctionsUsed: 0 }
+  const budget = BUDGET_MICRO_USD
+  const state: RuntimeCheckpoint = { agentId: null, naiveSessionId: null, lastSequence: 0, correctionsUsed: 0 }
   let runId: string | undefined
   const base = 'https://api.vetta.sh/v1'
   const save = () => options.checkpoint?.({ ...state })
@@ -40,26 +40,27 @@ export function createNaiveRanker(options: {
       await save()
     }
     let minimumSequence = state.lastSequence
-    if (!state.sessionId) {
+    if (!state.naiveSessionId) {
       const session = Session.parse(await requestJson(fetcher, `${base}/sessions`, options.apiKey, signal, {
         agent_id: state.agentId, budget_micro_usd: budget,
         message: JSON.stringify({ brief: input.brief, candidates }),
         output_schema: z.toJSONSchema(Ranking), structured_output_required: true,
         metadata: { eventId: input.eventId, runId: input.runId, briefRevision: input.briefRevision },
       }, `${input.runId}:research`))
-      state.sessionId = session.id
+      state.naiveSessionId = session.id
       await save()
     } else if (correction) {
       if (state.correctionsUsed >= 1) throw new Error('Correction limit reached')
       state.correctionsUsed = 1
       await save()
-      await requestJson(fetcher, `${base}/sessions/${encodeURIComponent(state.sessionId)}/messages`, options.apiKey, signal, {
+      const accepted = Accepted.parse(await requestJson(fetcher, `${base}/sessions/${encodeURIComponent(state.naiveSessionId)}/messages`, options.apiKey, signal, {
         message: 'Return submit_output now with only candidateIds from the supplied evidence. Reuse existing evidence. Do not search or include other fields.',
-      }, `${input.runId}:correction:1`)
-      minimumSequence = state.lastSequence
+      }, `${input.runId}:correction:1`))
+      // The corrective message takes its own sequence number, so an idle session at that number still holds the previous turn's output.
+      minimumSequence = Math.max(state.lastSequence, accepted.accepted_seq ?? 0)
     }
     for (let poll = 0; poll < 90; poll++) {
-      const session = Session.parse(await requestJson(fetcher, `${base}/sessions/${encodeURIComponent(state.sessionId)}`, options.apiKey, signal))
+      const session = Session.parse(await requestJson(fetcher, `${base}/sessions/${encodeURIComponent(state.naiveSessionId)}`, options.apiKey, signal))
       state.lastSequence = session.last_seq ?? state.lastSequence
       await save()
       if ((session.consumed_micro_usd ?? 0) > budget) throw new Error('Naive usage bound exceeded')
@@ -75,9 +76,9 @@ export function createNaiveRanker(options: {
   const dispose = async () => {
     const signal = AbortSignal.timeout(15_000)
     const failures: string[] = []
-    if (state.sessionId) {
+    if (state.naiveSessionId) {
       try {
-        const url = `${base}/sessions/${encodeURIComponent(state.sessionId)}`
+        const url = `${base}/sessions/${encodeURIComponent(state.naiveSessionId)}`
         const session = Session.parse(await requestJson(fetcher, url, options.apiKey, signal))
         if (!['completed', 'failed', 'cancelled'].includes(session.status)) await requestJson(fetcher, `${url}/cancel`, options.apiKey, signal, {})
       } catch { failures.push('Session cleanup could not be verified.') }

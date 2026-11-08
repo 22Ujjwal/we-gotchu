@@ -4,6 +4,8 @@ Ticket 01 provides researchEvent with the shared contract 0.4 input and result.
 Call it with createDiscovery and one createNaiveRanker instance per research run.
 The workflow validates input before paid discovery, retrieves venue and supply leads, asks the model to order only existing candidate IDs, and returns source-backed candidates.
 The model cannot modify supplier facts or add unsupported budget claims to the result.
+Invalid or repeated discovery results are skipped with a warning, and the remaining evidence is kept.
+A brief without a valid currency returns awaiting_input like any other missing field.
 The first slice deliberately returns partial research with unknown final costs.
 Supplier detail extraction and complete budget calculations belong to tickets 02 and 03.
 
@@ -25,6 +27,8 @@ No database implementation or shared schema is changed here.
 
 createNaiveRanker exposes recommend, checkpoint, and dispose.
 Always call dispose in a finally block, and record any cleanup failures for reconciliation.
+The checkpoint uses the contract Run field names naiveSessionId, lastSequence, and correctionsUsed, plus agentId.
+After the correction message, polling waits for a session sequence past the message's accepted_seq, so the previous turn's output is never reused.
 Supply a durable checkpoint callback before deployment; the smoke script writes a local recovery file.
 Provider creation uses stable idempotency headers and is not automatically retried after uncertain responses.
 Full reconciliation after uncertain creation and process recovery remain ticket 06; do not treat this in-process workflow as crash recovery.
@@ -36,7 +40,7 @@ Run bun run test and bun run typecheck.
 This machine required Bun 1.4.4 to read the merged lockfile; Bun 1.3.11 could not parse its version.
 No lockfile conversion or root configuration change was made.
 Controlled tests submit briefs at the workflow boundary, including tests with real adapters against controlled HTTP responses.
-They cover missing input, evidence preservation, malformed output, bounded correction, source failure, hostile supplier text, cancellation, and deadlines.
+They cover missing input, evidence preservation, invalid or duplicate discovery results, malformed output, bounded correction, source failure, hostile supplier text, cancellation, and deadlines.
 
 The optional live smoke command is bun src/agent/smoke.ts.
 It requires RESEARCH_LIVE_SMOKE=1, NAIVE_API_KEY, MONID_API_KEY, and RESEARCH_CHECKPOINT_PATH.
