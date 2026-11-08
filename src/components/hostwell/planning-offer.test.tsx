@@ -13,7 +13,8 @@ const offer: SelectedOffer = { id: 'offer', revision: 1, inquiryId: 'inquiry', r
 }
 test('shows selected quantities and an included deposit without adding it to the total', () => {
   render(<PlanningOfferReview offer={offer} stale={false} />)
-  expect(screen.getByText('Controlled test offer')).toBeVisible()
+  expect(screen.getByText('Cancellation: Refundable.')).toBeVisible()
+  expect(screen.getByText('View supplier quote')).toBeVisible()
   expect(screen.getByText('Room for 12')).toBeVisible()
   expect(screen.getByText(/Deposit:.*50.00.*included/)).toBeVisible()
   expect(screen.getByText('Total: $200.00')).toBeVisible()

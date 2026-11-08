@@ -6,11 +6,11 @@ import { PlanningPayment } from './planning-payment'
 import { calculateOfferCosts } from '../../agent/planning/offer-contract'
 import { PlanningOfferReview } from './planning-offer'
 import { useUser } from '@clerk/tanstack-react-start'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { PlanningOption } from '../../agent/planning/contract'
 import { usePlanningSession } from '../../lib/hostwell/planning-session'
 import { Button } from './ui'
-import { PlanningInquiryEditor } from './planning-inquiry'
+import { customerStage, isDemo, planningBlocked, PlanningStatus } from './planning-status'
 
 export function PlanningIntake({ onCreated }: { onCreated: (id: string) => void }) {
   const { user, isLoaded } = useUser()
@@ -39,9 +39,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     : session.error?.message
   useEffect(() => { if (notice) alert.current?.focus() }, [notice])
   const { view } = session
-  const blocked = session.pending || session.loading || !!session.uncertain || !!id && !view
-    || view?.inquiry?.delivery?.status === 'pending' || view?.status === 'working' || view?.status === 'uncertain' || view?.status === 'blocked'
-    || !!session.error && session.error.status !== 409 && session.error.status !== 400 && session.error.status !== 422
+  const blocked = planningBlocked(session, !!id)
   const complete = (next: typeof view, message: boolean) => {
     if (!next) return
     if (message) setDraft('')
@@ -66,10 +64,15 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     || !!offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now())
   const offerCosts = offer && calculateOfferCosts(offer)
   const venueOptions = [...options.values()].filter(option => option.kind === 'venue')
-  const venueCards = venueOptions.map(option => ({ id: option.id, name: option.name, photos: [] as string[],
+  const venueCards = venueOptions.map(option => ({ id: option.id, name: option.name, photos: [] as string[], why: option.why,
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
       : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: `${fact.label}: ${fact.value}` })) }))
   const answerAlreadyShown = view?.messages.some(message => message.role === 'assistant' && message.text === proposalText)
+  const arranged = !!view?.arrangement
+  const supplierQuote = offer && view?.inquiry?.replies?.find(reply => reply.id === offer.replyId)?.message.text
+  const offerReview = (approval?: ReactNode) => offer
+    ? <PlanningOfferReview offer={offer} stale={offerStale} supplierQuote={supplierQuote || undefined}>{approval}</PlanningOfferReview> : null
+  const stage = view && !view.paymentLink && customerStage(view, null, offerStale)
   const messageForm = <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
       <label htmlFor="planning-message" className="text-[18px] font-semibold">{id ? 'Ask for changes' : 'Tell us about your event'}</label>
       <textarea id="planning-message" rows={id ? 2 : 4} maxLength={8000} value={draft} readOnly={session.pending || !!session.uncertain}
@@ -100,49 +103,36 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           <p className="whitespace-pre-wrap text-[18px] leading-7">{message.text}</p>
         </div>)}
       </section></details>}
-      <p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
-        : view.status === 'blocked' ? "Research is paused for our team's review."
+      {(!arranged || view.status !== 'ready') && <p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
+        : view.status === 'blocked' ? "Research is paused for our team's review. You don't need to do anything."
         : view.status === 'failed' ? 'We could not finish this research. Send a message to try again.'
           : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
-            : 'Your options are ready to explore.'}</p>
-      {!!view.activity?.length && <details className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Research activity</summary><section aria-label="Research activity" className="flex flex-col gap-3">
+            : 'Your options are ready to explore.'}</p>}
+      {!!view.activity?.length && !arranged && <details className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Research activity</summary><section aria-label="Research activity" className="flex flex-col gap-3">
         {view.activity.map((item, index) => <div key={`${item.name}:${index}`} className="border-l-2 border-sand pl-4">
           <p className="text-[16px] font-semibold">{item.name}</p>
           <p className="text-[16px] text-stone">{item.detail}</p>
         </div>)}
       </section></details>}
-      {view.canReviewResearch && ['blocked', 'uncertain'].includes(view.status) && <details className="flex flex-col gap-4">
-        <summary className="cursor-pointer underline">Operator review for local testing</summary>
-        <p className="my-3">This is an internal research review, not a customer decision. Review the exact request before allowing or declining this one call.</p>
-        {!view.approvals?.length && <p>This request needs operator attention. No research call can be approved here.</p>}
-        {view.approvals?.map(approval => <div key={approval.id} className="flex flex-col gap-3 border border-sand p-4">
-          <p>{approval.tool === 'monid.monid_discover' ? 'Find a research source'
-            : approval.tool === 'monid.monid_inspect' ? "Check a research source's inputs"
-              : approval.tool === 'monid.monid_get_run' ? 'Read a research result' : 'Request supplier research'}</p>
-          <pre className="whitespace-pre-wrap break-words text-[14px]">{JSON.stringify(approval.arguments, null, 2)}</pre>
-          <div className="flex flex-wrap gap-3">{(['allow', 'deny'] as const).map(decision => <Button key={decision}
-            disabled={session.pending || session.loading || !!session.uncertain || view.status !== 'blocked'}
-            className="px-5 py-3" onClick={() => void session.submit({ kind: 'confirm', requestId: crypto.randomUUID(),
-              expectedVersion: view.version, approvalId: approval.id, decision })}>
-            {decision === 'allow' ? 'Approve this research call' : 'Decline this research call'}
-          </Button>)}</div>
-        </div>)}
-        <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Check research status</Button>
-      </details>}
       {view.status === 'uncertain' && <Button className="self-start px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
-
-      {view.inquiry?.delivery?.status === 'uncertain' && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
-        onClick={() => void session.checkMail()}>Check send status</Button>}
-      {view.inquiry?.delivery && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
-        onClick={() => void session.refreshSaved()}>Check for venue replies</Button>}
       {view.proposal && !venueCards.length && !answerAlreadyShown && <div className="flex flex-col gap-3 text-[18px] leading-7">
         <p>{view.proposal.summary}</p>
         {view.proposal.nextQuestion && <p>{view.proposal.nextQuestion}</p>}
       </div>}
+      {!browsingSettings && arranged && <>
+        {stage && <PlanningStatus stage={stage} demo={isDemo(view)} />}
+        {view.paymentLink ? <PlanningPayment key={view.paymentLink.eventId} link={view.paymentLink} identity={user?.id ?? null} stale={offerStale}
+          planning={view} renderOffer={offerReview}
+          onRelease={() => { void session.submit({ kind: 'release_payment', requestId: crypto.randomUUID(), expectedVersion: view.version, eventId: view.paymentLink!.eventId }) }} />
+          : offerReview(offer && !offerStale && !offer.missing.length && offerCosts?.ok && offerCosts.total > 0
+            && <Button className="self-start px-6 py-4" disabled={!!blocked || view.status !== 'ready'}
+              onClick={() => void session.submit({ kind: 'prepare_payment', requestId: crypto.randomUUID(), expectedVersion: view.version,
+                offerId: offer.id, offerRevision: offer.revision })}>Continue to payment</Button>)}
+      </>}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
         disabled={!!blocked} editBrief={<a href="/" className="underline">Plan another event</a>}
-        summary={<div className="max-w-[760px] text-center text-[18px] leading-7"><p>{view.proposal?.summary}</p>
-          {view.proposal?.nextQuestion && <p className="mt-3">{view.proposal.nextQuestion}</p>}
+        summary={(view.proposal?.nextQuestion || view.status === 'working') && <div className="max-w-[760px] text-center text-[18px] leading-7">
+          {view.proposal?.nextQuestion && <p>{view.proposal.nextQuestion}</p>}
           {view.status === 'working' && <p role="status">{view.progress || 'Researching your changes.'}</p>}</div>}
         followup={messageForm} onChoose={optionId => {
           setBrowsingSettings(false)
@@ -155,27 +145,8 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {!browsingSettings && <PlanningArrangement customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
       {!browsingSettings && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
-      {view.inquiry && <details className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Inquiry details</summary><PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
-        disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} /></details>}
-      {view.offer && <PlanningOfferReview offer={view.offer} stale={offerStale} />}
-      {view.paymentLink && <PlanningPayment key={view.paymentLink.eventId} link={view.paymentLink} identity={user?.id ?? null} stale={offerStale}
-        onRelease={() => { void session.submit({ kind: 'release_payment', requestId: crypto.randomUUID(), expectedVersion: view.version, eventId: view.paymentLink!.eventId }) }} />}
-      {view.offer && !view.paymentLink && !offerStale && !view.offer.missing.length && offerCosts?.ok && offerCosts.total > 0
-        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
-          onClick={() => void session.submit({ kind: 'prepare_payment', requestId: crypto.randomUUID(), expectedVersion: view.version,
-            offerId: view.offer!.id, offerRevision: view.offer!.revision })}>Review sandbox payment</Button>}
-      {!view.paymentLink && view.inquiry?.status === 'draft' && view.inquiry.replies?.at(-1)?.status === 'ready'
-        && ['quote', 'confirmation'].includes(view.inquiry.replies.at(-1)?.interpretation?.kind ?? '')
-        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
-          onClick={() => void session.submit({ kind: 'prepare_offer', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
-          {view.offer ? 'Update selected offer' : 'Prepare selected offer'}
-        </Button>}
-      {view.selections.some(option => option.kind === 'venue') && (!view.inquiry || view.inquiry.status === 'stale' || view.inquiry.delivery?.status === 'failed')
-        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
-          onClick={() => void session.submit({ kind: 'prepare_inquiry', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
-          {view.inquiry?.delivery?.status === 'failed' ? 'Prepare a replacement inquiry' : view.inquiry ? 'Replace outdated inquiry draft' : 'Prepare venue inquiry'}
-        </Button>}
-      <p className="text-[14px] leading-6 text-stone">Selections save your preferences. Send a message when you want us to research changes. Nothing is booked or purchased.</p>
+      {!arranged && <p className="text-[14px] leading-6 text-stone">Selections save your preferences. Send a message when you want us to research changes. Nothing is booked or purchased.</p>}
+      {view.canReviewResearch && id && <a href={`/planning/${encodeURIComponent(id)}/team`} className="self-start text-[14px] text-stone underline">Team view (local development)</a>}
     </>}
     {(!id || !venueCards.length) && messageForm}
     {id && <a href="/" className="self-start text-[16px] underline">Plan another event</a>}

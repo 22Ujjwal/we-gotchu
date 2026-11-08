@@ -5,7 +5,7 @@ import { Button, FeatureRow, Guests, Header, MetaLine, Photo } from './ui'
 import { to24h } from '#/lib/hostwell/fixture'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
 
-type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'>
+type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'> & { why?: string }
 
 const suggestions = ['Cheaper candles', 'Closer to U-Bahn', 'More venues']
 
@@ -72,6 +72,7 @@ export function SettingsView({
               />
               <div className="flex flex-col gap-[18px] p-6 lg:gap-[22px] lg:p-[34px]">
                 <CardTitle venue={current} large />
+                {current.why && <p className="m-0 text-[17px] leading-6">{current.why}</p>}
                 <ul className="m-0 flex list-none flex-col gap-3.5 p-0 lg:gap-[18px] lg:pt-1.5">
                   {current.cardFeatures.map((f) => (
                     <FeatureRow key={f.label} feature={f} />
@@ -150,6 +151,7 @@ function SideCard({ venue, onSelect, disabled = false }: { venue: SettingVenue; 
       />
       <div className="flex flex-col gap-4 px-6 pt-[22px] pb-[26px] lg:gap-5 lg:px-8 lg:pt-8 lg:pb-10">
         <CardTitle venue={venue} />
+        {venue.why && <p className="m-0 text-[16px] leading-6">{venue.why}</p>}
         <ul className="m-0 flex list-none flex-col gap-3 p-0 lg:gap-[18px] lg:pt-1.5">
           {venue.cardFeatures.map((f) => (
             <FeatureRow key={f.label} feature={f} />

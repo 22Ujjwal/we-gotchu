@@ -38,14 +38,10 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         <p className="font-semibold">{option.name}</p>
         {option.facts.filter(fact => /price|cost|subtotal/i.test(fact.label)).slice(0, 1).map((fact, index) => <p key={index} className="mt-1 text-[15px]">{fact.value}</p>)}
       </div>)}
-      <p>{arrangement?.status === 'offer_ready' && view.offer
-        ? 'Your quote is ready. Review the total and terms below.'
-        : 'Final total: quote needed'}</p>
-      {arrangement?.controlled && <p className="font-semibold">Controlled supplier rehearsal. No real venue will be contacted.</p>}
-      <p className="text-[15px] text-stone">Published prices are estimates until availability, quantities and all required charges are confirmed.</p>
-      {active ? <div role="status" aria-live="polite"><p className="font-semibold">Your arrangement request is saved</p><p className="mt-2">{arrangement.detail}</p></div>
+      {active ? <p>{view.offer ? 'Your final total is in your offer above.' : 'Final total: waiting for the venue.'}</p>
         : <>
-          {arrangement?.status === 'stale' && <p>{arrangement.detail}</p>}
+          <p>Final total: quote needed</p>
+          <p className="text-[15px] text-stone">Published prices are estimates until availability, quantities and all required charges are confirmed.</p>
           <p className="text-[15px]">Ask Arrange to check availability, supplies and the final price, and contact the selected suppliers about this event. You will approve the final offer before paying.</p>
           <label className="flex flex-col gap-2">Send my arrangement updates to
             <input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email"
@@ -54,8 +50,8 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
           <Button className="px-6 py-4" disabled={disabled || !validEmail || !view.canArrange || view.status !== 'ready' || !!view.paymentLink}
             onClick={() => void submit({ kind: 'arrange', customerEmail: email.trim(), requestId: crypto.randomUUID(), expectedVersion: view.version })}>Please arrange this</Button>
           {!view.canArrange && <p className="text-[14px] text-stone">Arrangement requests are not connected in this environment yet.</p>}
+          <p className="text-[14px] text-stone">Choosing a setting or requesting an arrangement does not reserve it or authorize a charge.</p>
         </>}
-      <p className="text-[14px] text-stone">Choosing a setting or requesting an arrangement does not reserve it or authorize a charge.</p>
     </div>
   return <VenueView embedded brief={view.brief ?? defaultBrief}
     venue={{ name: venue.name, neighbourhood: view.brief?.area ?? '', photos: [], description: venue.why,
