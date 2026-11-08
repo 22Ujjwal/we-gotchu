@@ -104,3 +104,9 @@ export const arrangeCommerce = pgTable('arrange_commerce', {
   eventId: text('event_id').primaryKey().references(() => arrangeEvents.id),
   facts: jsonb('facts').$type<CommerceFacts>().notNull(),
 })
+
+export const arrangePaymentEvents = pgTable('arrange_payment_events', {
+  id: text('id').primaryKey(),
+  eventId: text('event_id').notNull().references(() => arrangeEvents.id),
+  fingerprint: text('fingerprint').notNull(),
+})

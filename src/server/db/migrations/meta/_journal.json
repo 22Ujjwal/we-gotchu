@@ -43,6 +43,13 @@
       "when": 1794168569292,
       "tag": "0005_lethal_firedrake",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794168619230,
+      "tag": "0006_magical_shatterstar",
+      "breakpoints": true
     }
   ]
 }

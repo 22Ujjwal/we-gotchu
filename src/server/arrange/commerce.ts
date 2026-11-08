@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { LedgerRefusal, type Db } from './ledger'
-import { arrangeCommerce, arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms } from './tables'
+import { arrangePaymentEvents, arrangeCommerce, arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms } from './tables'
 import { emptyCommerce, offerLineSchema, optionSchema, type CommerceFacts, type OfferLine, type PaymentFact } from './commerce-types'
 
 const id = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`
@@ -122,9 +122,13 @@ export function createCommerceLedger(db: Db, now: () => Date) {
       })
     },
     recordPayment(eventId: string, payment: Omit<PaymentFact, 'receivedAt'>) {
-      return change(eventId, null, facts => {
+      return change(eventId, null, async (facts, _event, tx) => {
         const checkout = facts.checkout
         if (!checkout || checkout.sessionId !== payment.checkoutId || checkout.id !== payment.operationId || checkout.amountMinor !== payment.amountMinor || checkout.currency !== payment.currency) fail('payment_mismatch', 'The payment does not match the approved checkout.')
+        const fingerprint = JSON.stringify([eventId, payment.checkoutId, payment.operationId, payment.amountMinor, payment.currency, payment.paymentIntentId])
+        await tx.insert(arrangePaymentEvents).values({ id: payment.providerEventId, eventId, fingerprint }).onConflictDoNothing()
+        const [receipt] = await tx.select().from(arrangePaymentEvents).where(eq(arrangePaymentEvents.id, payment.providerEventId))
+        if (receipt.eventId !== eventId || receipt.fingerprint !== fingerprint) fail('payment_event_conflict', 'This provider event was already used for a different payment.')
         if (facts.payment) {
           if (facts.payment.checkoutId !== payment.checkoutId || facts.payment.paymentIntentId !== payment.paymentIntentId) fail('payment_mismatch', 'A different payment was already recorded.')
           return facts.payment
