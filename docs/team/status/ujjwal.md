@@ -1,6 +1,6 @@
 ## Email send key and full event duration — 2026-11-08
 
-Branch: `fix/agentmail-send-key`; baseline `776cd5b`; pending PR, not merged or deployed.
+Branch: `fix/agentmail-send-key`; baseline `776cd5b`; [draft PR #55](https://github.com/22Ujjwal/we-gotchu/pull/55), not merged or deployed.
 Fixes the invalid AgentMail send key and preserves optional event `endsAt` from
 Leo's form through the API/reload into the customer email. Includes timezone,
 end date and elapsed duration. Existing events remain supported. No migration,
