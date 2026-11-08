@@ -26,7 +26,7 @@ export function ConnectedPlanningPage({ id }: { id: string }) {
   if (!isLoaded) return <p role="status">Loading sign-in...</p>
   if (!user) return <a href={`/sign-in?redirect_url=${encodeURIComponent(`/planning/${encodeURIComponent(id)}`)}`}
     className="text-[17px] font-semibold underline">Sign in to view your plan</a>
-  return <main className="flex flex-1 justify-center px-5 pt-10 pb-8 lg:px-12">
+  return <main className="flex flex-1 justify-center">
     <PlanningChat key={`${user.id}:${id}`} id={id} />
   </main>
 }
@@ -87,6 +87,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         {view.status === 'uncertain' && <Button className="px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
         {view.status === 'blocked' && !(view.canReviewResearch && view.approvals?.length) && <Button className="px-5 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for research updates</Button>}
       </div>}
+    {!browsingSettings && view?.selections.some(option => option.kind === 'venue') && view.proposal?.nextQuestion && <p className="text-[17px] leading-6">{displayCopy(view.proposal.nextQuestion)}</p>}
     <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
       <label htmlFor="planning-message" className="text-[18px] font-semibold">{id ? 'Ask for changes' : 'Tell us about your event'}</label>
       <textarea id="planning-message" rows={id ? 2 : 4} maxLength={8000} value={draft} readOnly={session.pending || !!session.uncertain}
@@ -135,7 +136,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry?.delivery && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
         onClick={() => void session.refreshSaved()}>Check for venue replies</Button>}
-      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
+      {view.proposal && !venueCards.length && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
         disabled={!!selectionBlocked} editBrief={null}
         summary={view.proposal && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}

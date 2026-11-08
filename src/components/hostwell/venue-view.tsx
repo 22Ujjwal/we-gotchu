@@ -48,13 +48,11 @@ export function VenueView({
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
             {venue.name}
           </h1>
-          {!embedded && <MetaLine>
-            <span>
-              {brief.date}, {to24h(brief.from)}
-            </span>
-            <span>{venue.neighbourhood}</span>
-            <Guests n={brief.guests} />
-            <span className="hidden lg:inline">≤ ${brief.budget.replace(/^\$/, '')}</span>
+          {(brief.date || brief.from || venue.neighbourhood || brief.guests || brief.budget || back) && <MetaLine>
+            {(brief.date || brief.from) && <span>{[brief.date, brief.from ? to24h(brief.from) : ''].filter(Boolean).join(', ')}</span>}
+            {venue.neighbourhood && <span>{venue.neighbourhood}</span>}
+            {brief.guests && <Guests n={brief.guests} />}
+            {brief.budget && <span className="hidden lg:inline">≤ ${brief.budget.replace(/^\$/, '')}</span>}
             {back}
           </MetaLine>}
         </div>

@@ -71,7 +71,9 @@ test('saved conversation messages stay out of the customer screen while the curr
   await screen.findByRole('heading', { name: 'Garden room' })
   expect(screen.queryByText('Conversation history')).not.toBeInTheDocument()
   expect(screen.queryByText('Earlier private research discussion')).not.toBeInTheDocument()
-  expect(screen.getByText('Two options for dinner.')).toBeVisible()
+  expect(screen.queryByText('Two options for dinner.')).not.toBeInTheDocument()
+  expect(screen.getByText('What time should dinner start?')).toBeVisible()
+  expect(screen.getByRole('figure', { name: 'Event estimate' })).toBeVisible()
 })
 
 test('keyboard intake sends natural language once and opens the saved conversation', async () => {
@@ -109,7 +111,7 @@ test('saved options show sources and selection snapshots survive a follow-up and
   expect(await screen.findByRole('button', { name: 'Remove Garden room' })).toHaveAttribute('aria-pressed', 'true')
   await user.type(screen.getByRole('textbox', { name: 'Ask for changes' }), 'Keep the room, reduce supply cost.')
   await user.keyboard('{Enter}')
-  expect(await screen.findByText('Cheaper supplies.')).toBeVisible()
+  await waitFor(() => expect(screen.getByRole('textbox', { name: 'Ask for changes' })).toHaveValue(''))
   expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
   expect(commands).toEqual([
     { kind: 'select', requestId: expect.any(String), expectedVersion: 1, optionId: 'venue-a' },
@@ -700,7 +702,7 @@ test('uncertain research permits choosing a saved setting without enabling arran
 test('selected venue omits empty metadata and repeated arrangement explanations', async () => {
   http(() => Response.json(view({ selections: [venue] })))
   render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByText('Quote needed')).toBeVisible()
+  expect(await screen.findByRole('figure', { name: 'Event estimate' })).toHaveTextContent('Quote needed')
   expect(screen.getByRole('textbox', { name: 'Email for updates' })).toBeVisible()
   expect(screen.queryByText('guests', { exact: true })).not.toBeInTheDocument()
   expect(screen.queryByText('≤ $', { exact: true })).not.toBeInTheDocument()
@@ -723,9 +725,26 @@ test('selected venue keeps decision facts and supply quantities visible without 
   ] }
   http(() => Response.json(view({ selections: [room], proposal: { summary: 'Options.', nextQuestion: null, options: [room, plates] } })))
   render(<ConnectedPlanningPage id="plan-a" />)
-  await screen.findByRole('heading', { name: 'Your event' })
-  for (const fact of room.facts) expect(screen.getAllByText(fact.value).some(node => !node.closest('details'))).toBe(true)
+  await screen.findByRole('figure', { name: 'Event estimate' })
+  expect(screen.getAllByText(room.facts[1].value).some(node => !node.closest('details'))).toBe(true)
+  await userEvent.click(screen.getByText('Venue details'))
+  for (const fact of room.facts) expect(screen.getAllByText(fact.value)[0]).toBeVisible()
   expect(screen.getByText('24 plates, 7-inch.')).toBeVisible()
   expect(screen.getByText('1 pack covers 20 guests; tax and delivery extra.')).toBeVisible()
-  expect(screen.getAllByText(room.why).every(node => !!node.closest('details'))).toBe(true)
+  expect(screen.getAllByText(room.why)).toHaveLength(1)
+  expect(screen.getByText(room.why)).toBeVisible()
+})
+
+ test('saved estimate includes only selected items and never invents totals or cancellation terms', async () => {
+  const plates = { ...supply, facts: [{ ...supply.facts[0], label: 'Price', value: '$1 per pack.' }] }
+  http(() => Response.json(view({ selections: [venue, plates] })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  const estimate = await screen.findByRole('figure', { name: 'Event estimate' })
+  expect(estimate).toHaveTextContent('Garden room')
+  expect(estimate).toHaveTextContent('Paper plates')
+  expect(estimate).toHaveTextContent('$1 per pack.')
+  expect(estimate).toHaveTextContent('ESTIMATED TOTALQuote needed')
+  expect(estimate).toHaveTextContent('CancellationTo confirm')
+  expect(estimate).not.toHaveTextContent(/Berlin|783.70|Free cancellation|HOSTWELL/)
+  expect(screen.queryByRole('heading', { name: 'Updated event' })).not.toBeInTheDocument()
 })
