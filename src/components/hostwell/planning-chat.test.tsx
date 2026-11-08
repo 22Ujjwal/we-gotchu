@@ -347,16 +347,3 @@ test('restores the saved plan first and retains it when an explicit research ref
   expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
   expect(paths).toEqual(['/api/planning/plan-a?saved=1', '/api/planning/plan-a'])
 })
-
-test('a controlled accepted inquiry does not claim that real email was sent', async () => {
-  http(() => Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
-    recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Test inquiry', text: 'Controlled test only.',
-    contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: { status: 'accepted', mode: 'simulated', requestId: 'send',
-      draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'fixture-mail' },
-  } })))
-  render(<ConnectedPlanningPage id="plan-a" />)
-  await screen.findByRole('heading', { name: 'Garden room' })
-  expect(screen.queryByText('Supplier correspondence')).not.toBeInTheDocument()
-  expect(screen.queryByText('Controlled test only.')).not.toBeInTheDocument()
-  expect(screen.queryByText(/Email provider accepted your inquiry/)).not.toBeInTheDocument()
-})

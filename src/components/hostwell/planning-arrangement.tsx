@@ -38,7 +38,9 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
       <Receipt currency={offer?.currency} venue={{ freeCancellationUntil: '' }} brief={view.brief ?? defaultBrief}
         order={{ lines: offer ? offer.lines.map((line, index) => ({ qty: line.units, item: line.option.name,
           amount: costs?.ok ? costs.amounts[index] / 10 ** paymentFractionDigits(offer.currency) : 'Quote needed' }))
-          : view.selections.map(option => ({ qty: 1, item: option.name, amount: 'Quote needed' })),
+          : view.selections.map(option => ({ qty: 1, item: option.name, amount: 'Quote needed',
+            notes: option.facts.filter(fact => fact.basis === 'published' && /price|cost|subtotal|hire/i.test(fact.label))
+              .slice(0, 1).map(fact => `Published ${fact.label.toLowerCase()}: ${fact.value}. Final quote pending.`) })),
           requests: [], subtotal: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : null, vat: null, total: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : null }} />
       {arrangement?.controlled && <p className="font-semibold">Controlled supplier rehearsal. No real venue will be contacted.</p>}
       {active ? !view.paymentLink && <div role="status" aria-live="polite"><p className="font-semibold">Your arrangement request is saved</p><p className="mt-2">{arrangement.detail}</p></div>
