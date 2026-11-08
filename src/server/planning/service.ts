@@ -179,6 +179,7 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   let result: Awaited<ReturnType<PlanningAgent['read']>>
   try {
     result = await bounded(() => deps.agent().read({ sessionId: record.sessionId!, afterSequence: record.sequence,
+      ...(record.view.status === 'ready' && !record.pending ? { completedSequence: record.sequence } : {}),
       ...(record.pending?.kind === 'confirm' && record.pending.approval ? { approvalId: record.pending.approval.id } : {}),
     }), timeout(deps))
     if (!Number.isSafeInteger(result.sequence) || result.sequence < 0) throw new Error('Invalid sequence.')
