@@ -63,4 +63,4 @@ The current discovery adapter uses the US product catalog and one bounded search
 It does not establish that every requested supply category has adequate coverage.
 Candidate quantities and prices remain unknown until detail extraction and normalization are implemented.
 The complete UI, database persistence, polling, and crash recovery have not been tested by this slice.
-GitHub CI is unavailable due to the billing issue reported by the team, so local verification must be recorded on the PR.
+The GitHub ci check passed on PR #18; still record local verification on each PR.

@@ -3,17 +3,17 @@
 Owner: Tony.
 Updated: 2026-11-07, America/Los_Angeles.
 Implementation baseline: main at `4f50215`.
-Branch: feat/research-workflow.
-Availability: implementation on branch, pending PR review.
+Branch: feat/research-workflow, merged by PR #18 as `b181e1e`.
+Availability: merged.
 Prior report commit: `f756c9bd1cd86b779ebc6fe418da75b914bd9a68`.
 Implementation verification at `4a50290`: 45 tests, typecheck, and production build passed using Bun 1.4.4.
 The live smoke ran that implementation and cleaned up its evaluation session and definition.
 PR review fixes on top of `dac021a`: 50 tests, typecheck, and production build passed using Bun 1.3.11; the live smoke was not rerun.
-GitHub CI cannot execute because of the billing issue reported by Ujjwal.
+The GitHub ci check passed on PR #18 at `eaac453`.
 
 ## Current result
 
-Ticket 01 now has a standalone read-only research workflow on feat/research-workflow.
+Ticket 01 now has a standalone read-only research workflow on main.
 It imports the merged contract 0.4 and includes real Monid discovery and Naive ranking adapters.
 The live smoke check returned six candidates with source provenance and unknown final costs after one bounded correction.
 The workflow is not wired into the application API or database yet.
