@@ -186,7 +186,9 @@ test('a partial booking does not claim everything is booked', async () => {
     evidence: null, errorReason: 'The supplier response was lost.' })
   getOnly(view)
   render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
-  expect(await screen.findByText("Some of it couldn't be booked yet.")).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'In progress' })).toBeVisible()
+  expect(screen.getByText("We're still confirming a few things.")).toBeVisible()
+  expect(screen.queryByRole('heading', { name: "It's happening!" })).not.toBeInTheDocument()
   expect(screen.queryByText(/Everything is booked/)).not.toBeInTheDocument()
 })
 
