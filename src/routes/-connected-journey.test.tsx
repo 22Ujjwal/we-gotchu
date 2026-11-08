@@ -381,3 +381,78 @@ test('a lost create response retains entered answers and prevents repeated creat
   await user.click(submit)
   expect(fetch).toHaveBeenCalledTimes(1)
 })
+
+for (const status of [401, 403, 404]) {
+  test(`access failure ${status} clears the event and stops automatic reads`, async () => {
+    vi.useFakeTimers()
+    let count = 0
+    const privateView = createEventViewFixture('running')
+    privateView.event.brief.location = 'Private location before access loss'
+    controlledHttp(request => {
+      expect(request.method).toBe('GET')
+      return ++count === 1 ? Response.json(privateView)
+        : Response.json({ errorCode: 'access_denied', message: 'This event is not accessible.' }, { status })
+    })
+    render(<ConnectedEventPage eventId="evt_ui_1" />)
+    await flush()
+    expect(screen.getByText('Private location before access loss')).toBeVisible()
+    await advance()
+    expect(screen.getByRole('alert')).toHaveTextContent('not accessible')
+    expect(screen.getByRole('alert')).toHaveFocus()
+    expect(screen.queryByText('Private location before access loss')).not.toBeInTheDocument()
+    await advance(10000)
+    expect(count).toBe(2)
+  })
+}
+
+test('temporary read failure retains saved evidence and reconnects without another write', async () => {
+  vi.useFakeTimers()
+  let count = 0
+  controlledHttp(request => {
+    expect(request.method).toBe('GET')
+    count++
+    if (count === 2) throw new TypeError('disconnected')
+    return Response.json(createEventViewFixture(count === 1 ? 'running' : 'partial'))
+  })
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  await advance()
+  expect(screen.getByRole('alert')).toHaveTextContent('Check your connection')
+  expect(screen.getByText('San Francisco, CA')).toBeVisible()
+  await advance()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.getByText('Research: partial. Budget fit: unknown.')).toBeVisible()
+  expect(count).toBe(3)
+})
+
+test('missing-field server errors keep intake answers available for correction', async () => {
+  const user = userEvent.setup()
+  controlledHttp(request => {
+    expect(request.method).toBe('POST')
+    return Response.json({ errorCode: 'missing_fields', message: 'Please clarify the location.', missing: ['location'] }, { status: 422 })
+  })
+  render(<BriefIntake identity="customer_ui_1" onCreated={vi.fn()} />)
+  await enterIntake(user)
+  await user.keyboard('{Enter}')
+  expect(await screen.findByRole('alert')).toHaveTextContent('clarify the location')
+  expect(screen.getByLabelText('What you need')).toHaveValue('candles, plates')
+  await user.click(screen.getByRole('button', { name: /2026-12-12/ }))
+  expect(screen.getByLabelText('Area')).toHaveValue('Berlin')
+  expect(screen.getByLabelText('Timezone')).toHaveValue('Europe/Berlin')
+  expect(fetch).toHaveBeenCalledTimes(1)
+})
+
+test('mixed supplier outcomes show an unknown commitment without inventing confirmation', async () => {
+  const view = createEventViewFixture('booked')
+  view.event.status = 'partially_booked'
+  Object.assign(view.attempts[1], { state: 'unknown', providerReference: null, actualAmount: null,
+    evidence: null, errorReason: 'The supplier response was lost.' })
+  getOnly(view)
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  expect(await screen.findByText(/Payment: paid;/)).toBeVisible()
+  expect(screen.getByRole('status')).toHaveTextContent('partially booked')
+  const commitments = within(screen.getByRole('region', { name: 'Payment and commitments' }))
+  expect(commitments.getAllByText(/Supplier evidence:/)).toHaveLength(1)
+  expect(commitments.getByText('No supplier confirmation evidence recorded.')).toBeVisible()
+  expect(commitments.getByText('Outcome unknown. Do not repeat this supplier action; reconciliation is needed.')).toBeVisible()
+})
