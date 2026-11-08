@@ -5,13 +5,13 @@ import { createEventApi, mergeEventView } from './event-api'
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
 
 test('uses authenticated same-origin reads and encodes event identity and progress cursor', async () => {
-  const fetcher = vi.fn(async () => response(planReadyEvent))
+  const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => response(planReadyEvent))
   await createEventApi(fetcher).read('event/a', 3)
   expect(fetcher.mock.calls[0]).toEqual(['/api/events/event%2Fa?afterSequence=3', expect.objectContaining({ credentials: 'same-origin', cache: 'no-store' })])
 })
 
 test('submits the current brief revision and exact displayed plan without retrying writes', async () => {
-  const fetcher = vi.fn(async () => response(planReadyEvent))
+  const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => response(planReadyEvent))
   const api = createEventApi(fetcher)
   await api.update('evt_sim_1', 2, { headcount: 30 })
   expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ expectedBriefRevision: 2, changes: { headcount: 30 } })
