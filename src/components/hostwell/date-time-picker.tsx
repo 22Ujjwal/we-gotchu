@@ -99,7 +99,6 @@ export function DateTimePicker({ value, field, onSave, onClose }: {
       <div className="mt-7 space-y-2">
         <TimeChoice label="Start" field="from" value={from} onChange={setFrom} editing={editing} onEdit={setEditing} />
         <TimeChoice label="End" field="till" value={till} onChange={setTill} editing={editing} onEdit={setEditing} />
-        <p className="text-center text-xs text-stone">Give it a spin. Or use the arrow keys.</p>
       </div>
       {from && till && till <= from && <p className="mt-3 text-sm text-stone">{till === from ? 'Choose a different end time.' : 'Ends the following day.'}</p>}
       <Button

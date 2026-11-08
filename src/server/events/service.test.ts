@@ -100,6 +100,105 @@ describe('getEventView', () => {
     expect(view.run?.state).toBe('succeeded')
   })
 
+  it.each(['before plan save', 'after plan save', 'status update'] as const)(
+    'recovers stored research after a failure %s without replacing a saved plan', async (failure) => {
+      const { deps, store } = makeDeps()
+      const { event } = await createEvent(deps, validBrief)
+      const savePlan = store.savePlan.bind(store)
+      const setStatus = store.setEventStatus.bind(store)
+      let fail = true
+      store.savePlan = async (plan) => {
+        if (fail && failure === 'before plan save') { fail = false; throw new Error('database unavailable') }
+        await savePlan(plan)
+        if (fail && failure === 'after plan save') { fail = false; throw new Error('commit response lost') }
+      }
+      store.setEventStatus = async (...args) => {
+        if (fail && failure === 'status update') { fail = false; throw new Error('database unavailable') }
+        return setStatus(...args)
+      }
+      const interrupted = await getEventView(deps, event.eventId)
+      expect(interrupted.event.status).toBe('researching')
+      expect(interrupted.run?.state).toBe('succeeded')
+      // A recovery poll must use the durable result, even if the provider is unavailable.
+      let providerCalls = 0
+      deps.research = { ...deps.research, advanceResearch: async () => { providerCalls++; throw new Error('must not rerun research') } }
+      const recovered = await getEventView(deps, event.eventId)
+      expect(recovered.event.status).toBe('plan_ready')
+      expect(recovered.plan?.revision).toBe(1)
+      expect(recovered.plan?.total).toBe(31500)
+      expect(providerCalls).toBe(0)
+      if (interrupted.plan) expect(recovered.plan).toEqual(interrupted.plan)
+      expect((await getEventView(deps, event.eventId)).plan).toEqual(recovered.plan)
+      expect(recovered.progress.filter(p => p.message.startsWith('Plan ready:'))).toHaveLength(1)
+    },
+  )
+
+  it('recovers a non-bookable result whose researched status was not written', async () => {
+    const { deps, store } = makeDeps()
+    const { event, run } = await createEvent(deps, validBrief)
+    await store.publishResearchResult({ ...simulatedResult(event, run!, deps.now()), budgetFit: 'unknown' })
+    const recovered = await getEventView(deps, event.eventId)
+    expect(recovered.event.status).toBe('researched')
+    expect(recovered.plan).toBeNull()
+  })
+
+  it.each(['cancel', 'revise'] as const)('does not finalize old research when %s wins during recovery', async (change) => {
+    const { deps, store } = makeDeps()
+    const { event, run } = await createEvent(deps, validBrief)
+    await store.publishResearchResult(simulatedResult(event, run!, deps.now()))
+    const getResult = store.getResearchResult.bind(store)
+    store.getResearchResult = async (runId) => {
+      const result = await getResult(runId)
+      if (change === 'cancel') await cancel(deps, event.eventId)
+      else await updateBrief(deps, event.eventId, 1, { headcount: 30 })
+      return result
+    }
+    const recovered = await getEventView(deps, event.eventId)
+    expect(recovered.event.status).toBe(change === 'cancel' ? 'canceled' : 'researching')
+    expect(recovered.event.briefRevision).toBe(change === 'cancel' ? 1 : 2)
+    expect(recovered.plan).toBeNull()
+  })
+
+  it('concurrent recovery polls preserve one partial-result plan and stable action identities', async () => {
+    const { deps, store } = makeDeps()
+    const { event, run } = await createEvent(deps, validBrief)
+    await store.publishResearchResult({ ...simulatedResult(event, run!, deps.now()), outcome: 'partial' })
+    const getPlan = store.getPlan.bind(store)
+    let readers = 0
+    let release!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    store.getPlan = async (eventId) => {
+      const plan = await getPlan(eventId)
+      if (++readers === 2) release()
+      await gate
+      return plan
+    }
+    await Promise.all([getEventView(deps, event.eventId), getEventView(deps, event.eventId)])
+    const recovered = await getEventView(deps, event.eventId)
+    expect(recovered.event.status).toBe('plan_ready')
+    expect(recovered.event.planRevision).toBe(1)
+    expect(recovered.plan?.total).toBe(31500)
+    expect(recovered.run?.state).toBe('partial')
+    expect(recovered.progress.filter(p => p.message.startsWith('Plan ready:'))).toHaveLength(1)
+    expect((await getEventView(deps, event.eventId)).plan).toEqual(recovered.plan)
+  })
+
+  it.each(['cancel', 'revise'] as const)('does not overwrite %s after recovery saves its plan', async (change) => {
+    const { deps, store } = makeDeps()
+    const { event, run } = await createEvent(deps, validBrief)
+    await store.publishResearchResult(simulatedResult(event, run!, deps.now()))
+    const savePlan = store.savePlan.bind(store)
+    store.savePlan = async (plan) => {
+      await savePlan(plan)
+      if (change === 'cancel') await cancel(deps, event.eventId)
+      else await updateBrief(deps, event.eventId, 1, { headcount: 30 })
+    }
+    const recovered = await getEventView(deps, event.eventId)
+    expect(recovered.event.status).toBe(change === 'cancel' ? 'canceled' : 'researching')
+    expect(recovered.event.briefRevision).toBe(change === 'cancel' ? 1 : 2)
+    expect(recovered.progress.filter(p => p.message.startsWith('Plan ready:'))).toHaveLength(0)
+  })
+
   it('moves to researched when the budget fit is unknown', async () => {
     const research: ResearchPort = {
       startResearch: async (i) => ({ naiveSessionId: `ses_${i.runId}` }),

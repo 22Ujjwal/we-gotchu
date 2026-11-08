@@ -56,6 +56,8 @@ Deliver a small hackathon flow with real research integration when verified, Str
 - Derive each commitment or cancellation key from the stored approval, action, and operation. Claim commitments under the event lock so cancellation cannot overlook a newly started commitment.
 - Reject live execution backed by test or simulated payment. Reconcile unknown supplier outcomes; do not automatically purchase again.
 - Settle confirmed supplier cancellations before the final refund, account for retained supplier fees, and retain the provider's refund state. Do not infer completion from a requested refund.
+- Reconcile signed refund update/failure deliveries against Stripe's current refund and the stored payment intent. Retry an update that arrives before our refund identity is saved; a repeated create response must not overwrite a terminal refund state.
+- Repair expired Checkout state under the event lock used by approval and cancellation, so an old expiration cannot reopen a newer approval or canceled event.
 - Persist cancellation and refund information on the existing event, payment, and attempt records. This follow-up adds no database migration or public schema change.
 - Expose the existing JSON-RPC MCP transport over public HTTPS, test unauthorized access, and confirm an authenticated Naive ping. Plain JSON transport compatibility remains unverified until that check.
 - Preserve the exact shared route-repair commit as an integration prerequisite. Keep deployment configuration and Tony's research integration in their existing PRs instead of duplicating those implementations here.
@@ -79,8 +81,8 @@ Full crash recovery, unrestricted provider coverage, and separate refund or supp
 
 This spec synthesizes the existing product and transaction contracts and the approved local fixes. It is published through the repository's local specification tracker; ready-for-agent is its triage label, not evidence of deployment or team approval.
 
-Contracts, Clerk, backend core, standalone research, fixture-backed frontend, route repair, deployment configuration, supplier evidence, research integration, and coordination CI are merged as of main ce2d672. The transaction follow-up remains on PR #28. Check current PR state and the owner's status before integrating later changes.
+As of baseline `6001bd202beb42792bf62743dac10e593f9cfee8`, the earlier transaction follow-up and PRs #48/#49 are merged. Atomic expiration repair and refund-update reconciliation are on `fix/refund-expiry-integration`; consult the owner's status for current verification and deployment evidence.
 
-Real research currently returns partial results with unknown final costs and no bookable Plan. Rehearsing payment and booking therefore needs verified costs and terms or an explicitly labeled simulated path. Real execution/cancellation session starters remain unwired; selecting naive execution currently chooses placeholder hooks, while the scripted fallback is implemented. These are remaining integration tasks, not capabilities established by this spec.
+The latest recorded hosted research run failed; do not describe it as an acceptable partial result. Tony's research correction remains separate. A Stripe sandbox payment and full refund have now been verified with explicitly simulated supplier actions; this is backend/service and hosted webhook evidence, not a full signed-in customer UI rehearsal. Real execution/cancellation session starters remain unwired; selecting naive execution currently chooses placeholder hooks, while the scripted fallback is implemented. Naive-to-MCP ping remains blocked by the local key's missing vault-write permission. These are remaining integration tasks, not capabilities established by this spec.
 
 The hackathon ends at 11:00 AM Pacific on November 8, 2026. Prioritize one working event flow with honest mode labels and evidence of agent decisions and human intervention.
