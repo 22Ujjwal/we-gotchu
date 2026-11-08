@@ -1,3 +1,5 @@
+import { redirect } from '@tanstack/react-router'
+import { localPreview } from '#/lib/local-preview'
 import {
   Link,
   createFileRoute,
@@ -20,6 +22,7 @@ import { buildOrder, findVenue, useHostwell } from '#/lib/hostwell/store'
 
 export const Route = createFileRoute('/settings/$venueId')({
   loader: ({ params }) => {
+    if (!localPreview) throw redirect({ to: '/' })
     const venue = findVenue(params.venueId)
     if (!venue) throw notFound()
     return venue
