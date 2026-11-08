@@ -458,7 +458,12 @@ test('configured research combines real discovery, detail and ranking adapters w
     expect(result.outcome).toBe('partial')
     expect(result.budgetFit).toBe('unknown')
     expect(completed.plan).toBeNull()
-    expect(result.candidates.every(candidate => candidate.priceEstimate === null && candidate.quantityInfo === undefined)).toBe(true)
+    expect(result.candidates.find(candidate => candidate.kind === 'venue')).toMatchObject({ priceEstimate: null })
+    expect(result.candidates.find(candidate => candidate.kind === 'venue')!.quantityInfo).toBeUndefined()
+    expect(result.candidates.find(candidate => candidate.kind === 'supply')).toMatchObject({
+      priceEstimate: 1200, priceProvenance: 'supplier_listing',
+      quantityInfo: { needed: 20, packSize: 20, packs: 1 },
+    })
     expect(result.candidates.find(candidate => candidate.kind === 'supply')!.verification.listingPrice.status).toBe('known')
     expect(result.candidates.every(candidate => candidate.sources.some(source => source.stage === 'detail'))).toBe(true)
     expect(result.candidates.find(candidate => candidate.kind === 'venue')!.verification.capacity.note).toContain('fabricate quotes')

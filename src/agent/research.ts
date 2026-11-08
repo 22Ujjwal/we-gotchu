@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { explainRecommendations } from './recommendations'
+import { freshnessPolicy, type FreshnessPolicy } from './recommendation-freshness'
 import { Candidate, ResearchInput, ResearchResult } from '../contracts'
 
 export type Discovery = {
@@ -12,6 +14,7 @@ export type ResearchProviders = {
   recommend: (input: ResearchInput, candidates: Candidate[], signal: AbortSignal, correction: boolean) => Promise<unknown>
 }
 export type ResearchOptions = {
+  freshnessMs?: Partial<FreshnessPolicy>
   timeoutMs?: number
   detailTimeoutMs?: number
   rankingReserveMs?: number
@@ -60,6 +63,7 @@ export async function researchEvent(
     })
   }
   const input = parsed.data
+  const freshness = freshnessPolicy(options.freshnessMs)
   const timeoutMs = options.timeoutMs ?? 120_000
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) throw new Error('Research timeout must be a positive integer')
   const detailTimeoutMs = options.detailTimeoutMs ?? 45_000
@@ -146,10 +150,7 @@ export async function researchEvent(
     const ordered = [...ranking.candidateIds, ...candidates.map(c => c.candidateId).filter(id => !ranking.candidateIds.includes(id))]
     const result = ResearchResult.parse({
       ...base, ...evidence, outcome: 'partial',
-      recommendations: ordered.map((candidateId, index) => ({
-        candidateId, rank: index + 1, matched: [], unmet: [],
-        unchecked: ['Final costs, event-date availability, capacity fit, required quantities, and cancellation terms remain unconfirmed.'],
-      })),
+      ...explainRecommendations(candidates, ordered, input.brief, Date.now(), freshness),
       warnings: withEvidenceWarnings('Discovery candidates are not confirmed bookings or final quotes.'),
     })
     progress('finished')
