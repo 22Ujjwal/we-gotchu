@@ -34,8 +34,10 @@ Do not change authentication to get a passing result.
 
 Use the feature map in features/README.md.
 Prefer snapshot roles and labels over coordinates.
-For stage one, follow the homepage link named Plan with our research assistant to /planning.
-Enter a complete natural-language brief in the textbox named Tell us about your event, and submit exactly once.
+For the structured homepage path, fill the event brief and submit Find venues exactly once.
+Verify that the request creates a planning conversation through /api/planning and opens /planning/$id.
+The /planning page also accepts a natural-language brief in Tell us about your event.
+Test the entry point requested for the demo; a passing chat submission does not prove the structured homepage is connected.
 Observe the saved /planning/$id URL and the real proposal without injecting fixture responses.
 Target 90 seconds; stop observing after 180 seconds and report a miss rather than creating another conversation.
 Do not approve provider actions, send supplier mail, book or purchase as part of this research check.
