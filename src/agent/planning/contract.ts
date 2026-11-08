@@ -4,8 +4,17 @@ import { supplierReplySchema } from './reply-contract'
 
 const text = z.string().trim().min(1)
 const publicUrl = z.url().refine(value => ['http:', 'https:'].includes(new URL(value).protocol), 'Use an HTTP source link.')
+export const researchPricingSchema = z.object({
+  currency: z.string().regex(/^[A-Z]{3}$/),
+  minimumUnitAmount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  maximumUnitAmount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  quantity: z.number().positive().max(10000).nullable(),
+  unit: z.enum(['hour', 'day', 'person', 'item', 'event']),
+  sourceUrl: publicUrl, quote: text,
+}).strict().describe('Return sourced research pricing separately from prose. Amounts are integer currency minor units. Use equal minimum and maximum for one price, or both ends of a published range. Quantity is the hours, days, people, items or event packages needed for this brief; null if unknown. For an event subtotal use unit event and quantity 1. Never include remaining budget or a combined venue-and-supply total as an item price. This is an estimate, not a supplier quote.')
 export const planningOptionSchema = z.object({
   id: text, kind: z.enum(['venue', 'supply']), name: text, url: publicUrl, why: text,
+  pricing: researchPricingSchema.nullable().optional(),
   facts: z.array(z.object({
     label: text, value: text, sourceUrl: publicUrl, quote: text,
     basis: z.enum(['published', 'estimate']),

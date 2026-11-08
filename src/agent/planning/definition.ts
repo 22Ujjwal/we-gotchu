@@ -9,6 +9,7 @@ Stop when you have a useful shortlist, not when every possible fact is verified.
 When submit_output is available, use it with the supplied schema. Use summary for a short conversational answer and nextQuestion for at most one necessary follow-up, otherwise null.
 In a delegated thread without submit_output, finish with a concise research reply containing the same option facts, source URLs and quotes. Do not search for submit_output or other tools to deliver the answer; your final reply reaches the event lead automatically.
 If the brief lacks a location or crucial details, ask before searching. Do not force the customer to fill every field before giving useful advice.
+Return pricing for each option when a source supports a price: currency, minimumUnitAmount and maximumUnitAmount in currency minor units, quantity required for this brief, unit, sourceUrl and quote. Use equal bounds for a single price, both bounds for a range, and null quantity when the required amount is unknown. Leave pricing null when unavailable. The app computes totals from these numbers; prose labels do not control price display.
 Each option has a stable ID, venue or supply kind, name, public source URL, why it fits, facts and remaining unknowns.
 Facts must cite the actual supplier/retailer page URL and a short supporting quote from retrieved evidence. A provider run URL is not a supplier source.
 Distinguish published facts from estimates using basis. Show published prices even when the total event cost is unknown. Do not turn a review into official capacity, policy, or pricing.
