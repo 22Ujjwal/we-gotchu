@@ -6,7 +6,10 @@ The server preserves selected option snapshots and quantities.
 It calculates item subtotals, tax, delivery, fees and additional deposits using integer minor units.
 Included deposits are counted once.
 Unknown required charges and incomplete terms prevent payment preparation.
-Offer evidence validation remains under review before release.
+Positive monetary amounts must appear as complete currency amounts in the saved quotation.
+Customer budget and nonzero cancellation allowances must appear in saved customer messages.
+This rejects invented numbers but does not independently prove the model assigned every quoted amount to the correct charge category.
+The customer reviews the retained supplier wording before approval.
 
 ## Approval and payment timing
 
@@ -37,7 +40,10 @@ They are not a new live payment or a production verification.
 
 ## Remaining release gates
 
-Finish evidence validation and remaining review findings.
+Prioritize failures that block the demonstrated journey, misstate its outcome or change the approved charge.
+Defer broader currency coverage, advanced semantic quote validation and rare cancellation recovery cases unless the rehearsal exposes a failure.
+The demo uses USD, an explicitly controlled complete quote and simulated supplier execution.
+External email reply verification remains deferred until a different team-controlled recipient is available.
 Run the full required checks on the combined revision.
 Repeat the customer journey in the independent browser testing session, including sandbox decline, success, signed webhook settlement and reload.
 Test the additive migration on an isolated database before applying it to shared hosting.
