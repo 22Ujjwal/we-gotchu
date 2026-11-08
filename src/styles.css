@@ -234,3 +234,25 @@ body {
     animation: none;
   }
 }
+
+/* Keep the header still while receipts give way to the venue shortlist. */
+@media (prefers-reduced-motion: no-preference) {
+  .slip-loader[data-finishing] > :is(.slip-meter, .slip-strip) {
+    animation: receipts-leave 360ms 260ms cubic-bezier(.4, 0, .6, 1) both;
+  }
+  .venue-reveal > div,
+  .venue-reveal > section > *,
+  .venue-reveal > form {
+    animation: venue-settle 520ms cubic-bezier(.2, .72, .2, 1) backwards;
+  }
+  .venue-reveal > section > .gold-frame { animation-delay: 45ms; }
+  .venue-reveal > section > article { animation-delay: 105ms; }
+  .venue-reveal > form { animation-delay: 150ms; }
+}
+
+@keyframes receipts-leave {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes venue-settle {
+  from { opacity: 0; transform: translateY(8px); }
+}

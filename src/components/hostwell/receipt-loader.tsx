@@ -56,7 +56,7 @@ export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 
   }, [stage])
 
   const displayPercent = preview ? percent : Math.min(95, percent)
-  return <section className="slip-loader" aria-label={label}>
+  return <section className="slip-loader" data-finishing={preview && percent === 100 || undefined} aria-label={label}>
     <h1 className="sr-only">{title}</h1>
     <div className="slip-meter" role="progressbar" aria-label="Planning animation" aria-valuetext={displayPercent + '% - ' + slips[stage].task} aria-valuenow={displayPercent} aria-valuemin={0} aria-valuemax={100}>
       <span>{displayPercent}</span><small>%</small>
