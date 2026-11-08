@@ -1,10 +1,10 @@
 # Connect and verify the existing event journey
 
 Type: implementation
-Status: ready-for-agent
+Status: claimed
 Label: ready-for-agent
 Owner: Tony.
-Assignee: unclaimed.
+Assignee: Tony integration session, branch feat/event-api-connection.
 Blocked by: Ujjwal-coordinated rendered-UI test dependencies and root configuration.
 Tony explicitly authorizes functional route and API wiring in existing frontend files while preserving Leo's design.
 Live verification additionally requires completed Clerk sign-in/access, database configuration and migrations, research workspace/model credentials, and an agreed test brief.
@@ -45,3 +45,13 @@ Implement in incremental tested commits with one integration PR and a reviewable
 Do not edit other owners' status files or silently change shared contracts, root configuration, or provider behavior.
 Live payments, external communication, and supplier commitments require separate authorized test conditions.
 This ticket connects existing capabilities; it does not certify untested live booking or recovery.
+
+## Implementation checkpoint
+
+The authenticated customer API client and incremental progress merge are implemented locally.
+Seven focused tests and typecheck pass; screens are not connected yet.
+Ujjwal has provided rendered-UI test setup in PR39; integrate its reviewed commit before screen tests.
+Existing brief inputs omit an explicit timezone and accept ambiguous dates and currency text.
+Existing result/detail/party screens assume fixed photos, complete totals, and successful bookings, with no research pending/error/unknown-cost presentation.
+Request those frontend states from Leo through Tony before making presentation changes.
+Do not claim this ticket or live acceptance complete.
