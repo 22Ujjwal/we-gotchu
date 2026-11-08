@@ -1,3 +1,4 @@
+import { PlanningArrangement } from './planning-arrangement'
 import { SettingsView } from './settings-view'
 import { ReceiptLoader } from './receipt-loader'
 import type { Feature } from '../../lib/hostwell/fixture'
@@ -30,6 +31,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const { user } = useUser()
   const session = usePlanningSession(id)
   const [draft, setDraft] = useState('')
+  const [browsingSettings, setBrowsingSettings] = useState(false)
   const alert = useRef<HTMLParagraphElement>(null)
   const notice = session.uncertain
     ? id ? 'We could not confirm whether your request was saved. Your draft is kept. Check the saved status before taking any further action.'
@@ -137,21 +139,24 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         <p>{view.proposal.summary}</p>
         {view.proposal.nextQuestion && <p>{view.proposal.nextQuestion}</p>}
       </div>}
-      {!!venueCards.length && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
+      {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
         disabled={!!blocked} editBrief={<a href="/" className="underline">Plan another event</a>}
         summary={<div className="max-w-[760px] text-center text-[18px] leading-7"><p>{view.proposal?.summary}</p>
           {view.proposal?.nextQuestion && <p className="mt-3">{view.proposal.nextQuestion}</p>}
           {view.status === 'working' && <p role="status">{view.progress || 'Researching your changes.'}</p>}</div>}
         followup={messageForm} onChoose={optionId => {
-          if (selected.has(optionId)) { document.getElementById('selected-venue-details')?.scrollIntoView({ behavior: 'smooth' }); return }
+          setBrowsingSettings(false)
+          if (selected.has(optionId)) return
           void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId })
         }} />}
-      {options.size > 0 && <section aria-label="Supplies and sources" className="mx-auto grid w-full max-w-[1000px] gap-5 md:grid-cols-2">
+      {!view.selections.some(option => option.kind === 'venue') && options.size > 0 && <section aria-label="Supplies and sources" className="mx-auto grid w-full max-w-[1000px] gap-5 md:grid-cols-2">
         {[...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id)).map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
-      {view.inquiry && <div id="selected-venue-details" className="mx-auto w-full max-w-[900px]"><PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
-        disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} /></div>}
+      {!browsingSettings && <PlanningArrangement customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
+      {!browsingSettings && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
+      {view.inquiry && <details className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Inquiry details</summary><PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
+        disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} /></details>}
       {view.offer && <PlanningOfferReview offer={view.offer} stale={offerStale} />}
       {view.paymentLink && <PlanningPayment key={view.paymentLink.eventId} link={view.paymentLink} identity={user?.id ?? null} stale={offerStale}
         onRelease={() => { void session.submit({ kind: 'release_payment', requestId: crypto.randomUUID(), expectedVersion: view.version, eventId: view.paymentLink!.eventId }) }} />}

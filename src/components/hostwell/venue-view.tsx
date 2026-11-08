@@ -15,10 +15,14 @@ export function VenueView({
   onArrange,
   disabled = false,
   error,
+  embedded = false,
+  extras,
+  receipt,
+  action,
 }: {
-  venue: Venue
+  venue: Pick<Venue, 'name' | 'neighbourhood' | 'photos' | 'description' | 'detailFeatures'> & Partial<Venue>
   brief: Brief
-  order: Order
+  order?: Order
   /** The "Back to settings" link or button. */
   back: ReactNode
   /** Offer extras before booking. */
@@ -26,13 +30,17 @@ export function VenueView({
   onArrange: () => void
   disabled?: boolean
   error?: string
+  embedded?: boolean
+  extras?: ReactNode
+  receipt?: ReactNode
+  action?: ReactNode
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const bookLabel = 'Arrange'
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header step="setting" />
+    <div className={`flex flex-col ${embedded ? 'w-full' : 'min-h-screen'}`}>
+      {!embedded && <Header step="setting" />}
       <main className="flex flex-col items-center gap-6 px-5 pt-7 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
         <div className="flex flex-col items-center gap-2 text-center lg:gap-3.5">
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
@@ -66,6 +74,7 @@ export function VenueView({
                 ))}
               </ul>
             </div>
+            {extras}
             {addOns && (
               <section className="flex flex-col pt-8 lg:pt-10">
                 <h2 className="m-0 pb-4 text-[22px] leading-7 font-semibold">
@@ -77,15 +86,15 @@ export function VenueView({
           </div>
 
           <aside className="flex w-full shrink-0 flex-col gap-5 lg:w-[380px]">
-            <Receipt venue={venue} order={order} brief={brief} />
-            <Button
+            {receipt ?? (order && <Receipt venue={venue as Venue} order={order} brief={brief} />)}
+            {action ?? <Button
               type="button"
               disabled={disabled}
               onClick={() => (addOns ? dialog.current?.showModal() : onArrange())}
               className="py-4 text-[17px] leading-[22px]"
             >
               {bookLabel}
-            </Button>
+            </Button>}
             {error && (
               <p role="alert" className="m-0 text-center font-body text-[16px] leading-6 text-body">
                 {error}
