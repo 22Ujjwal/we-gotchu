@@ -1,66 +1,68 @@
-# Stage three ownership and mail handoff
+# Parallel ownership during stage three
 
-Status: proposed integration contract for Tony and Ujjwal to coordinate before shared edits.
-This work extends saved planning conversations; the older event approval and customer-notification flow stays separate.
-Stage-two review findings remain the implementation gate for the planning runtime.
+Tony clarified that his team owns all of stage three.
+Ujjwal's parallel work is outside the inquiry flow.
+This replaces the earlier proposed split of supplier-mail work.
 
-## Tony's work
+## Tony owns stage three
 
-Tony owns the selected-venue inquiry draft, conversation commands, persistence, and customer review UI.
-The draft records the chosen venue snapshot, the relevant customer requirements, a published recipient source or an explicit missing-contact state, subject, and message text.
-The customer can edit and save the draft without sending it.
-A changed selection or material customer request invalidates the old draft for sending until reviewed.
-Tony owns mapping an incoming reply into an updated customer offer after the transport is verified.
-No loader redesign or paper-slip activity work belongs in this stage.
+Tony owns inquiry drafts, approval to send, supplier-mail delivery, inbound replies, persistence, and customer UI integration.
+Reserved areas include planning contracts, planning provider behavior, conversation services and storage, planning API commands, planning UI, and new supplier-inquiry email modules.
+The relevant directories are `src/agent/planning`, `src/server/planning`, and planning components and clients under `src/components/hostwell` and `src/lib/hostwell`.
+Tony owns generated route-tree updates during integration.
+Do not independently edit these areas for image lookup or hosted readiness.
+Coordinate shared database schema, migrations, runtime, or package-file changes before either person starts editing them.
+The existing customer quote-ready email must remain separate from supplier inquiries.
 
-## Ujjwal's work
+## Ujjwal's first independent task: venue images
 
-Ujjwal owns the supplier-mail adapter and inbound receipt integration, plus its required deployment configuration.
-Reuse the installed AgentMail integration where suitable, but do not change the existing quote-ready customer notification behavior.
-Begin with provider capability checks and a controlled recipient approved for testing.
-Verify actual provider send, message/thread identity, reply retrieval, webhook authentication, duplicate inbound events, and uncertainty behavior rather than inferring them from SDK types.
-Use a separate feature branch and avoid planning contracts, conversation storage, planning routes, and frontend files until the handoff is coordinated.
-Any new dependency, migration, or shared runtime edit needs an explicit file-level handoff to avoid overlapping changes.
-Venue images can remain a separate PR if that assignment is already in progress.
+Ujjwal owns a new isolated venue-image module, its endpoint, provider configuration, and its own focused verification.
+Suggested owned files are `src/server/venue-images/**` and a new image endpoint route.
+Agree on the exact route filename before implementation; Tony owns any generated route-tree update.
+Do not modify the planning proposal schema, agent prompt, conversation persistence, or planning UI.
+Read saved venue options through the existing ownership-checked repository boundary.
+If that boundary needs a change, ask Tony for the smallest interface addition instead of editing it independently.
+Return image URL, source page, required attribution, and provider, or an explicit no-image result.
+Image retrieval must not delay research or prevent the proposal from rendering.
+Cache only according to the chosen source's rules, and reject uncertain venue matches.
+Source-page fetching must reject private/internal destinations and unsafe redirects.
 
-## Proposed boundary
+Ujjwal's verification before handoff:
+- Retrieve a correctly matched image for an actual saved venue and inspect the image itself.
+- Verify attribution and source identity, not just HTTP success.
+- Check no-image, ambiguous-match, provider timeout, and cache behavior.
+- Check conversation ownership and invalid option IDs.
+- Verify a failed image request leaves the existing planning result usable.
+- Run focused checks, typecheck, and the required shipping suite on the final revision.
+- Report exact commit, request/response contract, configuration names without secrets, and local versus hosted evidence.
 
-The planning service owns the customer authorization and durable inquiry state.
-The mail adapter receives a frozen send input only after that service has accepted approval.
+Tony then wires the response into the existing planning cards and verifies the actual browser rendering.
+Ujjwal should not duplicate that frontend work.
 
-Send input:
-- A stable request ID for the exact approved message.
-- Conversation ID, inquiry ID, and draft revision for correlation.
-- Recipient address, subject, and plain-text body.
+## Ujjwal's next independent task: hosted planning readiness
 
-Send output:
-- Provider message ID and thread ID when returned.
-- Provider acceptance timestamp when available.
-- Acceptance means the provider accepted the message; it does not establish delivery or supplier agreement.
+After the image work, Ujjwal can prepare and verify hosting for the existing planning flow on an agreed deployed revision.
+This is configuration and operational verification, not permission to rewrite the planner or inquiry flow.
+Verify Clerk sign-in, Neon connectivity and migration status, planner configuration, and the deployed commit.
+Do not migrate or change production configuration silently; coordinate the exact deployment window and revision.
+Do not enable the public planning entry before its hosted acceptance run passes.
 
-Inbound receipt:
-- Provider event ID when available, message ID, thread ID, and reply-to message identity when available.
-- Sender, recipients, subject, plain-text content, and received timestamp.
-- A reference to retained original content for later inspection.
+Hosted acceptance should cover one signed-in create, a completed or explicitly partial proposal, a selected venue, a follow-up in the same conversation, and reload restoration.
+Compare selected venue identity before and after the follow-up.
+Where evidence is available, confirm the same provider session and one accepted initial message and follow-up.
+Report provider failures separately from application failures, and mark missing evidence unverified.
+No supplier outreach, purchase, or real payment is part of this check.
+Use an isolated test conversation and preserve other records.
 
-Use native provider references to correlate replies, not subject text alone.
-The application must distinguish a duplicate inbound delivery from a new supplier message.
-Do not automatically resend an uncertain write; return enough information to inspect existing provider records or keep the inquiry visibly uncertain.
-Provider-specific retry and idempotency behavior must be verified before choosing recovery behavior.
-Keep credentials and raw authenticated provider URLs out of customer responses and handoff documents.
+## Shared integration gates
 
-## Demo and verification order
+Each owner verifies their own work before handoff.
+A handoff includes exact SHA, owned files, response or configuration contract, test commands and results, actual runtime evidence, and unresolved limitations.
+Passing unit tests or a deployment build does not establish live provider or browser behavior.
+Tony integrates only the reviewed commit and checks the combined customer journey.
+No shared-file edits, pushes to another owner's branch, or duplicate implementation without coordination.
 
-1. Tony verifies draft preparation, editing, stale-draft behavior, and reload locally.
-2. Ujjwal verifies sending and receiving through a controlled inbox, including provider references and duplicate delivery handling.
-3. Integrate one customer-approved test inquiry through the actual local UI and reload its saved status.
-4. Receive a controlled reply while the customer tab is closed, then return and inspect the updated offer and original message.
-5. Only after separate explicit recipient/message authorization, run a real-supplier inquiry and label its evidence separately.
+## Deferred work
 
-## Remaining work after stage three
-
-A priced supplier offer can later be bridged into the existing approval and Stripe sandbox flow.
-That bridge must carry the customer's exact selected items, quantities, quoted costs, and revision; selection alone is not purchase authorization.
-Ujjwal can inspect that mapping in parallel, but should not implement a speculative second transaction model before the inquiry and offer records settle.
-Real supplier booking or purchase remains a separate integration requiring an actual accepted supplier action and confirmation.
-Research caching and live activity slips remain deferred product improvements.
+Live activity paper slips, research-result caching, and general UI refinement remain separate from stage three.
+The planning-to-payment bridge follows a stable inquiry and offer flow; do not start a speculative duplicate transaction model now.

@@ -27,6 +27,6 @@ Keep UI presentation refinements separate from the minimum clear offer and sourc
 
 ## Coordination
 
-Tony owns planning state and customer UI.
-Ujjwal is proposed owner of mail delivery and inbound receipt integration; confirm the handoff before shared edits.
-The team handoff defines the proposed transport boundary and controlled-inbox verification.
+Tony owns this complete stage-three slice, including mail integration, planning state, and customer UI.
+Ujjwal's parallel assignment is venue images and hosted readiness, not supplier inquiries.
+Coordinate shared schema, migration, runtime, and dependency changes before editing.
