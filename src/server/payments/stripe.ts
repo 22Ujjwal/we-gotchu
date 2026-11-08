@@ -42,7 +42,7 @@ export type RefundCreateParams = {
   metadata: Record<string, string>
 }
 
-export type RefundLike = { id: string; status: string | null }
+export type RefundLike = { id: string; status: string | null; payment_intent?: string | { id: string } | null; metadata?: Record<string, string> | null }
 
 export interface StripeLike {
   checkout: {
@@ -53,6 +53,7 @@ export interface StripeLike {
     }
   }
   refunds: {
+    retrieve(id: string): Promise<RefundLike>
     create(params: RefundCreateParams, options: { idempotencyKey: string }): Promise<RefundLike>
   }
   webhooks: {
@@ -102,6 +103,11 @@ export function createStripeAdapter(secretKey: string | undefined): StripeLike {
       },
     },
     refunds: {
+      async retrieve(id) {
+        if (!client) missingKey()
+        const r = await client.refunds.retrieve(id)
+        return { id: r.id, status: r.status, payment_intent: typeof r.payment_intent === 'string' ? r.payment_intent : r.payment_intent ? { id: r.payment_intent.id } : null }
+      },
       async create(params, options) {
         if (!client) missingKey()
         const r = await client.refunds.create(params, options)
