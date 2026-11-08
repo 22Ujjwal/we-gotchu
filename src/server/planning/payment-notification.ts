@@ -43,6 +43,7 @@ export async function notifyPlanningPayment(store: Store, repository: PlanningRe
       ...plan.actions.map(action => `${action.supplierName}: ${action.quantityOrSchedule}.`),
       simulated ? 'Supplier fulfillment is simulated. No real venue reservation or purchase has been made.'
         : 'Payment is confirmed. Check your arrangement for the latest supplier confirmation status.',
+      `View your receipt: ${appUrl.replace(/\/$/, '')}/events/${encodeURIComponent(event.eventId)}/receipts`,
       `View your arrangement: ${appUrl.replace(/\/$/, '')}/planning/${encodeURIComponent(record.id)}`,
     ].join('\n\n'),
   })
