@@ -15,7 +15,7 @@ function fixture(t) {
   mkdirSync(bin);
   for (const file of ['refresh.mjs', 'queue.mjs']) copyFileSync(new URL(file, import.meta.url), join(scriptDir, file));
   for (const name of ['git', 'gh']) {
-    writeFileSync(join(bin, name), `#!${process.execPath}\nconst args=process.argv.slice(2);\nif (args[0]==='rev-parse' || args[0]==='api') console.log('abc');\nelse if (args[0]==='ls-tree') console.log('docs/team/status/new-owner.md');\nelse if (args[0]==='show') console.log('Decision: inspect fixture');\nelse console.log('[]');\n`, { mode: 0o700 });
+    writeFileSync(join(bin, name), `#!${process.execPath}\nconst args=process.argv.slice(2);\nif (args[0]==='rev-parse' || args[0]==='api') console.log('abc');\nelse if (args[0]==='ls-tree') process.stdout.write('docs/team/status/new-owner.md\\0');\nelse if (args[0]==='show') console.log('Decision: inspect fixture');\nelse console.log('[]');\n`, { mode: 0o700 });
   }
   const output = join(scriptDir, 'output');
   mkdirSync(output);

@@ -9,12 +9,18 @@ const directory = dirname(fileURLToPath(import.meta.url));
 const repository = '22Ujjwal/we-gotchu';
 const run = (command, args) => execFileSync(command, args, { cwd: directory, encoding: 'utf8', timeout: 45000, maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 const fields = 'number,title,url,state,headRefOid,headRefName,baseRefName,reviewDecision,mergeable,statusCheckRollup,isDraft,updatedAt';
-const sourcePaths = ['docs/team/coordination.md', 'docs/team/ownership.md', 'docs/team/agent-workflow.md', 'docs/team/frontend.md', 'docs/team/transactions.md', 'docs/team/pitch.md', 'docs/team/status/README.md', ...['tony', 'leo', 'ujjwal', 'ferdinand'].map(x => `docs/team/status/${x}.md`)];
+const sourcePaths = ['docs/team/coordination.md', 'docs/team/ownership.md', 'docs/team/agent-workflow.md', 'docs/team/frontend.md', 'docs/team/transactions.md', 'docs/team/pitch.md', 'docs/team/status/README.md'];
 
 export function collect(execute = run) {
   const baseline = execute('git', ['rev-parse', 'HEAD']).trim();
   const snapshot = { schemaVersion: 1, generatedAt: new Date().toISOString(), repository, baseline, remoteHead: null, documents: [], prs: [], errors: [] };
-  for (const path of sourcePaths) {
+  let ownerPaths = [];
+  try {
+    ownerPaths = execute('git', ['ls-tree', '-r', '--name-only', '-z', baseline, '--', 'docs/team/status/'])
+      .split('\0').filter(path => /^docs\/team\/status\/[^/]+\.md$/.test(path) && !/\/(README|template)\.md$/.test(path));
+    if (!ownerPaths.length) snapshot.errors.push('Committed status inventory contains no owner reports.');
+  } catch { snapshot.errors.push('Cannot read committed status inventory.'); }
+  for (const path of [...sourcePaths, ...ownerPaths.sort()]) {
     try {
       const text = execute('git', ['show', `${baseline}:${path}`]);
       snapshot.documents.push({ path, text, commit: baseline, sha256: createHash('sha256').update(text).digest('hex') });
