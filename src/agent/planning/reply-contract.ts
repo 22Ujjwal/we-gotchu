@@ -21,6 +21,4 @@ export const supplierReplySchema = z.object({
   interpretation: replyInterpretationSchema.optional(), error: text.optional(),
   lease: z.object({ token: text, expiresAt: z.number().int() }).optional(),
 }).strict()
-export type SupplierMessage = z.infer<typeof supplierMessageSchema>
 export type SupplierReply = z.infer<typeof supplierReplySchema>
-export type ReplyInterpretation = z.infer<typeof replyInterpretationSchema>

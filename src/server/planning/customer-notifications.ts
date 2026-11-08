@@ -46,7 +46,7 @@ export function arrangementAcknowledgment(record: PlanningRecord) {
   }
 }
 
-export function offerReadyEmail(record: PlanningRecord, total: number, appUrl: string) {
+function offerReadyEmail(record: PlanningRecord, total: number, appUrl: string) {
   const offer = record.view.offer!
   const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(total / 100)
   return {
