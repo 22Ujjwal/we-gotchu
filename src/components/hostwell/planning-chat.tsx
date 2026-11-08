@@ -1,3 +1,4 @@
+import { PlanningOfferReview } from './planning-offer'
 import { useUser } from '@clerk/tanstack-react-start'
 import { useEffect, useRef, useState } from 'react'
 import type { PlanningOption } from '../../agent/planning/contract'
@@ -111,6 +112,15 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry && <PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
         disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} />}
+      {view.offer && <PlanningOfferReview offer={view.offer} stale={view.inquiry?.status === 'stale'
+        || view.offer.contextMessageIds.join('|') !== view.messages.filter(message => message.role === 'user').map(message => message.id).join('|')
+        || view.offer.lines.map(line => line.option.id).sort().join('|') !== view.selections.map(option => option.id).sort().join('|')} />}
+      {!view.paymentLink && view.inquiry?.status === 'draft' && view.inquiry.replies?.at(-1)?.status === 'ready'
+        && ['quote', 'confirmation'].includes(view.inquiry.replies.at(-1)?.interpretation?.kind ?? '')
+        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
+          onClick={() => void session.submit({ kind: 'prepare_offer', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
+          {view.offer ? 'Update selected offer' : 'Prepare selected offer'}
+        </Button>}
       {view.selections.some(option => option.kind === 'venue') && (!view.inquiry || view.inquiry.status === 'stale' || view.inquiry.delivery?.status === 'failed')
         && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
           onClick={() => void session.submit({ kind: 'prepare_inquiry', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
