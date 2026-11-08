@@ -57,6 +57,7 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
         {session.error?.code === 'stale_brief' && <p>Your edits are retained. Review the latest event before submitting again.</p>}
       </section>}
       <EventDetails view={session.view} pending={session.pending || !!session.error} onEdit={() => void act(async () => {
+        if (editing) return
         const brief = session.view!.event.brief
         draftFromBrief(brief)
         setEditing({ brief, revision: session.view!.event.briefRevision })
