@@ -46,3 +46,18 @@ test('features the planned venue first with the plan as its receipt', () => {
   expect(order.vat).toBeNull()
   expect(settings.venues[1].total).toBeNull()
 })
+
+test('prices every venue with the recommended supply included', () => {
+  const result = planReadyEvent.researchResult!
+  const view = {
+    ...planReadyEvent,
+    researchResult: {
+      ...result,
+      candidates: result.candidates.map((c) => (c.candidateId === 'cand_venue_b' ? { ...c, priceEstimate: 20000 } : c)),
+    },
+  }
+  const settings = settingsFromView(view)
+  expect(settings.venues[1].total).toBe(215)
+  expect(settings.order(settings.venues[1]).total).toBe(215)
+  expect(settings.venues[0].total).toBe(planReadyEvent.plan!.total / 100)
+})
