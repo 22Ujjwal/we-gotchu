@@ -37,3 +37,11 @@ The approved research specification remains unchanged.
 - [04: Update research when the customer changes their brief](../../.scratch/agent-research/issues/04-revise-event-brief.md).
 - [05: Expose research progress and cancellation through the application contract](../../.scratch/agent-research/issues/05-progress-and-cancellation.md).
 - [06: Recover interrupted research without duplicating work](../../.scratch/agent-research/issues/06-recover-interrupted-research.md).
+
+## Event interface integration
+
+Tony owns integration of the existing frontend and customer API while preserving Leo's design.
+The specification uses the existing ready-for-agent triage label; the implementation ticket is unclaimed until work starts.
+
+- [Connect the event interface to the working backend](../../.scratch/specs/event-ui-integration.md).
+- [01: Connect and verify the existing event journey](../../.scratch/event-integration/issues/01-connect-event-journey.md).
