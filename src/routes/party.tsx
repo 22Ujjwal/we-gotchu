@@ -25,13 +25,14 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 const DAYS: Record<string, string> = { mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday' }
 
-/** Parses "Sat 12 Dec" loosely; returns nulls when it can't. */
+/** Accepts brief dates with or without an explicit year. */
 function parseDate(s: string) {
-  const m = s.match(/(?:(\w{3})\w*\s+)?(\d{1,2})\s+(\w{3})/i)
+  const m = s.match(/(?:(\w{3})\w*\s+)?(\d{1,2})\s+(\w{3})(?:\s+(\d{4}))?/i)
   const month = m ? MONTHS.indexOf(m[3].toUpperCase()) : -1
   if (!m || month < 0) return null
   return {
     day: Number(m[2]),
+    year: m[4] ? Number(m[4]) : undefined,
     month,
     weekday: m[1] ? DAYS[m[1].toLowerCase()] : undefined,
   }
@@ -70,9 +71,11 @@ function PartyPage() {
 
   const downloadIcs = () => {
     if (!date) return
-    const year = new Date().getMonth() > date.month ? new Date().getFullYear() + 1 : new Date().getFullYear()
-    const stamp = (t: string) =>
-      `${year}${String(date.month + 1).padStart(2, '0')}${String(date.day).padStart(2, '0')}T${t.replace(':', '')}00`
+    const year = date.year ?? (new Date().getMonth() > date.month ? new Date().getFullYear() + 1 : new Date().getFullYear())
+    const stamp = (t: string, nextDay = false) => {
+      const day = new Date(year, date.month, date.day + (nextDay ? 1 : 0))
+      return `${day.getFullYear()}${String(day.getMonth() + 1).padStart(2, '0')}${String(day.getDate()).padStart(2, '0')}T${t.replace(':', '')}00`
+    }
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -81,7 +84,7 @@ function PartyPage() {
       `UID:${venue.id}-${stamp(start)}@arrange`,
       `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
       `DTSTART;TZID=Europe/Berlin:${stamp(start)}`,
-      `DTEND;TZID=Europe/Berlin:${stamp(end)}`,
+      `DTEND;TZID=Europe/Berlin:${stamp(end, end < start)}`,
       `SUMMARY:${brief.occasion}`,
       `LOCATION:${venue.name}, ${venue.neighbourhood}, Berlin`,
       'END:VEVENT',

@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Fragment, useState } from 'react'
 import type { FormEvent } from 'react'
+import { DateTimePicker } from '#/components/hostwell/date-time-picker'
+import type { ScheduleField } from '#/components/hostwell/date-time-picker'
 import { Button, Header } from '#/components/hostwell/ui'
 import type { Brief } from '#/lib/hostwell/fixture'
 import { useHostwell } from '#/lib/hostwell/store'
@@ -23,6 +25,7 @@ function BriefPage() {
   const navigate = useNavigate()
   const [draft, setDraft] = useState(brief)
   const [step, setStep] = useState(0)
+  const [scheduleField, setScheduleField] = useState<ScheduleField | null>(null)
 
   const sentence = sentences[step]
   const last = step === sentences.length - 1
@@ -70,7 +73,7 @@ function BriefPage() {
             </ol>
           )}
 
-          <p
+          <div
             key={step}
             className="rise m-0 text-center text-[34px] leading-[60px] font-light tracking-[-0.02em] lg:text-[56px] lg:leading-[96px]"
           >
@@ -85,10 +88,13 @@ function BriefPage() {
                   placeholder={part.placeholder}
                   autoFocus={j === 1}
                   onChange={(v) => setDraft({ ...draft, [part.key]: v })}
+                  onPick={part.key === 'date' || part.key === 'from' || part.key === 'till'
+                    ? () => setScheduleField(part.key as ScheduleField)
+                    : undefined}
                 />
               ),
             )}
-          </p>
+          </div>
 
           <Button
             type="submit"
@@ -99,6 +105,14 @@ function BriefPage() {
           </Button>
         </form>
       </main>
+      {scheduleField && (
+        <DateTimePicker
+          value={draft}
+          field={scheduleField}
+          onSave={(schedule) => setDraft((current) => ({ ...current, ...schedule }))}
+          onClose={() => setScheduleField(null)}
+        />
+      )}
     </div>
   )
 }
@@ -109,13 +123,28 @@ function Blank({
   placeholder,
   autoFocus,
   onChange,
+  onPick,
 }: {
   label: string
   value: string
   placeholder?: string
   autoFocus?: boolean
   onChange: (v: string) => void
+  onPick?: () => void
 }) {
+  const className = `blank mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`
+  if (onPick) {
+    return (
+      <button
+        type="button"
+        aria-label={value ? `${label}: ${value}` : label}
+        aria-haspopup="dialog"
+        onClick={onPick}
+        autoFocus={autoFocus}
+        className={`${className} cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${value ? '' : 'text-faint'}`}
+      >{value || placeholder}</button>
+    )
+  }
   return (
     <input
       type="text"
@@ -132,7 +161,7 @@ function Blank({
         }
       }}
       style={{ width: `${Math.max((value || placeholder || '').length, 3)}ch` }}
-      className={`blank mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
+      className={className}
     />
   )
 }
