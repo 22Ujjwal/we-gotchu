@@ -296,6 +296,8 @@ test('a saved assistant answer is not repeated above the option cards', async ()
   expect(screen.queryByText(/Two options for dinner\./)).not.toBeInTheDocument()
   expect(screen.queryByText('Conversation history')).not.toBeInTheDocument()
   expect(screen.queryByText('Research activity')).not.toBeInTheDocument()
+  expect(screen.getByText('What time should dinner start?')).toBeVisible()
+  expect(screen.queryByText('Plan another event')).not.toBeInTheDocument()
 })
 
 test.each(['blocked'] as const)('shows customer status in %s state without exposing tool reviews', async status => {
@@ -353,7 +355,8 @@ test('a controlled accepted inquiry does not claim that real email was sent', as
       draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'fixture-mail' },
   } })))
   render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Supplier correspondence'))
-  expect(await screen.findByText('Controlled test only.')).toBeVisible()
+  await screen.findByRole('heading', { name: 'Garden room' })
+  expect(screen.queryByText('Supplier correspondence')).not.toBeInTheDocument()
+  expect(screen.queryByText('Controlled test only.')).not.toBeInTheDocument()
   expect(screen.queryByText(/Email provider accepted your inquiry/)).not.toBeInTheDocument()
 })

@@ -40,7 +40,7 @@ describe('hosted planning adapter', () => {
     const { agent, snapshot, client } = setup()
     snapshot.status = 'running'
     vi.mocked(client.sessions.events).mockResolvedValueOnce({ data: [{ seq: 20, type: 'tool.started', data: { name: 'monid.monid_run' } }] })
-    expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', progress: 'Checking sources for your event.' })
+    expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', progress: 'Researching venues and supplies' })
     snapshot.status = 'idle'; snapshot.stop_reason = 'budget_paused'
     expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'failed', proposal: null })
   })
