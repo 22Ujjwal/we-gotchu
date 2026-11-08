@@ -9,6 +9,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  server: { allowedHosts: process.env.PLANNING_LOCAL_CALLBACK_ORIGIN
+    ? [new URL(process.env.PLANNING_LOCAL_CALLBACK_ORIGIN).hostname] : [] },
   plugins: [devtools(), tailwindcss(), tanstackStart(), nitro(), viteReact()],
 })
 
