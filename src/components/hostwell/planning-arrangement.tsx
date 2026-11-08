@@ -18,7 +18,7 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
   onBack: () => void
   view: PlanningView; disabled: boolean; submit: (command: PlanningCommand) => Promise<PlanningView | null>
 }) {
-  const [email, setEmail] = useState(view.arrangement?.customerEmail ?? customerEmail)
+  const [email, setEmail] = useState(view.arrangement?.customerEmail ?? ((import.meta.env.DEV && import.meta.env.VITE_PLANNING_TEST_CUSTOMER_EMAIL) || customerEmail))
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   const venue = view.selections.find(option => option.kind === 'venue')
   if (!venue) return null

@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from 'vitest'
 import { createPlanningApi, PlanningApiError } from './planning-api'
 import type { PlanningView } from '../../agent/planning/contract'
 
-const saved: PlanningView = { id: 'plan-a', version: 1, status: 'working', messages: [], selections: [], proposal: null, progress: null, error: null }
+const saved: PlanningView = { id: 'plan-a', version: 1, status: 'working', offerApproval: { offerId: 'offer', offerRevision: 1, approvedAt: '2026-11-08T12:00:00Z', confirmedReplyId: 'reply' }, supplierQuestion: { replyId: 'reply', text: 'Can we use the included tables?' }, messages: [], selections: [], proposal: null, progress: null, error: null }
 afterEach(() => vi.unstubAllGlobals())
 
 test('reads use the encoded conversation URL and same-origin credentials without writing', async () => {

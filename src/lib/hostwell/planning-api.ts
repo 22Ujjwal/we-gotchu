@@ -11,6 +11,8 @@ const viewSchema: z.ZodType<PlanningView> = z.object({
   proposal: planningProposalSchema.nullable(), inquiry: planningInquirySchema.optional(), selections: z.array(planningOptionSchema),
   progress: z.string().nullable(), error: z.string().nullable(), approvals: z.array(planningApprovalSchema).optional(),
   activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(), canSendInquiry: z.boolean().optional(), canArrange: z.boolean().optional(),
+  offerApproval: z.object({ offerId: z.string(), offerRevision: z.number().int().positive(), approvedAt: z.string(), confirmedReplyId: z.string().optional() }).optional(),
+  supplierQuestion: z.object({ replyId: z.string(), text: z.string(), answer: z.string().optional(), answerRequestId: z.string().optional() }).optional(),
   offer: selectedOfferSchema.optional(), paymentLink: planningPaymentLinkSchema.optional(),
 })
 export type PlanningCreate = z.infer<typeof planningCreateSchema>
