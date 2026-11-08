@@ -102,3 +102,13 @@ Verification: 104 focused tests across planning-chat (50), connected-journey (28
 
 The saved local event remains uncertain and has no structured brief metadata. Arrange and extras remain disabled by existing guards. No real provider research, supplier contact, booking, purchase or payment occurred. Tony's newer unmerged flow changes remain outside this branch.
 
+
+## Full local walkthrough, 2026-11-08
+
+Created `planning_72473063-721e-49d7-ab3d-651ef6441ef0` through the signed-in homepage: Birthday, 20 guests, San Francisco, December 12 2026, 6pm–11pm, USD 500, paper plates, USD 0 cancellation loss. Native browser screenshots in chat show the completed brief and research animation. Research reached a partial proposal with El Lopo and 24 plates. Venue selection, adding plates, receipt update and reload restoration were observed. The earlier Pearl photo rendered. El Lopo retrieval failed, including explicit Retry photos, while proposal controls remained usable.
+
+Submitted one research-only Oakland/30-guest revision. Final completion was not verified: the UI last reported Saving, then native browser capture lost the content tree and returned blank. Do not count this as a successful revised brief. Provider diagnostics included HTTP 500 on a session read and HTTP 429 on a separate read-only diagnostic. No repeated revision or supplier action was sent.
+
+Full suite initially timed out in database startup with default parallel workers. An unchanged rerun with `bun run test --maxWorkers=2` passed all 778 tests across 72 files. A browser-found duplicated Published pack price was reproduced, fixed in `3ac9101`, and verified with 78 focused tests, typecheck and build. All test runners completed. Local Vite remains available on port 3000.
+
+Local arrangement capability is unavailable; email, provider reply, Checkout and booking are covered by controlled tests only in this run. No supplier mail, purchases, payment, deployment or push occurred during verification.
