@@ -490,6 +490,15 @@ export function createStore(db: Db): Store {
 
     async validatePlanOffer(plan, now) {
       if (!plan.planningOffer) return true
+      const [event] = await db.select().from(events).where(eq(events.id, plan.eventId))
+      // Once paid handoff starts, later conversation edits cannot rewrite its approved plan.
+      if (event?.planRevision === plan.revision && ['executing', 'booked', 'partially_booked', 'failed'].includes(event.status)) {
+        const [funded] = await db.select({ id: approvals.id }).from(approvals).innerJoin(payments, eq(payments.approvalId, approvals.id))
+          .where(and(eq(approvals.eventId, plan.eventId), eq(approvals.planId, plan.planId),
+            eq(approvals.planRevision, plan.revision), eq(payments.state, 'paid'),
+            eq(payments.amount, plan.total), eq(payments.currency, plan.currency)))
+        if (funded) return true
+      }
       const [row] = await db.select().from(planningConversations).where(eq(planningConversations.id, plan.planningOffer.conversationId))
       return isCurrentPlanningOffer(row?.data ?? null, plan, now)
     },
@@ -703,7 +712,7 @@ export function createStore(db: Db): Store {
         if (!payment || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
             payment.currency !== approval.currency || (input.mode === 'live' && payment.mode !== 'live')) return null
         const [currentPlan] = await tx.select().from(plans).where(eq(plans.id, approval.planId))
-        if (currentPlan?.data.planningOffer) {
+        if (currentPlan?.data.planningOffer && !['executing', 'booked', 'partially_booked', 'failed'].includes(event.status)) {
           const [conversation] = await tx.select().from(planningConversations)
             .where(eq(planningConversations.id, currentPlan.data.planningOffer.conversationId)).for('update')
           if (!isCurrentPlanningOffer(conversation?.data ?? null, currentPlan.data, now)) return null
