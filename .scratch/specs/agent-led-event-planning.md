@@ -22,7 +22,8 @@ Defer Stripe, supplier contact, and booking.
 This deliberately replaces the earlier ranking-only agent and fixed application-driven research stages.
 Do not build a new queue, custom scraping framework, or general workflow engine for this slice.
 Tony has proposed a named product team after this slice works: an event lead, venue researcher and supplies researcher.
-Their handoffs are not implemented by the current single-agent flow.
+Their native roster and delegation configuration have now been applied, with local waiting-state coverage.
+A complete live team research run is still unverified.
 Do not make our hosted event MCP endpoint a prerequisite for research when Monid already exposes the required tools.
 
 ## Customer flow
@@ -87,7 +88,8 @@ Monid's hosted MCP catalog accepts the existing Monid key.
 Naive's SDK documents hosted MCP, structured proposals, same-session messages, and resumable event streaming.
 The updated Naive key successfully created the vault and agent-bound Monid credential.
 A hosted session completed monid_inspect through that connection.
-The reusable research configuration is now version 2, but live research attempts are blocked by provider capacity and a timed-out create.
+The reusable lead configuration is now version 3 with two pinned specialists.
+Earlier live research attempts hit provider capacity and a timed-out create; a later complete read-only lookup found no matching session.
 Saved-evidence extraction alone does not satisfy that acceptance criterion.
 
 ## Limits

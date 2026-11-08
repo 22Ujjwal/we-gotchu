@@ -1,6 +1,6 @@
 # Local agent-led planning handoff
 
-Status: code integrated locally; live research and browser acceptance not passed.
+Status: named team configured; code integrated locally; live team research and browser acceptance pending.
 No push, PR update, merge, Vercel deployment or hosted migration was performed.
 Hosted Naive configuration was updated as explicitly authorized.
 
@@ -44,8 +44,8 @@ No web server was left running by this implementation pass.
 
 ## Hosted configuration and evidence
 
-The retained research agent is agt_95n3aqvyk5qhpd4k9z5pc7bnxt, configuration version 2.
-Its definition is src/agent/planning/definition.ts.
+The retained lead agent is agt_95n3aqvyk5qhpd4k9z5pc7bnxt, now Tom at configuration version 3.
+Its team definition is src/agent/planning/team.ts, built on the research instructions in definition.ts.
 The vault is vlt_gan30nrft94yqfgr5qkxqar8hm and its credential is vcr_wr4ang1h8q72ftrsr57p96d7z4.
 These IDs are non-secret.
 This configuration is research-only in purpose and is not a shared execution or cancellation agent.
@@ -70,16 +70,16 @@ Live proof records are ignored under tools/agent-research-proof/output:
 - planning-6da8a4f8-96b5-44a7-bc48-8a737b044e33 received429 before a session ID was returned.
 - planning-7682e2c6-f441-4152-82fd-326ad53e661e timed out during session creation; no session ID was returned.
 
-The last attempt is unresolved.
-A read-only session listing for the configured agent also timed out.
-Do not claim no session exists, and do not start another test until inspecting sessions for metadata.conversationId=7682e2c6-f441-4152-82fd-326ad53e661e.
+The first read-only reconciliation attempt also timed out.
+A subsequent complete session listing succeeded and found no session with metadata.conversationId=7682e2c6-f441-4152-82fd-326ad53e661e.
+This is a point-in-time provider observation, not proof that the timed-out request never arrived.
 The create idempotency key is planning:7682e2c6-f441-4152-82fd-326ad53e661e:7682e2c6-f441-4152-82fd-326ad53e661e:start.
 Do not silently replay that write with a different request body or key.
 No full live research turn, live follow-up, or background completion claim is made.
 
 ## Verification
 
-The integrated code passed these commands using Bun1.4.4:
+Before the named-team change, the integrated code passed these commands using Bun1.4.4:
 
 ```sh
 /tmp/ticket04-bun/bun-darwin-aarch64/bun run test --maxWorkers 2
@@ -101,6 +101,40 @@ Do not treat controlled tests as proof of these live outcomes.
 
 Tony proposed a named product team inside Naive.
 The suggested roles are Tom as event lead, Maya for venues, and Sam for supplies.
-Only the reusable researcher is configured now.
-Handoffs between named specialists are a later change after a complete live conversation succeeds.
+The named team is now configured and read back from the provider:
+
+- Tom (Event lead): agt_95n3aqvyk5qhpd4k9z5pc7bnxt, version 3.
+- Maya (Venue researcher): agt_qcnpjxe84z0nm9cbr3t76n4akb, pinned at version 1.
+- Sam (Supplies researcher): agt_7pj1hmzyrjtbzw6ae8d5z25f8v, pinned at version 1.
+
+Both specialists have their own agent-bound Monid credential in the existing vault.
+Tom uses the native coordinator roster and wait:true delegation, with board scheduling disabled.
+The specialist definitions do not allow further handoffs.
+The application treats awaiting_delegation as working and does not publish an old proposal while teammates are running.
+No complete live team research run has been verified.
+The existing CEO and unrelated ping-test agent were not changed.
+
+The setup command defaults to a dry run:
+
+```sh
+/tmp/ticket04-bun/bun-darwin-aarch64/bun --env-file=.env.local tools/agent-research-proof/team-setup.ts
+```
+
+RESEARCH_LIVE_SMOKE=1 explicitly applies the setup.
+It reuses saved resource IDs and refuses to repeat an operation recorded as uncertain.
+Do not run the older single-agent configure.ts against Tom; it now refuses to overwrite a coordinator.
+The ignored output/team-setup.json stores configuration IDs and setup progress, never credentials.
+The live planning.ts proof now records the actual agent version and thread events so a later test can establish that both specialists were called.
+
+Provider behavior was checked against [roster documentation](https://vetta.sh/docs/team/rosters-and-versioning.md) and [delegation documentation](https://vetta.sh/docs/team/delegation.md).
 The coding sessions for API/storage and UI finished their assigned local stages and were integrated here.
+
+## Named-team change verification
+
+After the team change, the focused planning/provider/storage tests passed 34 tests in 9 files.
+Typecheck and git diff --check also passed.
+The regression first reproduced premature completion while the provider was awaiting_delegation, then passed after the fix.
+No additional research session was started during team configuration.
+The next live run must show thread creation and results from Maya and Sam, a merged Tom proposal, and a same-session customer follow-up.
+While provider requests are unreliable, controlled API/UI testing and planning the first real supplier procurement remain useful independent work.
+Supplier outreach, payment and actual procurement were not implemented or performed here.

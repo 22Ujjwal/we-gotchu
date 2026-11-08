@@ -77,7 +77,8 @@ Non-secret resource IDs:
 - Stopped test session: ses_r4fgqb4jm7ap524vfa1915p2y4
 
 The retained agent was subsequently updated to version 2 using configure.ts and src/agent/planning/definition.ts.
-It now has research instructions and Monid discover, inspect, run and get-run access.
+That single-agent configuration was subsequently replaced by the named team at lead version 3.
+Tom delegates to Maya and Sam, which have Monid discover, inspect, run and get-run access.
 It is separate from execution and cancellation workflows.
 A completed live supplier research turn has not yet been verified because subsequent session requests hit capacity errors and a timeout.
 The ignored evidence record is output/connection-3f382d84-e7b7-4cab-a2d1-1c49143be8c7/result.json.
@@ -88,5 +89,6 @@ Do not rerun connect.mjs casually: a fresh invocation creates resources, and it 
 The local application now uses src/agent/planning/provider.ts for new planning conversations.
 See docs/research/agent-led-planning-local.md for setup, verification and the unresolved session-create attempt.
 The planning.ts proof performs paid hosted research and a selection follow-up, with no purchases or supplier contact.
-Do not rerun it until the uncertain attempt documented in that handoff has been reconciled.
+The uncertain attempt was checked with a complete read-only listing, which found no matching session.
+Consult the handoff before another paid test.
 A new invocation creates a new conversation and is not a retry of an earlier attempt.
