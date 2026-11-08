@@ -42,12 +42,13 @@ export function buildSelectedOfferPlan(input: Input): Result {
     agentReasoning: `Customer-selected offer ${offer.id}, revision ${offer.revision}.`,
     mode: 'simulated', budgetFit: 'within', budgetBasis: 'Selected quantities, tax, delivery, fees and additional deposits included.',
     warnings: ['Sandbox payment only. Supplier execution is simulated; payment does not reserve or purchase anything.'],
+    // Execution follows action order, so satisfy venue dependencies first.
     actions: offer.lines.map((line, index) => ({
       actionId: actionId(line.option.id), kind: line.option.kind === 'venue' ? 'venue_booking' : 'item_purchase',
       supplierName: line.option.name, target: line.option.name, quantityOrSchedule: line.quantityDescription,
       maximumAmount: amounts[index], cancellationTerms: { known: true, summary: line.cancellationTerms, sourceUrl: line.option.url },
       sourceUrl: line.option.url, dependsOn: line.option.kind === 'venue' ? [] : [actionId(venue.option.id)], mode: 'simulated',
-    })),
+    })).sort((a, b) => Number(b.kind === 'venue_booking') - Number(a.kind === 'venue_booking')),
   })
   return plan.success ? { ok: true, plan: plan.data } : fail('The offer could not be converted to a transaction plan.')
 }
