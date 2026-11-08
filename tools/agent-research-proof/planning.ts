@@ -63,8 +63,27 @@ try {
 } finally {
   if (sessionId) {
     try {
-      const events = await client.sessions.events(sessionId, { after_seq: 0, limit: 1000 })
-      record.toolEvents = events.data.filter(event => /tool|degraded|thread/.test(event.type))
+      const events = []
+      let cursor = 0
+      for (let page = 0; page < 20; page++) {
+        const result = await client.sessions.events(sessionId, { after_seq: cursor, limit: 100 })
+        events.push(...result.data)
+        if (!result.has_more) break
+        const next = Number(result.next_cursor)
+        if (!Number.isSafeInteger(next) || next <= cursor || page === 19) { record.eventsIncomplete = true; break }
+        cursor = next
+      }
+      record.toolEvents = events.filter(event => /tool|degraded|thread/.test(event.type))
+      const children = await client.sessions.threads(sessionId, { limit: 100 })
+      record.children = children.data.map(child => ({ id: child.id, status: child.status, stopReason: child.stop_reason }))
+      record.childCleanup = []
+      for (const child of children.data.filter(child => child.parent_session_id === sessionId)) {
+        try {
+          await client.sessions.cancel(child.id)
+          ;(record.childCleanup as unknown[]).push({ id: child.id, stopped: true })
+        } catch { (record.childCleanup as unknown[]).push({ id: child.id, stopped: false }) }
+      }
+      if (children.has_more) record.childCleanupIncomplete = true
     } catch { record.eventsUnavailable = true }
     try { await client.sessions.cancel(sessionId); record.sessionStopped = true } catch { record.sessionStopped = false }
   }
