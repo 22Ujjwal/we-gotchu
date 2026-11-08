@@ -38,7 +38,9 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         <p className="font-semibold">{option.name}</p>
         {option.facts.filter(fact => /price|cost|subtotal/i.test(fact.label)).slice(0, 1).map((fact, index) => <p key={index} className="mt-1 text-[15px]">{fact.value}</p>)}
       </div>)}
-      <p>Final total: quote needed</p>
+      <p>{arrangement?.status === 'offer_ready' && view.offer
+        ? 'Your quote is ready. Review the total and terms below.'
+        : 'Final total: quote needed'}</p>
       {arrangement?.controlled && <p className="font-semibold">Controlled supplier rehearsal. No real venue will be contacted.</p>}
       <p className="text-[15px] text-stone">Published prices are estimates until availability, quantities and all required charges are confirmed.</p>
       {active ? <div role="status" aria-live="polite"><p className="font-semibold">Your arrangement request is saved</p><p className="mt-2">{arrangement.detail}</p></div>
