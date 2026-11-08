@@ -66,3 +66,22 @@ test('same-repository URLs and explicit shorthand preserve local references', ()
   const result = buildQueue(snapshot({ documents: [doc('https://github.com/22Ujjwal/we-gotchu/pull/16/files?diff=split\nPR #16')], prs: [pr({ state: 'MERGED' })] }));
   assert.equal(result.items.filter(x => x.kind === 'reconcile').length, 2);
 });
+
+test('negative words inside real blockers do not suppress the report', () => {
+  const result = buildQueue(snapshot({ documents: [doc('Blockers: No-show risk from venue\nBlockers: No access to endpoint\nBlockers: None.\nBlockers: No blockers.\nBlockers: none found after checking.')] }));
+  assert.deepEqual(result.items.filter(x => x.kind === 'blocker').map(x => x.evidence.line), [1, 2]);
+});
+
+test('equal priorities sort source lines and PR numbers naturally', () => {
+  const text = ['Blockers: waiting', ...Array(8).fill(''), 'Blockers: review'].join('\n');
+  const result = buildQueue(snapshot({ documents: [doc(text)], prs: [pr({ number: 10 }), pr({ number: 9 })] }));
+  assert.deepEqual(result.items.filter(x => x.kind === 'blocker').map(x => x.evidence.line), [1, 10]);
+  assert.deepEqual(result.items.filter(x => x.kind === 'pull-request').map(x => x.evidence.number), [9, 10]);
+});
+
+test('rendered priority key covers the implemented PR blocking conditions', () => {
+  const md = renderMarkdown(buildQueue(snapshot()));
+  assert.match(md, /failed checks/);
+  assert.match(md, /requested changes/);
+  assert.match(md, /merge conflicts/);
+});
