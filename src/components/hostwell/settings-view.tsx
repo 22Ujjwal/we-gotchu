@@ -119,18 +119,9 @@ export function SettingsView({
 
 function CardTitle({ venue, large }: { venue: Venue; large?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <h2
-        className={`m-0 font-semibold ${large ? 'text-[22px] leading-7 lg:text-[26px] lg:leading-8' : 'text-[20px] leading-6 lg:text-[22px] lg:leading-7'}`}
-      >
-        {venue.name}
-      </h2>
-      <span
-        className={`shrink-0 font-mono font-medium tracking-[-0.01em] text-stone ${large ? 'text-[18px] leading-[22px] lg:text-[24px] lg:leading-[30px]' : 'text-[17px] leading-[22px] lg:text-[20px] lg:leading-6'}`}
-      >
-        {venue.total === null ? 'Quote' : `$${venue.total.toFixed(2)}`}
-      </span>
-    </div>
+    <h2 className={`m-0 font-semibold ${large ? 'text-[22px] leading-7 lg:text-[26px] lg:leading-8' : 'text-[20px] leading-6 lg:text-[22px] lg:leading-7'}`}>
+      {venue.name}
+    </h2>
   )
 }
 
