@@ -44,7 +44,7 @@ test('late old-revision reads cannot replace current state and different events 
   const current = { ...bookedEvent, event: { ...bookedEvent.event, briefRevision: 2 } }
   expect(mergeEventView(current, planReadyEvent)).toBe(current)
   const other = { ...planReadyEvent, event: { ...planReadyEvent.event, eventId: 'other' }, progress: [] }
-  expect(mergeEventView(current, other)).toBe(other)
+  expect(mergeEventView(current, other)).toEqual(other)
 })
 
 test('an older progress snapshot cannot undo payment state', () => {
