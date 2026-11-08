@@ -43,7 +43,8 @@ function assess(candidate: Candidate, brief: Brief, now: number, policy: Freshne
   const priceMatch = price.note?.match(/^Retailer [a-zA-Z0-9.-]+ lists ([0-9]+(?:\.[0-9]+)?) ([A-Za-z]{3}) for one offered product, ([0-9]+) minor units\. Not a delivered total or quote\.$/)
   const unit = packMatch?.[2]
   const needs = unit ? brief.supplyNeeds.filter(need => new RegExp(`\\b${unit}\\b`, 'i').test(need)) : []
-  if (!packMatch || !priceMatch || needs.length !== 1 || pack.sourceUrl !== price.sourceUrl) {
+  const requestedTypes = needs[0]?.match(/\b(?:plates|cups|napkins)\b/gi) ?? []
+  if (!packMatch || !priceMatch || needs.length !== 1 || new Set(requestedTypes.map(type => type.toLowerCase())).size !== 1 || pack.sourceUrl !== price.sourceUrl) {
     result.unchecked.push('No unambiguous supported pack, price, and requested supply match; required quantity remains unknown.')
     return result
   }
