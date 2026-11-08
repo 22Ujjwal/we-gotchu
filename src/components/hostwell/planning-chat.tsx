@@ -123,7 +123,8 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       {view.inquiry && <PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
         disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} />}
       {view.offer && <PlanningOfferReview offer={view.offer} stale={offerStale} />}
-      {view.paymentLink && <PlanningPayment key={view.paymentLink.eventId} link={view.paymentLink} identity={user?.id ?? null} stale={offerStale} />}
+      {view.paymentLink && <PlanningPayment key={view.paymentLink.eventId} link={view.paymentLink} identity={user?.id ?? null} stale={offerStale}
+        onRelease={() => { void session.submit({ kind: 'release_payment', requestId: crypto.randomUUID(), expectedVersion: view.version, eventId: view.paymentLink!.eventId }) }} />}
       {view.offer && !view.paymentLink && !offerStale && !view.offer.missing.length && offerCosts?.ok && offerCosts.total > 0
         && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
           onClick={() => void session.submit({ kind: 'prepare_payment', requestId: crypto.randomUUID(), expectedVersion: view.version,
