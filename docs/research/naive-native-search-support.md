@@ -67,3 +67,29 @@ Sam returned a supply shortlist before cancellation; Maya continued venue resear
 The test ended after its four-minute observation window without a customer proposal.
 The test canceled its parent and both specialist sessions, with acknowledgements recorded.
 These errors do not establish why the overall proposal failed to finish within the observation window.
+
+## Single-planner recurrence
+
+The single-planner Berkeley run used version 4 of agt_t6445gy3v6jt6jfre51019qtyz.
+Session: ses_6qjnndzmjk773af2az4td9wfw1.
+No delegation was involved.
+
+| UTC time | Tool | Sequence | Tool call ID | Exact error |
+| --- | --- | --- | --- | --- |
+| 2026-11-08T08:27:39.351Z | web_search | 7 | call_huy8JrUc5I0kr77whaWYnLNp | the web provider answered 429 |
+| 2026-11-08T08:27:39.351Z | web_search | 8 | call_HGmE5sf95vDYq0teSW2GOlVz | the web provider answered 429 |
+| 2026-11-08T08:27:39.547Z | web_search | 9 | call_Ox3QFYT1nwhMViFLm7BA5CUW | the web provider answered 429 |
+| 2026-11-08T08:27:41.335Z | web_search | 13 | call_f1I0dztLaoQJgKuau0tdRtAW | the web provider answered 429 |
+| 2026-11-08T08:28:12.794Z | data_run | 33 | call_Jm8lpJjc5wbRAsARSwWA1BkG | the data source refused the request (HTTP 400); check the input against the tool's schema |
+| 2026-11-08T08:28:32.740Z | data_run | 39 | call_OWH55GnReyBtUmRwO5ykLcl1 | the data source refused the request (HTTP 400); check the input against the tool's schema |
+| 2026-11-08T08:28:41.030Z | data_run | 42 | call_3JJEOVQU9osPHZnYdEX9ufyQ | the data source refused the request (HTTP 400); check the input against the tool's schema |
+| 2026-11-08T08:28:42.940Z | data_run | 43 | call_2AHmNv8a8hAy7AUKD1jOOMNE | the data source refused the request (HTTP 400); check the input against the tool's schema |
+| 2026-11-08T08:28:51.378Z | data_run | 45 | call_EQA0TLvXKEEpLmLxdf8pqd7b | the data source refused the request (HTTP 400); check the input against the tool's schema |
+| 2026-11-08T08:28:58.164Z | data_run | 47 | call_AwbtZHd8F8HQbBreAA2DeQP8 | the data source refused the request (HTTP 400); check the input against the tool's schema |
+
+The 400 responses occurred on Google Shopping Search and Google Maps Results data tools.
+The agent inspected their schemas but omitted language fields on these calls; the returned schema descriptions mention language selection although the required array only contains keyword.
+The provider did not expose the underlying validation reason, so this does not establish a provider defect.
+Search Web Pages and several page fetches succeeded during the same run.
+The agent repeatedly tried rejected data requests and exceeded the prompt-only research allowance.
+The observation window ended without a proposal; cancellation was acknowledged.
