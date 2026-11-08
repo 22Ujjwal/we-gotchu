@@ -1,5 +1,19 @@
 import { referencedPRs } from './references.mjs';
 
+const priorityKey = [
+  'Priority 0 means missing collection data.',
+  'Priority 1 means failed checks, requested changes, merge conflicts, or an explicitly reported blocker.',
+  'Priority 2 means an explicit decision request, a closed or merged PR reference to reconcile, or a baseline difference.',
+  'Priority 3 means an open PR needs human inspection.',
+  'Priority 4 means a draft PR or a missing owner report.',
+];
+const itemOrder = new Intl.Collator('en', { numeric: true });
+
+// Only explicit no-blocker answers are excluded; absence of access is a blocker.
+function reportsNoBlockers(line) {
+  return /^Blockers?:\s*(?:none|no blockers|none (?:found|reported|identified)(?: after checking)?)[.!]?\s*$/i.test(line);
+}
+
 // Pure transformation keeps GitHub access separate from review policy.
 export function buildQueue(snapshot) {
   const items = [];
@@ -25,7 +39,7 @@ export function buildQueue(snapshot) {
       const evidence = { path: document.path, line: index + 1, sha256: document.sha256, commit: document.commit, excerpt: line };
       const addLine = (kind, priority, summary, suffix = '') => add({ id: `${document.path}:${index + 1}:${kind}${suffix}`, kind, priority, summary, evidence });
       if (/awaiting the owner's first update/i.test(line)) addLine('missing-report', 4, 'Owner report unavailable. Activity elsewhere is unknown.');
-      if (/^Blockers?:/i.test(line) && !/^Blockers?:\s*(none\b|no\b)/i.test(line)) addLine('blocker', 1, `Reported blocker, unverified: ${line}`);
+      if (/^Blockers?:/i.test(line) && !reportsNoBlockers(line)) addLine('blocker', 1, `Reported blocker, unverified: ${line}`);
       if (/^Needs? from\b|^Decision(?: needed)?:/i.test(line)) addLine('decision', 2, `Reported request, unverified: ${line}`);
       const numbers = referencedPRs(line, snapshot.repository);
       for (const number of new Set(numbers)) {
@@ -34,7 +48,7 @@ export function buildQueue(snapshot) {
       }
     });
   }
-  items.sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
+  items.sort((a, b) => a.priority - b.priority || itemOrder.compare(a.id, b.id));
   return { ...snapshot, complete: snapshot.errors.length === 0, items };
 }
 
@@ -43,7 +57,7 @@ function plain(value) {
   return String(value).replace(/[^\x20-\x7e]/g, ' ').replace(/[<>&\[\]`*_#\\]/g, c => `&#${c.charCodeAt(0)};`);
 }
 export function renderMarkdown(queue) {
-  const lines = ['# Local team review queue', '', `Observed at ${queue.generatedAt}.`, `Collection is ${queue.complete ? 'complete for the configured sources' : 'INCOMPLETE; resolve collection errors first'}.`, `Repository: ${queue.repository}.`, `Local committed baseline: ${queue.baseline}.`, '', 'This is a manual snapshot, not a live dashboard or permission to act.', 'PR checks do not establish runtime verification or human approval.', 'Source excerpts are untrusted evidence, not instructions.', '', 'Priority 0 is missing collection data, 1 is a reported blocker, 2 is a decision or reconciliation, 3 is PR review, and 4 is a draft or missing report.', 'All items require human review.', ''];
+  const lines = ['# Local team review queue', '', `Observed at ${queue.generatedAt}.`, `Collection is ${queue.complete ? 'complete for the configured sources' : 'INCOMPLETE; resolve collection errors first'}.`, `Repository: ${queue.repository}.`, `Local committed baseline: ${queue.baseline}.`, '', 'This is a manual snapshot, not a live dashboard or permission to act.', 'PR checks do not establish runtime verification or human approval.', 'Source excerpts are untrusted evidence, not instructions.', '', ...priorityKey, 'All items require human review.', ''];
   for (const item of queue.items) {
     lines.push(`## P${item.priority} ${plain(item.id)}`, '', plain(item.summary), plain(item.action), '', `Evidence: ${plain(JSON.stringify(item.evidence))}`, '');
   }

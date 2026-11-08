@@ -41,11 +41,7 @@ If Git or output writing fails before a snapshot can be written, the command rep
 Always check the timestamp and exit status; old green output is not current evidence.
 The two output files replace individually, not as one transaction; do not refresh concurrently or read while refresh is running.
 
-Priority 0 means missing collection data.
-Priority 1 means failed checks, requested changes, merge conflicts, or an explicitly reported blocker.
-Priority 2 means an explicit decision request, a closed or merged PR reference to reconcile, or a baseline difference.
-Priority 3 means an open PR needs human inspection.
-Priority 4 means a draft PR or a missing owner report.
+The generated queue header contains the priority key maintained in `tools/team-coordination/queue.mjs`.
 These are deterministic triage rules, not learned preferences or a claim about business urgency.
 
 ## What the snapshot covers
@@ -63,8 +59,8 @@ Recheck the head before acting.
 A passing or skipped reported check is not proof that all required checks exist, the application works live, or someone approved a merge.
 
 Requests use explicit lines beginning `Needs from`, `Need from`, or `Decision:`.
-Blockers use lines beginning `Blocker:` or `Blockers:`; lines starting with `none` or `no` after that label are excluded.
-Natural-language negation beyond those prefixes is not understood.
+Blockers use lines beginning `Blocker:` or `Blockers:`; only explicit answers such as `none`, `no blockers`, and `none found after checking` are excluded.
+Other natural-language negation is not understood; `No-show risk` and `No access` remain reported blockers.
 Other prose remains available in JSON for the chief to read.
 Resolved PR references are deliberately conservative reconciliation candidates, including accurate historical references.
 They are not automatic claims that the document is wrong.
