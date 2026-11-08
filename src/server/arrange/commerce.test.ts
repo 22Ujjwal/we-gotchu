@@ -106,7 +106,7 @@ describe('the complete event ledger', () => {
   })
 })
 
-it('does not contact suppliers outside the customer choice or charge an obsolete offer', async () => {
+it('waits for the customer choice before supplier outreach', async () => {
   await app.ledger.publishOptions(eventId, 'options', [{ id: 'venue', name: 'Venue', reason: 'Fits', sourceUrl: 'https://example.test', knownTerms: [], unknownTerms: ['Price'], contactIds: [contactId] }])
   await expect(app.sendSupplierEmail({ eventId, contactId, subject: 'Quote', body: 'Please quote', operationKey: 'too-early' })).rejects.toMatchObject({ code: 'choice_required' })
 })

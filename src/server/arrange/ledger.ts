@@ -1,6 +1,6 @@
 import { createCommerceLedger } from './commerce'
 import type { CommerceFacts } from './commerce-types'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import type { schema } from '../db/schema'
@@ -10,7 +10,7 @@ import { InquiryConflict } from '../email/supplier-inquiries/types'
 import type { OperationRepository, SendOperation, SendResult } from '../email/supplier-inquiries/types'
 import { eventBriefSchema, type EventBrief } from './brief'
 import {
-  arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms, arrangeUpdates,
+  arrangeCommerce, arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms, arrangeUpdates,
 } from './tables'
 
 // The Event ledger stores facts about an event and enforces the rules that guard
@@ -198,13 +198,18 @@ export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; s
     mailReceipts,
     readEvent,
 
-    async createEvent(customerId: string, brief: unknown, contactConsent: boolean): Promise<{ eventId: string }> {
+    async createEvent(customerId: string, brief: unknown, contactConsent: boolean, requestKey?: string): Promise<{ eventId: string }> {
       const parsed = eventBriefSchema.safeParse(brief)
       if (!parsed.success) throw new LedgerRefusal('invalid_brief', 'The brief is missing something we need.')
-      const eventId = newId('evt')
+      const eventId = requestKey ? `evt_${createHash('sha256').update(JSON.stringify([customerId, requestKey])).digest('hex').slice(0, 32)}` : newId('evt')
       const createdAt = now()
       await db.transaction(async tx => {
-        await tx.insert(arrangeEvents).values({ id: eventId, customerId, brief: parsed.data, contactConsent, createdAt })
+        const inserted = await tx.insert(arrangeEvents).values({ id: eventId, customerId, brief: parsed.data, contactConsent, createdAt }).onConflictDoNothing().returning()
+        if (!inserted.length) {
+          const [existing] = await tx.select().from(arrangeEvents).where(eq(arrangeEvents.id, eventId))
+          if (existing.customerId !== customerId || existing.contactConsent !== contactConsent || JSON.stringify(eventBriefSchema.parse(existing.brief)) !== JSON.stringify(parsed.data)) throw new LedgerRefusal('key_conflict', 'This request already created an event with different details.')
+          return
+        }
         if (opts.seedContacts.length) {
           await tx.insert(arrangeSupplierContacts).values(opts.seedContacts.map(c => ({ id: newId('con'), eventId, name: c.name, email: c.email.toLowerCase(), kind: c.kind, createdAt })))
         }
@@ -242,6 +247,12 @@ export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; s
             throw new LedgerRefusal('key_conflict', 'This operation key was already used for a different email.')
           }
           return { operation: toMailOperation(existing), replayed: true }
+        }
+        const [commerceRow] = await tx.select().from(arrangeCommerce).where(eq(arrangeCommerce.eventId, eventId))
+        if (commerceRow?.facts.options.length) {
+          const selected = commerceRow.facts.options.find(o => o.id === commerceRow.facts.choice?.optionId)
+          if (!selected) throw new LedgerRefusal('choice_required', 'Wait for the customer to choose an option before contacting suppliers.')
+          if (!selected.contactIds.includes(contactId)) throw new LedgerRefusal('contact_not_selected', 'Only contact suppliers in the customer choice.')
         }
         if (!event.contactConsent) throw new LedgerRefusal('no_consent', 'The customer has not allowed us to contact suppliers.')
         const [contact] = await tx.select().from(arrangeSupplierContacts)

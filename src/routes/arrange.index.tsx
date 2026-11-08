@@ -1,6 +1,7 @@
+import { ArrangeHeader } from '#/components/arrange/header'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Button, Header } from '#/components/hostwell/ui'
+import { Button } from '#/components/hostwell/ui'
 
 // Where an ARRANGE customer starts: one short brief and a clear yes to supplier contact.
 
@@ -10,6 +11,7 @@ const inputClass = 'w-full rounded-lg border border-sage/40 bg-white px-3 py-2 t
 
 function ArrangeStartPage() {
   const navigate = useNavigate()
+  const [requestKey] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -32,9 +34,10 @@ function ArrangeStartPage() {
       const response = await fetch('/api/arrange/events', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ brief, contactConsent: form.get('consent') === 'on' }),
+        body: JSON.stringify({ brief, requestKey, contactConsent: form.get('consent') === 'on' }),
       })
       if (!response.ok) {
+        if (response.status === 401) throw new Error('Please sign in before sending your brief.')
         const body = await response.json().catch(() => null)
         throw new Error(body?.message ?? 'Something went wrong on our side. Please try again.')
       }
@@ -48,7 +51,7 @@ function ArrangeStartPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header step="brief" />
+      <ArrangeHeader />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pt-10 pb-12">
         <h1 className="font-display text-[28px] leading-8 text-ink">Tell us about your event</h1>
         <p className="mt-2 text-[16px] leading-6 text-body">
@@ -91,7 +94,8 @@ function ArrangeStartPage() {
               ARRANGE may email venues and suppliers on my behalf about this event. Nothing is ever booked without me.
             </span>
           </label>
-          {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">{error}</p>}
+          {error && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">{error}</p>}
+          {error?.includes('sign in') && <a href="/sign-in?redirect_url=%2Farrange" className="text-sm underline">Sign in to continue</a>}
           <Button type="submit" disabled={busy} className="mt-2 rounded-full px-6 py-3">
             {busy ? 'One moment...' : 'Hand it over'}
           </Button>

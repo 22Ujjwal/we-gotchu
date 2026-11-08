@@ -10,7 +10,7 @@ import { createEventLedger, type Db, type MailOperation, type SeedContact } from
 import { createArrangeTools, handleArrangeMcp } from './mcp'
 import type { NaiveSessions } from './naive'
 
-// Builds the Event ledger and wires it to AgentMail and Naïve. Routes and tests
+// Builds the Event ledger and wires it to AgentMail and Naive. Routes and tests
 // both go through this, so they assemble the same dependencies.
 
 export type ArrangeConfig = {
@@ -130,8 +130,8 @@ export function createApp(deps: { db: Db; mail: MailProvider; naive: NaiveSessio
     },
     ensureSession,
     sendSupplierEmail,
-    async createEventForCustomer(customerId: string, brief: unknown, contactConsent: boolean) {
-      const { eventId } = await ledger.createEvent(customerId, brief, contactConsent)
+    async createEventForCustomer(customerId: string, brief: unknown, contactConsent: boolean, requestKey?: string) {
+      const { eventId } = await ledger.createEvent(customerId, brief, contactConsent, requestKey)
       try {
         await ensureSession(eventId)
       } catch (error) {
