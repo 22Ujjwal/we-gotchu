@@ -130,7 +130,10 @@ test.each([
   { changed: false, supplyFirst: false },
   { changed: true, supplyFirst: false },
   { changed: false, supplyFirst: true },
-])('linked offer handles signed payment once, changed: $changed, supply first: $supplyFirst', async ({ changed, supplyFirst }) => {
+  { delayed: true },
+  { duringExecution: 'reply' },
+  { duringExecution: 'draft' },
+].map(value => ({ changed: false, supplyFirst: false, delayed: false, duringExecution: '', ...value })))('linked offer handles signed payment once, changed: $changed, supply first: $supplyFirst, delayed: $delayed, concurrent: $duringExecution', async ({ changed, supplyFirst, delayed, duringExecution }) => {
   const { default: Stripe } = await import('stripe')
   const { makeDeps, WEBHOOK_SECRET } = await import('../events/testFakes')
   const { approve } = await import('../events/service')
@@ -150,7 +153,21 @@ test.each([
   await db.offers.save('customer', 'conversation', version, selectedOffer)
   const total = supplyFirst ? 20347 : 20000
   const link = await db.offers.prepare('customer', 'conversation', 'offer', 1, now)
-  const { deps, stripe } = makeDeps({ store: db.store, requireCustomerId: async () => 'customer', now: () => now, hooks: scriptedAgentHooks })
+  let processingTime = now
+  const hooks = { ...scriptedAgentHooks, async onPaymentConfirmed(input: Parameters<typeof scriptedAgentHooks.onPaymentConfirmed>[0]) {
+    if (duringExecution) {
+      const before = (await db.repository.getById('conversation'))!
+      const inquiry = before.view.inquiry!
+      const update = duringExecution === 'reply'
+        ? { inquiry: { ...inquiry, replies: [...inquiry.replies!, { ...inquiry.replies![0], id: 'thanks',
+            message: { ...inquiry.replies![0].message, messageId: 'thanks', text: 'Thank you.' },
+            interpretation: { kind: 'other' as const, summary: 'Thank you.', nextAction: 'None.', facts: [], missing: [] } }] } }
+        : { selections: [], messages: [...before.view.messages, { id: 'follow-up', role: 'user' as const, text: 'Another question.', createdAt: now.toISOString() }] }
+      await db.repository.compareAndSet(before, { ...before, view: { ...before.view, ...update, version: before.view.version + 1 } })
+    }
+    return scriptedAgentHooks.onPaymentConfirmed(input)
+  } }
+  const { deps, stripe } = makeDeps({ store: db.store, requireCustomerId: async () => 'customer', now: () => processingTime, hooks })
   configureStore(db.store)
   setDepsForTests(deps)
   try {
@@ -164,6 +181,7 @@ test.each([
       const before = (await db.repository.getById('conversation'))!
       await db.repository.compareAndSet(before, { ...before, view: { ...before.view, selections: [], version: before.view.version + 1 } })
     }
+    if (delayed) processingTime = new Date('2026-12-02T00:00:00Z')
     const payload = JSON.stringify({ id: 'controlled-payment', object: 'event', type: 'checkout.session.completed',
       created: Math.floor(now.getTime() / 1000), data: { object: { id: first.payment.checkoutSessionId,
         payment_status: 'paid', payment_intent: 'pi_controlled', currency: 'usd', amount_total: total,
