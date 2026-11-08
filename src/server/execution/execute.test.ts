@@ -174,6 +174,35 @@ describe('execute_action success and replay', () => {
   })
 })
 
+describe('all-booked hook', () => {
+  it('fires once, when the last commitment makes the event booked', async () => {
+    const { deps, execute } = setup()
+    const onAllBooked = vi.fn(async () => {})
+    deps.onAllBooked = onAllBooked
+    await execute(VENUE)
+    expect(onAllBooked).not.toHaveBeenCalled()
+    expect(await execute(ITEM)).toMatchObject({ ok: true, eventStatus: 'booked' })
+    await execute(ITEM)
+    expect(onAllBooked).toHaveBeenCalledExactlyOnceWith(EVENT, expect.objectContaining({ approvalId: bookedEvent.approval!.approvalId }))
+  })
+
+  it('does not fire for a partial booking', async () => {
+    const { deps, execute } = setup({ adapter: new SimulatedSupplierAdapter({ failure: 'fail', failureTarget: ITEM }) })
+    const onAllBooked = vi.fn(async () => {})
+    deps.onAllBooked = onAllBooked
+    await execute(VENUE)
+    await execute(ITEM)
+    expect(onAllBooked).not.toHaveBeenCalled()
+  })
+
+  it('still books when the hook throws', async () => {
+    const { deps, execute } = setup()
+    deps.onAllBooked = async () => { throw new Error('mail down') }
+    await execute(VENUE)
+    expect(await execute(ITEM)).toMatchObject({ ok: true, eventStatus: 'booked' })
+  })
+})
+
 describe('cancel_action', () => {
   it('refuses before the customer requests cancellation', async () => {
     const { execute, deps } = setup()

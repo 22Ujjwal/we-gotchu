@@ -31,7 +31,7 @@ function VenuePage() {
       }
       onArrange={() => {
         setBookedVenueId(venue.id)
-        navigate({ to: '/party' })
+        navigate({ to: '/party', search: { arranging: true } })
       }}
     />
   )
