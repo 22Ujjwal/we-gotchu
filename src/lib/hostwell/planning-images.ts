@@ -24,7 +24,7 @@ export function usePlanningImages(conversationId: string | undefined, options: r
   const scope = JSON.stringify([conversationId ?? null, venues])
   const currentVersion = useRef(version)
   currentVersion.current = version
-  const [saved, setSaved] = useState<{ scope: string; images: Images; canRetry: boolean }>({ scope, images: empty, canRetry: false })
+  const [saved, setSaved] = useState<{ scope: string; images: Images; canRetry: boolean; attempted: string[] }>({ scope, images: empty, canRetry: false, attempted: [] })
   const retryAction = useRef<{ scope: string; run: () => void } | null>(null)
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export function usePlanningImages(conversationId: string | undefined, options: r
     const controller = new AbortController()
     const timers = new Set<ReturnType<typeof setTimeout>>()
     const failed = new Set<string>()
-    setSaved({ scope, images: empty, canRetry: false })
+    setSaved({ scope, images: empty, canRetry: false, attempted: [] })
     function transientFailure(optionId: string, attempt: number, requestedVersion: number) {
       if (controller.signal.aborted) return
       if (attempt < 2) {
@@ -43,6 +43,11 @@ export function usePlanningImages(conversationId: string | undefined, options: r
         setSaved(previous => previous.scope === scope ? { ...previous, canRetry: true } : previous)
       }
     }
+    function markAttempted(optionId: string) {
+      if (controller.signal.aborted) return
+      setSaved(previous => previous.scope === scope && !previous.attempted.includes(optionId)
+        ? { ...previous, attempted: [...previous.attempted, optionId] } : previous)
+    }
     async function read(optionId: string, attempt: number, requestedVersion: number) {
       if (controller.signal.aborted || !id) return
       let response: Response
@@ -51,12 +56,13 @@ export function usePlanningImages(conversationId: string | undefined, options: r
           method: 'GET', credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
         })
       } catch {
+        markAttempted(optionId)
         transientFailure(optionId, attempt, requestedVersion)
         return
       }
       if (controller.signal.aborted) return
-      if (response.status >= 500) { transientFailure(optionId, attempt, requestedVersion); return }
-      if (!response.ok) return
+      if (response.status >= 500) { markAttempted(optionId); transientFailure(optionId, attempt, requestedVersion); return }
+      if (!response.ok) { markAttempted(optionId); return }
       try {
         const parsed = responseSchema.safeParse(await response.json())
         if (controller.signal.aborted || !parsed.success) return
@@ -68,6 +74,7 @@ export function usePlanningImages(conversationId: string | undefined, options: r
           images: Object.assign(Object.create(null), previous.images, { [optionId]: result.images.slice(0, 4) }),
         } : previous)
       } catch { /* Invalid image responses are not retried and never block the proposal. */ }
+      finally { markAttempted(optionId) }
     }
     retryAction.current = { scope, run: () => {
       if (controller.signal.aborted || !failed.size) return
@@ -81,7 +88,7 @@ export function usePlanningImages(conversationId: string | undefined, options: r
     return () => { controller.abort(); for (const timer of timers) clearTimeout(timer) }
   }, [scope])
 
-  return { images: saved.scope === scope ? saved.images : empty,
+  return { attempted: saved.scope === scope ? saved.attempted : [], images: saved.scope === scope ? saved.images : empty,
     canRetry: saved.scope === scope && saved.canRetry,
     retry: () => { if (retryAction.current?.scope === scope) retryAction.current.run() },
   }

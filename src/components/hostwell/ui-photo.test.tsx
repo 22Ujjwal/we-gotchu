@@ -51,3 +51,21 @@ test('new sources recover from an exhausted image list', () => {
   page.rerender(<Photo photos={[photos[1]]} alt="Garden room" />)
   expect(screen.getByRole('img')).toHaveAttribute('src', photos[1])
 })
+
+test('inspiration is labeled and ordered, while real venue photos take precedence', async () => {
+  const fallback = { photos: ['/images/interior-inspiration/01.jpg', '/images/interior-inspiration/02.jpg'], alt: 'Interior inspiration', label: 'Interior inspiration, not this venue', href: '/images/interior-inspiration/credits.html' }
+  const page = render(<Photo photos={[photos[0]]} alt="Garden room" fallback={fallback} />)
+  expect(screen.getByRole('img')).toHaveAttribute('src', photos[0])
+  expect(screen.queryByText(fallback.label)).not.toBeInTheDocument()
+  fireEvent.error(screen.getByRole('img'))
+  expect(screen.getByRole('img')).toHaveAttribute('src', fallback.photos[0])
+  expect(screen.getByRole('img')).toHaveAttribute('alt', expect.stringContaining('Interior inspiration'))
+  expect(screen.getByRole('link', { name: fallback.label })).toHaveAttribute('href', fallback.href)
+  await userEvent.click(screen.getByRole('button', { name: 'Next photo' }))
+  expect(screen.getByRole('img')).toHaveAttribute('src', fallback.photos[1])
+  await userEvent.click(screen.getByRole('button', { name: 'Next photo' }))
+  expect(screen.getByRole('img')).toHaveAttribute('src', fallback.photos[0])
+  page.rerender(<Photo photos={[photos[1]]} alt="Garden room" fallback={fallback} />)
+  expect(screen.getByRole('img')).toHaveAttribute('src', photos[1])
+  expect(screen.queryByText(fallback.label)).not.toBeInTheDocument()
+})

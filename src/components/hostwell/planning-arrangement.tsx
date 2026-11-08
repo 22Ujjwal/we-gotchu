@@ -1,3 +1,4 @@
+import { interiorInspiration } from '../../lib/hostwell/interior-inspiration'
 import { PlanningEstimate } from './planning-estimate'
 import type { Feature } from '../../lib/hostwell/fixture'
 import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
@@ -8,7 +9,8 @@ import { Button } from './ui'
 import { VenueView } from './venue-view'
 import { defaultBrief } from '../../lib/hostwell/fixture'
 
-export function PlanningArrangement({ view, disabled, submit, onBack, customerEmail, images = {} }: {
+export function PlanningArrangement({ view, disabled, submit, onBack, customerEmail, images = {}, attemptedImages = [] }: {
+  attemptedImages?: string[]
   images?: Record<string, PlanningVenueImage[]>
   customerEmail: string
   onBack: () => void
@@ -59,7 +61,7 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
           {!view.canArrange && <p className="text-[14px] text-stone">Requests unavailable.</p>}
         </>}
     </div>
-  return <VenueView embedded brief={view.brief ?? defaultBrief}
+  return <VenueView photoFallback={attemptedImages.includes(venue.id) ? interiorInspiration(venue.id) : undefined} embedded brief={view.brief ?? defaultBrief}
     venue={{ name: venueName, neighbourhood: view.brief?.area ?? '', photos: (images[venue.id] ?? []).map(image => image.url), description: displayCopy(venue.why),
       detailFeatures: venue.facts.filter(fact => /capacity|seat|guest|duration|hour|access/i.test(fact.label) && fact.value.length < 100).slice(0, 4).map(fact => ({
         icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests' : 'calendar') as Feature['icon'], label: displayFactValue(fact.value),
