@@ -1,7 +1,8 @@
 ## Latest: venue photo fallback, 2026-11-08
 
 Branch: `feat/venue-photo-fallbacks`, stacked on tested integration baseline `f933645`.
-Integration draft PR: https://github.com/22Ujjwal/we-gotchu/pull/77. No merge.
+Integration draft PR: https://github.com/22Ujjwal/we-gotchu/pull/77.
+Photo fallback draft PR: https://github.com/22Ujjwal/we-gotchu/pull/78. Both pushed; neither merged.
 
 Added 20 licensed indoor reference photos (7.15 MB total), author/source/license credits and stable sequential galleries. Real venue photos take priority. After the first failed or empty fetch, cards and venue details show explicitly labeled interior inspiration. Broken assets are skipped; late real photos replace inspiration. No research, provider, payment, email or source-security changes.
 
