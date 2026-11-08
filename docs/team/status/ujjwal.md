@@ -35,9 +35,13 @@ Editing/revising to 30 guests and Oakland, restoration of every editable answer,
 
 MONID_API_KEY authenticated successfully against the read-only Monid wallet endpoint (HTTP 200); no balance or key is published. NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL are configured in production. Earlier authenticated catalogue verification confirmed `z-ai/glm-5.3-flash` supports immediate execution. The existing $0.50 session cap remains unchanged. Provider configuration alone does not establish a completed hosted Naive research journey.
 
-### Stripe: pending, separate from research
+### Stripe: test configuration verified; payment flow pending
 
-Production and ignored local STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are absent. The account owner completed Stripe sign-in; the `yc-hack-naive sandbox` is accessible in test mode. The existing test secret must be saved into ignored local configuration before registering the hosted webhook and configuring Vercel. The webhook requires `checkout.session.completed` and `checkout.session.expired`; a generic test fixture alone cannot prove the application payment flow. Test Checkout, hosted signed webhooks, and refunds have not been verified. No plan approval, Checkout creation, purchase, or supplier commitment was performed in this research test. Supplier execution/cancellation remain simulated adapters; real Naive execution starters remain unwired.
+The saved Stripe test key authenticated against the intended `yc-hack-naive sandbox` account. Test webhook `we_1UZOSrC2U49BZm5fucPTMPSx` is enabled at `https://we-gotchu.vercel.app/api/stripe/webhook` for `checkout.session.completed` and `checkout.session.expired`. STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are saved in ignored local configuration and Vercel production; no secret values are recorded here.
+
+Production was redeployed to activate the configuration. The production alias subsequently reports READY deployment `dpl_G4tjbi12Ex646NpF71mYAJJDnpa5`, full SHA `2e1976edb73875e9d8eb3bd18b5a168becc0be42`; the earlier research evidence above remains tied to its original commit. Hosted webhook checks passed: unsigned request HTTP 400 invalid_signature; correctly signed synthetic setup.verification event HTTP 200 ignored; replay HTTP 200 duplicate. This creates only a probe entry in the webhook deduplication ledger, with no payment or event changes.
+
+These probes validate signing configuration and duplicate handling, not Stripe-origin delivery or a completed payment. Test Checkout, Stripe-delivered payment events, and refunds remain unverified. No plan approval, Checkout creation, purchase, or supplier commitment was performed. Supplier execution/cancellation remain simulated adapters; real Naive execution starters remain unwired.
 
 ## Contracts and dependencies
 
@@ -47,7 +51,7 @@ Contract 0.4 is unchanged. Transaction fixes (#28), hosting (#33), DOM harness (
 
 1. Tony: supply the corrected research commit and deployment readiness. Reuse the agreed brief, then revise only guest count and city. Verify a terminal evidence-backed result, reload, saved answers, and isolation from earlier research. No additional credentials or brief are needed from Tony.
 2. Ujjwal: confirm team membership for the now-claimed existing Clerk application. Ownership claim and customer sign-in are verified separately; no teammate access is inferred.
-3. Ujjwal: configure Stripe **test** secret and webhook endpoint/signing secret through the intended team account; then verify signed test events separately. Missing Stripe setup does not block research.
+3. Ujjwal: Stripe test configuration and synthetic signature checks now pass. Stripe-origin delivery and an explicitly scoped test-payment rehearsal remain separate from research; do not claim a completed payment from the setup probe.
 4. Continue small, reversible commits; report verified, failed, simulated, and pending outcomes separately. No real bookings or supplier commitments during these tests.
 
 The untracked HANDOFF-CODEX.md and original stash `8de106d6fd9a61ca772b059646c753759c0188b3` are preserved.
