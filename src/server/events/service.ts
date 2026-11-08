@@ -285,6 +285,12 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
   }
   await deps.store.setEventStatus(eventId, ['plan_ready'], 'awaiting_payment')
   await deps.store.appendProgress(eventId, 'customer', `Approved plan revision ${plan.revision}; awaiting payment.`)
+  // Only a fresh approval emails, so reopening an existing Checkout never sends a duplicate.
+  try {
+    await deps.notifications?.quoteReady({ customerId: event.customerId, eventId, approvalId: approval.approvalId, brief: event.brief, plan })
+  } catch (err) {
+    console.warn('[approve] quote-ready email failed', eventId, err)
+  }
   return { approval, payment, checkoutUrl: session.url }
 }
 
