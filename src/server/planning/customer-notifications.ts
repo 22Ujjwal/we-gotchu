@@ -72,7 +72,15 @@ export async function notifySupplierOffer(repository: PlanningRepository, record
   if (!arrangement || arrangement.status === 'stale' || record.pending || record.view.paymentLink
     || !offer || offer.replyId !== reply?.id || reply.status !== 'ready') return
   const costs = calculateOfferCosts(offer)
-  if (offer.missing.length || !costs.ok || offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now()) return
+  if (offer.missing.length || !costs.ok || offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now()) {
+    const detail = 'We received the supplier reply, but the offer needs clarification before you can approve it.'
+    if (arrangement.status !== 'needs_attention' || arrangement.detail !== detail) {
+      const saved = await repository.compareAndSet(record, { ...record, view: { ...record.view, version: record.view.version + 1,
+        arrangement: { ...arrangement, status: 'needs_attention', detail } } })
+      if (!saved) throw new Error('The arrangement changed before the offer status update.')
+    }
+    return
+  }
   const saved = await repository.compareAndSet(record, { ...record, view: { ...record.view, version: record.view.version + 1,
     arrangement: { ...arrangement, status: 'offer_ready', detail: 'The supplier terms are ready. Review the complete offer before approving payment.' } } })
   if (!saved) throw new Error('The arrangement changed before the offer notification.')
