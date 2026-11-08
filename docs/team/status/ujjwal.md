@@ -1,9 +1,9 @@
 # Ujjwal's status
 
 Owner: Ujjwal.
-Updated: 2026-11-07T19:20:21-08:00
+Updated: 2026-11-07T19:27:41-08:00
 Baseline: origin/main at `14cab2ef91c1c83b6f28eb4807accde37376eafb`.
-Branch and PR: [fix/checkout-cancel-integration](https://github.com/22Ujjwal/we-gotchu/tree/fix/checkout-cancel-integration); PR pending review and publication.
+Branch and PR: [fix/checkout-cancel-integration](https://github.com/22Ujjwal/we-gotchu/tree/fix/checkout-cancel-integration), [PR #28](https://github.com/22Ujjwal/we-gotchu/pull/28), open against main.
 Availability: backend core merged; this Checkout fix and specification are on branch.
 Tested commit: `cb29c308d1d57520c8778c96c9b77156e3150458`, including shared route repair `60e20a03cc2cb9bf10782ab905e39d23836d2485`.
 
@@ -51,7 +51,7 @@ No teammate approval is inferred from tests, merges, or this status file.
 
 ## Next step and blockers
 
-Publish this focused fix and specification PR after review; then review #24's storage, migration, lease/revision, session cleanup, and dependency boundaries.
+PR #28 is published after review with no introduced blockers. Integrate prerequisite #26 before #28; merging either PR is still pending. Next review #24's storage, migration, lease/revision, session cleanup, and dependency boundaries.
 For public MCP deployment, Ujjwal must configure DATABASE_URL and a test-mode STRIPE_SECRET_KEY in the ignored .env.local; both were missing at the last configuration check. The MCP bearer and Clerk keys were present.
 After authorized migration and deployment, configure the Stripe webhook and verify authenticated Naive ping and the hosted test-payment flow.
 
