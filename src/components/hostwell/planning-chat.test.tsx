@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 import type { PlanningOption, PlanningView } from '../../agent/planning/contract'
 import { ConnectedPlanningPage, PlanningIntake } from './planning-chat'
+import { ConnectedPlanningTeamPage } from './planning-team'
 
 const auth = vi.hoisted(() => ({ user: { id: 'customer-a' } as { id: string } | null, isLoaded: true }))
 vi.mock('@clerk/tanstack-react-start', () => ({ useUser: () => auth }))
@@ -13,6 +14,7 @@ const view = (changes: Partial<PlanningView> = {}): PlanningView => ({ id: 'plan
   messages: [{ id: 'm1', role: 'user', text: 'Dinner next Saturday in Oakland.', createdAt: '2026-11-07T12:00:00Z' }],
   proposal: { summary: 'Two options for dinner.', nextQuestion: 'What time should dinner start?', options: [venue, supply] },
   selections: [], progress: null, error: null, ...changes })
+const teamView = (changes: Partial<PlanningView> = {}) => view({ canReviewResearch: true, ...changes })
 function http(handle: (request: Request) => Response | Promise<Response>) {
   vi.mocked(fetch).mockImplementation((input, init) => Promise.resolve(handle(new Request(new URL(String(input), 'http://localhost'), init))))
 }
@@ -288,12 +290,33 @@ test('uncertain write status remains checkable after a temporary read failure', 
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
 })
 
-test('a saved assistant answer is not repeated above the option cards', async () => {
-  const saved = view({ messages: [{ id: 'answer-1', role: 'assistant', text: 'Two options for dinner.\n\nWhat time should dinner start?', createdAt: '2026-11-07T12:00:00Z' }] })
-  http(() => Response.json(saved))
+test('venue cards carry the reason and only the plan-changing question appears above them', async () => {
+  http(() => Response.json(view()))
   render(<ConnectedPlanningPage id="plan-a" />)
   await screen.findByRole('heading', { name: 'Garden room' })
-  expect(screen.getAllByText(/Two options for dinner\./)).toHaveLength(1)
+  expect(screen.queryByText(/Two options for dinner\./)).not.toBeInTheDocument()
+  expect(screen.getByText('What time should dinner start?')).toBeVisible()
+  expect(screen.getAllByText('Room for dinner.')[0]).toBeVisible()
+  expect(screen.getByRole('textbox', { name: 'Ask for changes' })).toBeVisible()
+})
+
+test('after arranging, the customer sees one waiting status and no operator controls', async () => {
+  const delivery = { status: 'accepted' as const, mode: 'live' as const, requestId: 'send', draftRevision: 1,
+    approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'mail' }
+  http(() => Response.json(view({ selections: [venue], canArrange: true,
+    arrangement: { id: 'arrangement-a', inquiryId: 'inquiry-a', requestedAt: '2026-11-08T10:00:00Z', status: 'awaiting_reply', selections: [venue],
+      detail: 'The email provider accepted the controlled inquiry. Delivery is not yet confirmed.', customerEmail: 'a@example.com', controlled: true },
+    inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue, recipient: 'venue@example.com', contactSourceUrl: null,
+      subject: 'Inquiry', text: 'Please confirm.', contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery } })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByRole('heading', { name: 'Waiting for venue' })).toBeVisible()
+  expect(screen.getByText("We're waiting for the venue to confirm the price and availability. You can close this page. We'll email you.")).toBeVisible()
+  expect(screen.getAllByText(/controlled test inbox/)).toHaveLength(1)
+  expect(screen.queryByText('Your options are ready to explore.')).not.toBeInTheDocument()
+  expect(screen.queryByText(/email provider accepted/i)).not.toBeInTheDocument()
+  for (const name of ['Check for venue replies', 'Prepare selected offer', 'Retry reply summary', 'Approve this research call'])
+    expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+  expect(screen.queryByText('Inquiry details')).not.toBeInTheDocument()
 })
 
 test('paused research shows the exact request and only an explicit decision sends confirmation', async () => {
@@ -306,11 +329,8 @@ test('paused research shows the exact request and only an explicit decision send
     commands.push(await request.json())
     return Response.json(view({ version: 2, status: 'working', approvals: [] }))
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByText("Research is paused for our team's review.")).toBeVisible()
-  fireEvent.click(screen.getByText('Operator review for local testing'))
-  expect(screen.getByText(/channel3/)).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
+  expect(await screen.findByText(/channel3/)).toBeVisible()
   expect(commands).toEqual([])
   fireEvent.click(screen.getByRole('button', { name: 'Approve this research call' }))
   await waitFor(() => expect(commands).toEqual([{ kind: 'confirm', requestId: expect.any(String), expectedVersion: 1, approvalId: 'approval-1', decision: 'allow' }]))
@@ -364,9 +384,8 @@ test('a lost operator confirmation recovers after a read shows that exact call i
     }
     return Response.json(saved)
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Operator review for local testing'))
-  fireEvent.click(screen.getByRole('button', { name: 'Approve this research call' }))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Approve this research call' }))
   await screen.findByRole('button', { name: 'Check saved status' })
   fireEvent.click(screen.getByRole('button', { name: 'Check saved status' }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Approve this research call' })).toBeEnabled())
@@ -376,7 +395,7 @@ test('a lost operator confirmation recovers after a read shows that exact call i
 
 test('prepares, edits and reloads an inquiry without sending mail', async () => {
   const user = userEvent.setup()
-  let saved = view({ selections: [venue] })
+  let saved = teamView({ selections: [venue] })
   const commands: Record<string, unknown>[] = []
   http(async request => {
     if (request.method === 'GET') return Response.json(saved)
@@ -389,9 +408,8 @@ test('prepares, edits and reloads an inquiry without sending mail', async () => 
       recipient: command.recipient, subject: command.subject, text: command.text } }
     return Response.json(saved)
   })
-  const page = render(<ConnectedPlanningPage id="plan-a" />)
+  const page = render(<ConnectedPlanningTeamPage id="plan-a" />)
   await user.click(await screen.findByRole('button', { name: 'Prepare venue inquiry' }))
-  fireEvent.click(await screen.findByText('Inquiry details'))
   expect(await screen.findByText(/No published email address/)).toBeVisible()
   await user.type(screen.getByRole('textbox', { name: 'Venue email' }), 'test@example.com')
   await user.type(screen.getByRole('textbox', { name: 'Inquiry message' }), ' We need space for 12.')
@@ -399,8 +417,7 @@ test('prepares, edits and reloads an inquiry without sending mail', async () => 
   expect(await screen.findByText('Draft saved. Nothing has been sent.')).toBeVisible()
   expect(commands.map(command => command.kind)).toEqual(['prepare_inquiry', 'save_inquiry'])
   page.unmount()
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Inquiry details'))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   expect(await screen.findByRole('textbox', { name: 'Venue email' })).toHaveValue('test@example.com')
   expect(screen.getByRole('textbox', { name: 'Inquiry message' })).toHaveValue('Please confirm our date and all-in price. We need space for 12.')
   expect(screen.queryByRole('button', { name: /Send inquiry/ })).not.toBeInTheDocument()
@@ -408,7 +425,7 @@ test('prepares, edits and reloads an inquiry without sending mail', async () => 
 
 test('a concurrent inquiry edit retains local text and requires explicit reconciliation', async () => {
   const user = userEvent.setup()
-  let saved = view({ selections: [venue], inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+  let saved = teamView({ selections: [venue], inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
     recipient: '', contactSourceUrl: null, subject: 'Event inquiry', text: 'Original inquiry',
     contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z' } })
   let writes = 0
@@ -418,8 +435,7 @@ test('a concurrent inquiry edit retains local text and requires explicit reconci
     saved = { ...saved, version: 3, inquiry: { ...saved.inquiry!, revision: 2, text: 'Saved by another tab' } }
     return Response.json({ errorCode: 'stale_version' }, { status: 409 })
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Inquiry details'))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   const message = await screen.findByRole('textbox', { name: 'Inquiry message' })
   await user.type(message, ' with my changes')
   await user.click(screen.getByRole('button', { name: 'Save inquiry draft' }))
@@ -433,7 +449,7 @@ test('a concurrent inquiry edit retains local text and requires explicit reconci
 
 test('sending requires approval of the saved draft and locks the accepted message', async () => {
   const user = userEvent.setup()
-  let saved = view({ selections: [venue], canSendInquiry: true, inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+  let saved = teamView({ selections: [venue], canSendInquiry: true, inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
     recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Event inquiry', text: 'Please confirm the price.',
     contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z' } })
   const commands: unknown[] = []
@@ -446,8 +462,7 @@ test('sending requires approval of the saved draft and locks the accepted messag
     } } }
     return Response.json(saved)
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Inquiry details'))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   const send = await screen.findByRole('button', { name: 'Approve and send inquiry' })
   expect(send).toBeDisabled()
   await user.click(screen.getByRole('checkbox', { name: /I approve sending this saved message/ }))
@@ -463,7 +478,7 @@ test('a reloaded pending inquiry checks saved status without resending', async (
   http(request => {
     expect(request.method).toBe('GET')
     reads++
-    return Response.json(view({ selections: [venue], canSendInquiry: true, inquiry: {
+    return Response.json(teamView({ selections: [venue], canSendInquiry: true, inquiry: {
       id: 'inquiry-a', revision: 1, status: 'draft', venue, recipient: 'venue@example.com', contactSourceUrl: null,
       subject: 'Inquiry', text: 'Please confirm the date.', contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z',
       delivery: { status: reads === 1 ? 'pending' : 'accepted', requestId: 'send-once', draftRevision: 1,
@@ -472,8 +487,7 @@ test('a reloaded pending inquiry checks saved status without resending', async (
       },
     } }))
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Inquiry details'))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   expect(await screen.findByText('Submitting your approved inquiry.')).toBeVisible()
   expect(await screen.findByText(/Email provider accepted your inquiry/, {}, { timeout: 3500 })).toBeVisible()
   expect(reads).toBe(2)
@@ -488,7 +502,7 @@ test('restores the saved plan first and retains it when an explicit research ref
       : Response.json({ errorCode: 'provider_unavailable' }, { status: 503 })
   })
   render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByRole('button', { name: 'Prepare venue inquiry' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Garden room' })).toBeVisible()
   expect(paths).toEqual(['/api/planning/plan-a?saved=1'])
   await userEvent.click(screen.getByRole('button', { name: 'Check for an update' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('We could not load your plan')
@@ -501,25 +515,24 @@ test('checking venue replies reads saved state without refreshing research or se
   http(request => {
     expect(request.method).toBe('GET')
     paths.push(new URL(request.url).search)
-    return Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+    return Response.json(teamView({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
       recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Inquiry', text: 'Please confirm.',
       contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: { status: 'accepted', requestId: 'send',
         draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'mail' },
     } }))
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   await userEvent.click(await screen.findByRole('button', { name: 'Check for venue replies' }))
   expect(paths).toEqual(['?saved=1', '?saved=1'])
 })
 
 test('a controlled accepted inquiry does not claim that real email was sent', async () => {
-  http(() => Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+  http(() => Response.json(teamView({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
     recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Test inquiry', text: 'Controlled test only.',
     contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: { status: 'accepted', mode: 'simulated', requestId: 'send',
       draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'fixture-mail' },
   } })))
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Inquiry details'))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   expect(await screen.findByText('Controlled test inquiry. No real email was sent.')).toBeVisible()
   expect(screen.queryByText(/Email provider accepted your inquiry/)).not.toBeInTheDocument()
 })
@@ -530,7 +543,7 @@ test('checks uncertain email status using reads without resending the inquiry or
     expect(request.method).toBe('GET')
     const query = new URL(request.url).search
     paths.push(query)
-    return Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+    return Response.json(teamView({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
       recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Inquiry', text: 'Please confirm.',
       contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: {
         status: query === '?mail=1' ? 'accepted' : 'uncertain', requestId: 'send', draftRevision: 1,
@@ -539,8 +552,7 @@ test('checks uncertain email status using reads without resending the inquiry or
       },
     } }))
   })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Inquiry details'))
+  render(<ConnectedPlanningTeamPage id="plan-a" />)
   await userEvent.click(await screen.findByRole('button', { name: 'Check send status' }))
   expect(await screen.findByText(/Email provider accepted your inquiry/)).toBeVisible()
   expect(paths).toEqual(['?saved=1', '?mail=1'])

@@ -48,7 +48,7 @@ export const planningCreateSchema = z.object({ requestId, message: text.max(8000
 const version = z.number().int().nonnegative()
 export const arrangementSchema = z.object({
   id: text, inquiryId: text, requestedAt: z.iso.datetime(),
-  status: z.enum(['requested', 'preparing', 'awaiting_reply', 'needs_attention', 'offer_ready', 'stale']),
+  status: z.enum(['requested', 'preparing', 'awaiting_reply', 'needs_attention', 'offer_ready', 'awaiting_vendor_confirmation', 'vendor_confirmed', 'stale']),
   selections: z.array(planningOptionSchema), detail: text, customerEmail: z.email().max(254).optional(), controlled: z.boolean().optional(),
 }).strict()
 

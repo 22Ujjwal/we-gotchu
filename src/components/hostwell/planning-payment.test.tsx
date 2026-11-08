@@ -13,8 +13,7 @@ test('uses the charge currency units in the approval amount', async () => {
   view.plan!.total = 20000
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(view))))
   render(<PlanningPayment link={link} identity="customer" stale={false} />)
-  expect(await screen.findByText('Selected plan total: \u00a520,000')).toBeVisible()
-  expect(screen.getByRole('checkbox')).toHaveAccessibleName(/20,000 total/)
+  expect(await screen.findByRole('checkbox')).toHaveAccessibleName(/\u00a520,000 total/)
 })
 test('requires explicit approval and uses the existing event approval API exactly once', async () => {
   const requests: string[] = []
@@ -25,7 +24,7 @@ test('requires explicit approval and uses the existing event approval API exactl
   }))
   const checkout = vi.fn()
   render(<PlanningPayment link={link} identity="customer" stale={false} onCheckout={checkout} />)
-  const button = await screen.findByRole('button', { name: 'Approve and open sandbox Checkout' })
+  const button = await screen.findByRole('button', { name: 'Approve and pay' })
   expect(button).toBeDisabled()
   const user = userEvent.setup()
   await user.click(screen.getByRole('checkbox'))
@@ -36,8 +35,8 @@ test('requires explicit approval and uses the existing event approval API exactl
 test('restores saved payment status without treating it as a real reservation', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ ...bookedEvent, payment: { ...bookedEvent.payment, mode: 'test' } }))))
   render(<PlanningPayment link={link} identity="customer" stale={false} />)
-  expect(await screen.findByText('Sandbox payment received.')).toBeVisible()
-  expect(screen.getByText(/Supplier execution is simulated/)).toBeVisible()
+  expect(await screen.findByText('Received (Stripe test mode)')).toBeVisible()
+  expect(screen.getByText('Booking')).toBeVisible()
   expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument()
 })
 

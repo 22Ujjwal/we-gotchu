@@ -29,6 +29,7 @@ import { Route as ApiPlanningReplyJobsRouteImport } from './routes/api/planning.
 import { Route as ApiPlanningToolsRouteImport } from './routes/api/planning.tools'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiSupplierMailWebhookRouteImport } from './routes/api/supplier-mail.webhook'
+import { Route as PlanningIdTeamRouteImport } from './routes/planning.$id_.team'
 import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
 import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.brief'
 import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
@@ -136,6 +137,11 @@ const ApiSupplierMailWebhookRoute = ApiSupplierMailWebhookRouteImport.update({
   path: '/api/supplier-mail/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlanningIdTeamRoute = PlanningIdTeamRouteImport.update({
+  id: '/planning/$id_/team',
+  path: '/planning/$id/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEventsIdApproveRoute = ApiEventsIdApproveRouteImport.update({
   id: '/approve',
   path: '/approve',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
+  '/planning/$id/team': typeof PlanningIdTeamRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
+  '/planning/$id/team': typeof PlanningIdTeamRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
+  '/planning/$id_/team': typeof PlanningIdTeamRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/api/planning/tools'
     | '/api/stripe/webhook'
     | '/api/supplier-mail/webhook'
+    | '/planning/$id/team'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/api/planning/tools'
     | '/api/stripe/webhook'
     | '/api/supplier-mail/webhook'
+    | '/planning/$id/team'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/api/planning/tools'
     | '/api/stripe/webhook'
     | '/api/supplier-mail/webhook'
+    | '/planning/$id_/team'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -359,6 +371,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiSupplierMailWebhookRoute: typeof ApiSupplierMailWebhookRoute
+  PlanningIdTeamRoute: typeof PlanningIdTeamRoute
   EventsEventIdReceiptsReceiptIdRoute: typeof EventsEventIdReceiptsReceiptIdRoute
   EventsEventIdReceiptsIndexRoute: typeof EventsEventIdReceiptsIndexRoute
 }
@@ -505,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSupplierMailWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/planning/$id_/team': {
+      id: '/planning/$id_/team'
+      path: '/planning/$id/team'
+      fullPath: '/planning/$id/team'
+      preLoaderRoute: typeof PlanningIdTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/events/$id/approve': {
       id: '/api/events/$id/approve'
       path: '/approve'
@@ -624,6 +644,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiSupplierMailWebhookRoute: ApiSupplierMailWebhookRoute,
+  PlanningIdTeamRoute: PlanningIdTeamRoute,
   EventsEventIdReceiptsReceiptIdRoute: EventsEventIdReceiptsReceiptIdRoute,
   EventsEventIdReceiptsIndexRoute: EventsEventIdReceiptsIndexRoute,
 }
