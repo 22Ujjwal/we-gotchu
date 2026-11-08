@@ -1,7 +1,7 @@
 # Ujjwal's status
 
 Owner: Ujjwal.
-Updated: 2026-11-07T21:02:00-08:00
+Updated: 2026-11-07T21:12:00-08:00
 Baseline and hosted test commit: `5b180cc8c57c85c876852579cf448f9cbc7c627a`.
 Branch: [docs/neon-setup](https://github.com/22Ujjwal/we-gotchu/tree/docs/neon-setup).
 PR: [#43](https://github.com/22Ujjwal/we-gotchu/pull/43), status documentation only; not merged.
@@ -27,7 +27,7 @@ Fresh hosted checks: home/sign-in pages HTTP 200; unauthenticated MCP HTTP 401; 
 
 ### Clerk and research journey: mixed
 
-Actual deployed Google/Clerk sign-in completed and authenticated event creation returned a persisted event URL. Reload restored that same event and its displayed date, timezone, location, guest count, budget, and failed research result. Shared Clerk application claim and team membership remain unconfirmed; deployment still uses development keys.
+Actual deployed Google/Clerk sign-in completed and authenticated event creation returned a persisted event URL. Reload restored that same event and its displayed date, timezone, location, guest count, budget, and failed research result. The existing Clerk application was claimed through the official CLI after the account owner completed OAuth consent. It is linked as `we-gotchu`, application `app_3LnoH2aBDyPqxoQM3Fx6a8UaWet`, development instance `ins_3LnoH25CGx4pNuuU52o92MpTOYM`. CLI identity confirms Ujjwal; team membership remains unverified. Local and deployed public frontend domains both remain `enough-airedale-6136.clerk.accounts.dev`. The separately visible `yc-naive-we-gotchu` / `immune-lark-2628` application is a different instance and was not substituted. The claim preserved the existing database and provider configuration. No Clerk production upgrade or key rotation was performed.
 
 The agreed Birthday brief (20 guests, San Francisco, December 12 2026 at 18:00 America/Los_Angeles, USD 500, paper plates, maximum cancellation loss USD 0) was saved. Continuous polling reached terminal **failed**, with no usable candidates and no bookable Plan. This is a failed research run, not an acceptable partial result. No Naive session ID was saved for that run. Tony is handling the research automation fix; this branch does not modify his code.
 
@@ -37,7 +37,7 @@ MONID_API_KEY authenticated successfully against the read-only Monid wallet endp
 
 ### Stripe: pending, separate from research
 
-Production and ignored local STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are absent. Test Checkout, hosted signed webhooks, and refunds have not been verified. No plan approval, Checkout creation, purchase, or supplier commitment was performed in this research test. Supplier execution/cancellation remain simulated adapters; real Naive execution starters remain unwired.
+Production and ignored local STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are absent. The account owner completed Stripe sign-in; the `yc-hack-naive sandbox` is accessible in test mode. The existing test secret must be saved into ignored local configuration before registering the hosted webhook and configuring Vercel. The webhook requires `checkout.session.completed` and `checkout.session.expired`; a generic test fixture alone cannot prove the application payment flow. Test Checkout, hosted signed webhooks, and refunds have not been verified. No plan approval, Checkout creation, purchase, or supplier commitment was performed in this research test. Supplier execution/cancellation remain simulated adapters; real Naive execution starters remain unwired.
 
 ## Contracts and dependencies
 
@@ -46,7 +46,7 @@ Contract 0.4 is unchanged. Transaction fixes (#28), hosting (#33), DOM harness (
 ## Next step and blockers
 
 1. Tony: supply the corrected research commit and deployment readiness. Reuse the agreed brief, then revise only guest count and city. Verify a terminal evidence-backed result, reload, saved answers, and isolation from earlier research. No additional credentials or brief are needed from Tony.
-2. Ujjwal: confirm shared Clerk application ownership and team access separately from the already-passing sign-in.
+2. Ujjwal: confirm team membership for the now-claimed existing Clerk application. Ownership claim and customer sign-in are verified separately; no teammate access is inferred.
 3. Ujjwal: configure Stripe **test** secret and webhook endpoint/signing secret through the intended team account; then verify signed test events separately. Missing Stripe setup does not block research.
 4. Continue small, reversible commits; report verified, failed, simulated, and pending outcomes separately. No real bookings or supplier commitments during these tests.
 
