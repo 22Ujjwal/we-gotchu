@@ -62,3 +62,22 @@ test('refuses stale model output and changed selections without creating a payab
   await db.repository.compareAndSet(saved, { ...saved, view: { ...saved.view, selections: [], version: saved.view.version + 1 } })
   await expect(db.offers.prepare('customer', 'conversation', 'offer', 1, now)).rejects.toMatchObject({ status: 422 })
 })
+
+test('rechecks a linked offer before approval and after a customer changes selection', async () => {
+  await db.offers.save('customer', 'conversation', 0, offer)
+  const link = await db.offers.prepare('customer', 'conversation', 'offer', 1, now)
+  const plan = (await db.store.getPlan(link.eventId))!
+  expect(await db.store.validatePlanOffer!(plan, now)).toBe(true)
+  expect(await db.store.validatePlanOffer!(plan, new Date('2026-12-02T00:00:00Z'))).toBe(false)
+  const approval = { approvalId: 'approval', eventId: link.eventId, planId: link.planId, planRevision: 1,
+    actionIds: plan.actions.map(action => action.actionId), approvedTotal: plan.total, currency: plan.currency,
+    approvedAt: now.toISOString(), expiresAt: '2026-11-08T12:30:00Z', revokedAt: null }
+  const payment = { paymentId: 'payment', approvalId: 'approval', checkoutSessionId: 'checkout', paymentIntentId: null,
+    amount: plan.total, currency: plan.currency, state: 'pending' as const, refundId: null, refundState: 'none' as const,
+    refundReason: null, mode: 'test' as const }
+  const saved = (await db.repository.getById('conversation'))!
+  await db.repository.compareAndSet(saved, { ...saved, view: { ...saved.view, selections: [], version: saved.view.version + 1 } })
+  expect(await db.store.validatePlanOffer!(plan, now)).toBe(false)
+  await expect(db.store.createApproval(approval, payment)).rejects.toMatchObject({ status: 409, errorCode: 'stale_offer' })
+  expect(await db.store.getApproval('approval')).toBeNull()
+})
