@@ -137,3 +137,124 @@ test('account switch aborts old reads and never shows their late private respons
   await act(async () => { resolve(Response.json(view())) })
   expect(screen.queryByRole('heading', { name: 'Garden room' })).not.toBeInTheDocument()
 })
+
+test('lost create response keeps the message and never creates again', async () => {
+  const created = vi.fn()
+  http(() => { throw new TypeError('lost create') })
+  render(<PlanningIntake onCreated={created} />)
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Dinner tomorrow' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Plan my event' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('could not confirm')
+  expect(screen.getByRole('textbox')).toHaveValue('Dinner tomorrow')
+  expect(screen.getByRole('button', { name: 'Plan my event' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: /Retry/ })).not.toBeInTheDocument()
+  fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' })
+  expect(fetch).toHaveBeenCalledTimes(1)
+  expect(created).not.toHaveBeenCalled()
+})
+
+test('selection follows server snapshots for one venue and multiple supplies and toggles off', async () => {
+  const otherVenue = { ...venue, id: 'venue-b', name: 'Dining hall' }
+  const otherSupply = { ...supply, id: 'supply-b', name: 'Candles' }
+  let saved = view({ proposal: { summary: 'Options.', nextQuestion: null, options: [venue, otherVenue, supply, otherSupply] } })
+  const commands: Record<string, unknown>[] = []
+  http(async request => {
+    if (request.method === 'GET') return Response.json(saved)
+    const command = await request.json(); commands.push(command)
+    expect(command.kind).toBe('select')
+    expect(command.expectedVersion).toBe(saved.version)
+    const option = saved.proposal!.options.find(option => option.id === command.optionId)!
+    const selected = saved.selections.some(item => item.id === option.id)
+    saved = { ...saved, version: saved.version + 1, selections: selected ? saved.selections.filter(item => item.id !== option.id)
+      : [...saved.selections.filter(item => option.kind !== 'venue' || item.kind !== 'venue'), option] }
+    return Response.json(saved)
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await screen.findByRole('heading', { name: 'Garden room' })
+  for (const name of ['Garden room', 'Paper plates', 'Candles', 'Dining hall']) {
+    fireEvent.click(screen.getByRole('button', { name: `Select ${name}` }))
+    await screen.findByRole('button', { name: `Remove ${name}` })
+  }
+  expect(screen.getByRole('button', { name: 'Select Garden room' })).toHaveAttribute('aria-pressed', 'false')
+  expect(screen.getByRole('button', { name: 'Remove Paper plates' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'Remove Candles' })).toHaveAttribute('aria-pressed', 'true')
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Dining hall' }))
+  await screen.findByRole('button', { name: 'Select Dining hall' })
+  expect(commands).toHaveLength(5)
+})
+
+for (const status of ['ready', 'failed', 'uncertain'] as const) {
+  test(`automatic reads stop at ${status}`, async () => {
+    vi.useFakeTimers()
+    http(() => Response.json(view({ status, error: 'private_provider_session_id' })))
+    render(<ConnectedPlanningPage id="plan-a" />)
+    await act(async () => {})
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('private_provider_session_id')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /book|pay/i })).not.toBeInTheDocument()
+  })
+}
+
+for (const status of [401, 403, 404]) {
+  test(`access loss ${status} clears private options and stops reads`, async () => {
+    vi.useFakeTimers()
+    let count = 0
+    http(() => ++count === 1 ? Response.json(view({ status: 'working' }))
+      : Response.json({ errorCode: 'unavailable', message: 'private diagnostic' }, { status }))
+    render(<ConnectedPlanningPage id="plan-a" />)
+    await act(async () => {})
+    expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+    expect(screen.queryByRole('heading', { name: 'Garden room' })).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveFocus()
+    expect(screen.getByRole('alert')).toHaveTextContent('not available')
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
+    expect(count).toBe(2)
+  })
+}
+
+test('temporary reads back off and preserve the prior proposal while working', async () => {
+  vi.useFakeTimers()
+  let count = 0
+  http(() => {
+    count++
+    if (count === 2) throw new TypeError('offline')
+    return Response.json(view({ status: count < 4 ? 'working' : 'ready', proposal: count === 3 ? null : view().proposal }))
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await act(async () => {})
+  await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+  expect(screen.getByRole('alert')).toHaveTextContent('connection')
+  expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
+  await act(async () => { await vi.advanceTimersByTimeAsync(3999) })
+  expect(count).toBe(2)
+  await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+  expect(count).toBe(3)
+  expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
+  await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+  expect(count).toBe(4)
+  await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
+  expect(count).toBe(4)
+})
+
+test('account changes discard draft and ignore a late create response', async () => {
+  let resolve!: (response: Response) => void
+  const created = vi.fn()
+  http(() => new Promise<Response>(r => { resolve = r }))
+  const page = render(<PlanningIntake onCreated={created} />)
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Private event' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Plan my event' }))
+  auth.user = { id: 'customer-b' }
+  page.rerender(<PlanningIntake onCreated={created} />)
+  expect(screen.getByRole('textbox')).toHaveValue('')
+  await act(async () => { resolve(Response.json(view())) })
+  expect(created).not.toHaveBeenCalled()
+})
+
+test('sign-in links keep the conversation URL and no reads happen when signed out', () => {
+  auth.user = null
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(screen.getByRole('link', { name: 'Sign in to view your plan' })).toHaveAttribute('href', '/sign-in?redirect_url=%2Fplanning%2Fplan-a')
+  expect(fetch).not.toHaveBeenCalled()
+})
