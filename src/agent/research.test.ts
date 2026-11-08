@@ -38,3 +38,46 @@ test('missing essential requirements return focused fields without paid discover
   expect(discover).not.toHaveBeenCalled()
   expect(recommend).not.toHaveBeenCalled()
 })
+
+test('one correction recovers malformed output without repeating discovery', async () => {
+  const discover = vi.fn(async () => ({ candidates, sourceChecks: [] }))
+  const recommend = vi.fn().mockResolvedValueOnce({ budgetFit: 'within' }).mockResolvedValueOnce({ candidateIds: [candidates[0].candidateId] })
+  const result = await researchEvent(input, { discover, recommend })
+  expect(result.recommendations[0].candidateId).toBe(candidates[0].candidateId)
+  expect(result.budgetFit).toBe('unknown')
+  expect(discover).toHaveBeenCalledTimes(1)
+  expect(recommend).toHaveBeenCalledTimes(2)
+})
+
+test('repeated invalid claims stop after one correction and preserve only retrieved evidence', async () => {
+  const recommend = vi.fn(async () => ({ candidateIds: ['invented'], budgetFit: 'within' }))
+  const result = await researchEvent(input, { discover: async () => ({ candidates, sourceChecks: [] }), recommend })
+  expect(recommend).toHaveBeenCalledTimes(2)
+  expect(result.recommendations).toEqual([])
+  expect(result.candidates).toEqual(candidates)
+  expect(result.budgetFit).toBe('unknown')
+})
+
+test('provider failure does not leak its secret or invent evidence', async () => {
+  const result = await researchEvent(input, {
+    discover: async () => { throw new Error('Bearer secret-123') }, recommend: vi.fn(),
+  })
+  expect(result.outcome).toBe('failed')
+  expect(result.candidates).toEqual([])
+  expect(JSON.stringify(result)).not.toContain('secret-123')
+})
+
+test('cancellation before work prevents provider calls', async () => {
+  const controller = new AbortController()
+  controller.abort()
+  const discover = vi.fn()
+  const result = await researchEvent(input, { discover, recommend: vi.fn() }, { signal: controller.signal })
+  expect(result.outcome).toBe('canceled')
+  expect(discover).not.toHaveBeenCalled()
+})
+
+test('a stalled provider is bounded by the research deadline', async () => {
+  const result = await researchEvent(input, { discover: () => new Promise(() => {}), recommend: vi.fn() }, { timeoutMs: 10 })
+  expect(result.outcome).toBe('failed')
+  expect(result.warnings).toContain('Research stopped before completion.')
+})
