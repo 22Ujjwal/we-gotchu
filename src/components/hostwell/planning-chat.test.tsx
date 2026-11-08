@@ -85,7 +85,7 @@ test('conflict refreshes the displayed version and preserves draft until explici
   expect(commands[1].requestId).not.toBe(commands[0].requestId)
 })
 
-test('lost writes never retry automatically and explicit retry reuses the exact intent', async () => {
+test('lost writes preserve the draft and only check saved status without resending', async () => {
   const commands: unknown[] = []
   http(async request => {
     if (request.method === 'GET') return Response.json(view())
@@ -101,9 +101,11 @@ test('lost writes never retry automatically and explicit retry reuses the exact 
   expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('Cheaper please')
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
   expect(commands).toHaveLength(1)
-  fireEvent.click(screen.getByRole('button', { name: 'Retry saved request' }))
-  await waitFor(() => expect(commands).toHaveLength(2))
-  expect(commands[1]).toEqual(commands[0])
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved status' }))
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3))
+  expect(commands).toHaveLength(1)
+  expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('Cheaper please')
+  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
 })
 
 test('polls do not overlap and stop at ready while retaining the prior proposal', async () => {
