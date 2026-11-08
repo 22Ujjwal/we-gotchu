@@ -51,7 +51,7 @@ function PreviewSettingsPage() {
             </span>
             <span>Berlin</span>
             <Guests n={brief.guests} />
-            <span>≤ {brief.budget}</span>
+            <span>≤ ${brief.budget.replace(/^\$/, '')}</span>
             <Link to="/" className="underline decoration-1 [text-underline-position:from-font]">
               Edit brief
             </Link>
@@ -142,7 +142,7 @@ function CardTitle({ venue, large }: { venue: Venue; large?: boolean }) {
       <span
         className={`shrink-0 font-mono font-medium tracking-[-0.01em] text-stone ${large ? 'text-[18px] leading-[22px] lg:text-[24px] lg:leading-[30px]' : 'text-[17px] leading-[22px] lg:text-[20px] lg:leading-6'}`}
       >
-        €{venue.total.toFixed(2)}
+        ${venue.total.toFixed(2)}
       </span>
     </div>
   )

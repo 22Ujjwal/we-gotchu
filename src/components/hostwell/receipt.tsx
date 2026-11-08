@@ -1,5 +1,5 @@
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
-import { eur } from '#/lib/hostwell/fixture'
+import { usd } from '#/lib/hostwell/fixture'
 import type { Order } from '#/lib/hostwell/store'
 
 const bars: Array<[number, number]> = [
@@ -72,12 +72,12 @@ export function Receipt({
           <span className="text-receipt-muted">Event purchasing · Berlin</span>
         </div>
         <Rule />
-        <Row left="QTY ITEM" right="EUR" muted />
+        <Row left="QTY ITEM" right="USD" muted />
         {order.lines.map((l) => (
           <div key={l.item} className="flex flex-col gap-0.5">
             <Row
               left={`${l.qty} x ${l.item}`}
-              right={typeof l.amount === 'number' ? eur(l.amount) : l.amount}
+              right={typeof l.amount === 'number' ? usd(l.amount) : l.amount}
             />
             {l.notes?.map((n, i) => (
               <Row
@@ -95,14 +95,14 @@ export function Receipt({
         ))}
         <Rule />
         <div className="flex flex-col gap-1">
-          <Row left="Subtotal" right={eur(order.subtotal)} />
-          <Row left="VAT" right={eur(order.vat)} />
+          <Row left="Subtotal" right={usd(order.subtotal)} />
+          <Row left="VAT" right={usd(order.vat)} />
           <Row left="Service fee" right="0.00" />
         </div>
         <Rule solid />
         <div className="flex items-baseline justify-between font-bold">
-          <span className="text-[16px]">TOTAL EUR</span>
-          <span className="text-[20px] leading-6">{eur(order.total)}</span>
+          <span className="text-[16px]">ESTIMATED TOTAL USD</span>
+          <span className="text-[20px] leading-6">{usd(order.total)}</span>
         </div>
         <Rule solid />
         <Row

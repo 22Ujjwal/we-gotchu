@@ -36,7 +36,7 @@ function VenuePage() {
   const navigate = useNavigate()
   const dialog = useRef<HTMLDialogElement>(null)
   const order = buildOrder(venue, addOns, selected)
-  const bookLabel = `Book for €${order.total.toFixed(2)}`
+  const bookLabel = "Arrange"
 
   const book = () => {
     setBookedVenueId(venue.id)
@@ -57,7 +57,7 @@ function VenuePage() {
             </span>
             <span>{venue.neighbourhood}</span>
             <Guests n={brief.guests} />
-            <span className="hidden lg:inline">≤ {brief.budget}</span>
+            <span className="hidden lg:inline">≤ ${brief.budget.replace(/^\$/, '')}</span>
             <Link
               to="/settings"
               className="underline decoration-1 [text-underline-position:from-font]"

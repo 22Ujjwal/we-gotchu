@@ -8,7 +8,7 @@ type Sentence = Array<string | Field>
 const sentences: Sentence[] = [
   ["I'm planning ", { key: 'occasion', label: 'Occasion', placeholder: 'Birthday' }, ' for ', { key: 'guests', label: 'Number of guests', placeholder: '24' }, ' people.'],
   ["It's on ", { key: 'date', label: 'Date', placeholder: '2026-12-12' }, ' at ', { key: 'from', label: 'Start time', placeholder: '19:00+01:00' }, ' in timezone ', { key: 'timezone', label: 'Timezone', placeholder: 'Europe/Berlin' }, ', near ', { key: 'area', label: 'Area', placeholder: 'Berlin' }, '.'],
-  ["I'll spend up to ", { key: 'budget', label: 'Budget', placeholder: '900.00' }, ' in ', { key: 'currency', label: 'Currency', placeholder: 'EUR' }, ', and can lose ', { key: 'canLose', label: 'Acceptable cancellation loss', placeholder: '10.00' }, ' if plans change.'],
+  ["I'll spend up to ", { key: 'budget', label: 'Budget', placeholder: '900.00' }, ' in ', { key: 'currency', label: 'Currency', placeholder: 'USD' }, ', and can lose ', { key: 'canLose', label: 'Acceptable cancellation loss', placeholder: '10.00' }, ' if plans change.'],
   ["We'll need ", { key: 'needs', label: 'What you need', placeholder: 'candles, paper plates', optional: true }, '.'],
 ]
 

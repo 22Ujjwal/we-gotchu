@@ -174,7 +174,7 @@ export function Photo({
   )
 }
 
-const money = (n: number) => `€${n.toFixed(2)}`
+const money = (n: number) => `$${n.toFixed(2)}`
 
 /** Checklist of add-ons plus a free-text "something else" row. */
 export function AddOnList({ boxed = false }: { boxed?: boolean }) {
