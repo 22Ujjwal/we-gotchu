@@ -83,3 +83,14 @@ export async function interpretReply(repository: PlanningRepository, target: Rep
   }
   throw new ApiError(409, 'reply_busy', 'Could not save the interpretation. The original reply remains saved.')
 }
+
+// Await from the verified transport callback. Receipt and job are the same atomic stored entry.
+export async function receivePlanningReply(repository: PlanningRepository, conversationId: string, inquiryId: string,
+  input: unknown, interpreter: ReplyInterpreter) {
+  const record = await repository.getById(conversationId)
+  if (!record) throw new ApiError(404, 'not_found', 'Conversation not found.')
+  const target = { customerId: record.customerId, conversationId, inquiryId }
+  const reply = await acceptIncomingReply(repository, target, input)
+  await interpretReply(repository, target, reply.id, interpreter)
+  return { replyId: reply.id }
+}

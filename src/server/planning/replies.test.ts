@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createTestPlanningRepository } from '../db/client'
 import type { PlanningRecord } from './repository'
-import { acceptIncomingReply, interpretReply } from './replies'
+import { acceptIncomingReply, interpretReply, receivePlanningReply } from './replies'
 
 let db: Awaited<ReturnType<typeof createTestPlanningRepository>>
 const venue = { id: 'venue', kind: 'venue' as const, name: 'Test Room', url: 'https://example.com', why: 'Room', facts: [], unknowns: [] }
@@ -82,4 +82,13 @@ test('finds durable interpretation work without a customer read and excludes com
   expect(await db.repository.pendingReplyJobs(10, Date.now())).toEqual([{ ...target, replyId: reply.id }])
   await interpretReply(db.repository, target, reply.id, async () => question)
   expect(await db.repository.pendingReplyJobs(10, Date.now())).toEqual([])
+})
+
+test('a repeated awaited transport callback uses one stored reply and one interpretation', async () => {
+  const interpret = vi.fn(async () => question)
+  const first = await receivePlanningReply(db.repository, 'conversation', 'inquiry', incoming, interpret)
+  const second = await receivePlanningReply(db.repository, 'conversation', 'inquiry', incoming, interpret)
+  expect(second).toEqual(first)
+  expect(interpret).toHaveBeenCalledTimes(1)
+  expect((await db.repository.get('customer', 'conversation'))?.view.inquiry?.replies).toHaveLength(1)
 })

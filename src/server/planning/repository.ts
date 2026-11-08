@@ -26,6 +26,7 @@ export type PlanningRecord = {
 }
 export type ReplyJob = { customerId: string; conversationId: string; inquiryId: string; replyId: string }
 export interface PlanningRepository {
+  getById(id: string): Promise<PlanningRecord | null>
   pendingReplyJobs(limit: number, now: number): Promise<ReplyJob[]>
   get(customerId: string, id: string): Promise<PlanningRecord | null>
   insert(record: PlanningRecord): Promise<PlanningRecord>
@@ -35,6 +36,11 @@ export interface PlanningRepository {
 export function createPlanningRepository(db: PgDatabase<PgQueryResultHKT, typeof schema>): PlanningRepository {
   const table = planningConversations
   return {
+    // Internal webhook/job lookup; customer HTTP handlers must use the owner-scoped get below.
+    async getById(id) {
+      const [row] = await db.select().from(table).where(eq(table.id, id))
+      return row ? { ...row.data, revision: row.revision } : null
+    },
     async pendingReplyJobs(limit, now) {
       const count = Math.max(1, Math.min(25, Math.floor(limit)))
       const rows = await db.select({ data: table.data }).from(table).where(sql`
