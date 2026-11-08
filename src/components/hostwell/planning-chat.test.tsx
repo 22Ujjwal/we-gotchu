@@ -619,6 +619,7 @@ test('source images arrive without delaying selection and stay visible without a
   render(<ConnectedPlanningPage id="plan-a" />)
   expect(await screen.findByRole('button', { name: 'Choose Garden room' })).toBeEnabled()
   expect(screen.getByText('Photo not available')).toBeVisible()
+  await waitFor(() => expect(resolveImages).toBeTypeOf('function'))
   await act(async () => resolveImages(Response.json({ conversationId: 'plan-a', optionId: 'venue-a', version: 1,
     status: 'available', images: [{ url: 'https://example.com/room.jpg', sourcePage: venue.url,
       attribution: { text: 'Garden room', url: venue.url }, provider: 'source-page', evidence: 'page-metadata', description: null }] })))
@@ -706,4 +707,25 @@ test('selected venue omits empty metadata and repeated arrangement explanations'
   expect(screen.queryByRole('button', { name: 'Back to settings' })).not.toBeInTheDocument()
   expect(screen.queryByText(/Published prices are estimates until/)).not.toBeInTheDocument()
   expect(screen.queryByText(/Choosing a setting or requesting/)).not.toBeInTheDocument()
+})
+
+
+test('selected venue keeps decision facts and supply quantities visible without repeating prose', async () => {
+  const room = { ...venue, facts: [
+    { ...venue.facts[0], label: 'Rental', value: '$9,000–$16,000; December pricing unconfirmed.' },
+    { ...venue.facts[0], label: 'Duration', value: 'Up to 10 hours including setup and breakdown.' },
+    { ...venue.facts[0], label: 'Extras', value: 'Staff, equipment, insurance and taxes cost extra.' },
+  ] }
+  const plates = { ...supply, facts: [
+    { ...supply.facts[0], label: 'Pack contents', value: '24 plates, 7-inch.' },
+    { ...supply.facts[0], label: 'Price', value: '$1 per pack.' },
+    { ...supply.facts[0], label: 'Quantity', value: '1 pack covers 20 guests; tax and delivery extra.' },
+  ] }
+  http(() => Response.json(view({ selections: [room], proposal: { summary: 'Options.', nextQuestion: null, options: [room, plates] } })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await screen.findByRole('heading', { name: 'Your event' })
+  for (const fact of room.facts) expect(screen.getAllByText(fact.value).some(node => !node.closest('details'))).toBe(true)
+  expect(screen.getByText('24 plates, 7-inch.')).toBeVisible()
+  expect(screen.getByText('1 pack covers 20 guests; tax and delivery extra.')).toBeVisible()
+  expect(screen.getAllByText(room.why).every(node => !!node.closest('details'))).toBe(true)
 })

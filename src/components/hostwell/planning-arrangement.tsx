@@ -1,4 +1,4 @@
-import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
+import { displayCopy, displayFactLabel, displayFactValue } from '../../lib/hostwell/display-copy'
 import type { PlanningVenueImage } from '../../lib/hostwell/planning-images'
 import { useState } from 'react'
 import type { PlanningCommand, PlanningOption, PlanningView } from '../../agent/planning/contract'
@@ -23,6 +23,12 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
   const arrangement = view.arrangement
   const active = arrangement && arrangement.status !== 'stale'
   const extras = <div className="flex flex-col gap-5 pt-8">
+      <dl aria-label="Venue essentials" className="flex flex-col gap-3 text-[16px] leading-6">
+        {venue.facts.slice(0, 3).map((fact, index) => <div key={index}>
+          <dt className="font-semibold">{displayFactLabel(fact.label)}</dt>
+          <dd className="text-stone">{displayFactValue(fact.value)}</dd>
+        </div>)}
+      </dl>
       <button type="button" className="self-start underline" onClick={onBack}>Change venue</button>
       <Button className="self-start px-5 py-3" aria-label={`Remove ${venueName}`} aria-pressed="true" disabled={disabled || !!view.paymentLink}
         onClick={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: venue.id })}>Remove venue</Button>
@@ -30,8 +36,8 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
       {[...supplies.values()].map(option => <label key={option.id} className="flex items-start gap-3 border-b border-sand pb-4">
         <input type="checkbox" checked={selected.has(option.id)} disabled={disabled || !!view.paymentLink}
           onChange={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />
-        <span><span className="block font-semibold line-clamp-2" title={displayCopy(option.name)}>{displayCopy(option.name)}</span>
-          {option.facts.filter(fact => /price|cost|subtotal|pack/i.test(fact.label)).slice(0, 2).map((fact, index) => <span key={index} className="mt-1 block text-[15px]">{displayFactValue(fact.value)}</span>)}
+        <span><span className="block font-semibold" title={displayCopy(option.name)}>{displayCopy(option.name)}</span>
+          {option.facts.filter(fact => /price|cost|subtotal|pack|quantity|size|capacity/i.test(fact.label)).slice(0, 3).map((fact, index) => <span key={index} className="mt-1 block text-[15px]">{displayFactValue(fact.value)}</span>)}
         </span>
       </label>)}
       {!supplies.size && <p className="text-stone">No extras yet.</p>}
