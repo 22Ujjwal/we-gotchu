@@ -17,7 +17,7 @@ export function collect(execute = run) {
   const snapshot = { schemaVersion: 1, generatedAt: new Date().toISOString(), repository, baseline, remoteHead: null, documents: [], prs: [], errors: [] };
   let ownerPaths = [];
   try {
-    ownerPaths = execute('git', ['ls-tree', '-r', '--name-only', '-z', baseline, '--', 'docs/team/status/'])
+    ownerPaths = execute('git', ['ls-tree', '--full-tree', '-r', '--name-only', '-z', baseline, '--', 'docs/team/status/'])
       .split('\0').filter(path => /^docs\/team\/status\/[^/]+\.md$/.test(path) && !/\/(README|template)\.md$/.test(path));
     if (!ownerPaths.length) snapshot.errors.push('Committed status inventory contains no owner reports.');
   } catch { snapshot.errors.push('Cannot read committed status inventory.'); }
