@@ -58,7 +58,7 @@ Do not grant broad session-wide permission to purchase beyond that per-call matc
 SDK or browser write permissions do not replace the application approval check.
 
 Naive's agent session is durable and performs the long work of research and deciding what to call, so the backend needs no worker or job queue.
-The backend starts one Naive session per phase through functions Tony provides in src/agent: research when the event is created, execution when the Stripe webhook confirms payment, and cancellation when the customer cancels.
+The backend starts one Naive session per phase: research when the event is created, through the functions Tony provides in src/agent, and execution and cancellation through starters Ujjwal writes until ownership is agreed with Tony.
 Starting a session is a short API call, so it fits inside those requests.
 The backend serves only short requests: Stripe webhooks and the guarded MCP endpoint that Naive calls.
 Store the action attempt before the supplier call.

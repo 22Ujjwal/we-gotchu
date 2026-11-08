@@ -2,19 +2,20 @@
 
 Owner: Ujjwal.
 Responsibility: transactions and integration.
-Updated: 2026-11-07T18:10:00-08:00
+Updated: 2026-11-07T17:37:31-08:00
 Baseline: main at 073eafd (merged PR #14).
-Branch and PR: docs/backend-decisions (contract 0.4 and doc updates), PR link below once opened. Status PR #13 is merged.
+Branch and PR: docs/backend-decisions, https://github.com/22Ujjwal/we-gotchu/pull/15 (contract 0.4 and doc updates); feat/contracts-foundation, https://github.com/22Ujjwal/we-gotchu/pull/16 (schemas, rules, fixtures, test runner, CI). Status PR #13 is merged.
 Other work, not published: feat/clerk-auth (Clerk code, local clone only).
-Availability: proposed. The Clerk code exists only in a local clone and is not published.
-Tested commit: the local Clerk commit passed typecheck and build and served the home and sign-in pages in a dev server. The sign-in flow itself was not exercised.
+Availability: on branch for PR #15 and PR #16; proposed for everything else. The Clerk code exists only in a local clone.
+Tested commit: PR #16 at e6032bd passed typecheck and 35 tests locally; its GitHub CI run is the first run of that workflow. The local Clerk commit passed typecheck and build, but the sign-in flow was not exercised.
 
 ## Current result
 
 The merged baseline is TanStack Start with Bun and a single package.json.
 [PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) proposed a Next.js workspace migration and was closed without merging.
 On feat/clerk-auth, Clerk is wired in with sign-in and sign-up routes, request middleware, and a server-only requireCustomerId helper in src/server/auth.ts.
-Nothing else in the transaction service exists yet: no schemas, database, payment, or MCP endpoint code.
+On PR #16 (not merged), src/contracts holds the contract 0.4 Zod schemas, pure rules, three simulated fixtures, and Vitest tests.
+No database, payment, or MCP endpoint code exists yet.
 
 ## Decisions recorded (proposed until the team reviews the doc PR)
 
@@ -35,13 +36,15 @@ Nothing else in the transaction service exists yet: no schemas, database, paymen
 
 ## Contracts and dependencies
 
-Contract version: 0.1 draft is merged; a 0.4 hackathon cut aligned with Tony's research spec is on docs/backend-decisions and needs review by Tony and Leo.
-Needs from Tony: confirmation that supplier checkout runs inside the Naive session and that the agent can call a public HTTPS endpoint during a run.
+Contract version: 0.1 draft is merged; 0.4 is on PR #15 and PR #16 and needs review by Tony and Leo.
+Research results are separate from bookable plans, and the backend owns the stale-revision write and the single-flight lease; Tony owns validation and carries run and brief identities.
+Execution, supplier cancellation, and the simulated adapter are not part of Tony's six research tickets; Ujjwal covers them until they agree otherwise.
+Needs from Tony: review of the Candidate, ResearchResult, and Run fields, and a live check that the backend can poll a finished session.
 Needs from Leo: confirmation of the summary and progress fields the interface reads, and a review of the Clerk change to src/routes/__root.tsx.
 Needs from the team: sharing and claiming of one Clerk application, and a public URL for the MCP endpoint.
 
 ## Next step and blockers
 
-Next step: publish the doc update for review, deploy a stub MCP endpoint to a stable public URL (demo plan milestone 1), then the first code PR with Zod schemas, simulated fixtures and a test runner.
+Next step: get Tony and Leo's review of PRs #15 and #16, then deploy a stub MCP endpoint to a stable public URL (demo plan milestone 1).
 Hacking ends at 11:00 AM on Nov 8, 2026, so the first code PR is limited to those items.
 Blockers: none found after checking.

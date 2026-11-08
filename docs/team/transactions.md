@@ -16,7 +16,7 @@ Follow the [demo plan](demo-plan.md) and contract 0.4; these come before everyth
 
 1. Milestone 1: deploy the app to a stable public HTTPS URL with a bearer-checked stub MCP endpoint and a `ping` tool.
 2. Milestone 3: contract 0.4 schemas and three fixtures.
-3. Milestone 4: Neon tables, POST /api/events, GET /api/events/:id, and the `get_event` and `log_progress` tools, calling Tony's `startResearch` and `advanceResearch` for research.
+3. Milestone 4: Neon tables, POST /api/events, GET /api/events/:id, PATCH /api/events/:id/brief, the `get_event` and `log_progress` tools, the research lease and stale-revision write, and Plan derivation, calling Tony's `startResearch` and `advanceResearch` for research.
 4. Milestone 5: approve-and-pay with Stripe test Checkout, the webhook, and `execute_action` with the execution-key constraint.
 5. Milestone 7: cancel, `cancel_action`, and the Stripe test refund.
 6. The labeled fallback switches for simulated payment and the scripted agent.

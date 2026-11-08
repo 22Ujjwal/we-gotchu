@@ -10,17 +10,20 @@ Read the [research index](../research-index.md), [architecture](../architecture-
 
 Follow the [demo plan](demo-plan.md); these come before everything else in this brief.
 
-1. Research first, using the path you already tested: `startResearch(event)` creates a session with `web_search` and a required `submit_output`, and `advanceResearch(event)` reads it by sequence, validates it, and returns the result the backend stores as the Plan.
-   The backend calls both; there is no worker.
-   Your research spec stays the source for the ResearchResult schema, which you and Ujjwal reconcile with the contract's Plan and Candidate fields.
-2. By milestone 2, a setup script that adds our MCP server to the agent used for execution and cancellation, stores the static bearer in Naive's vault for the exact deployed MCP URL, and a hello session that calls our `ping` tool, with its session id in your status file.
-   Research does not wait on this step.
-3. Proposed, needs your agreement: `startExecution(event, approval)`, `startCancellation(event)`, and the prompts that call `execute_action`, `cancel_action`, and `log_progress` with a reason each time.
-4. Proposed, needs your agreement: the simulated supplier adapter in src/suppliers implementing the contract's SupplierAdapter interface.
-   If you would rather keep to the research-only scope, Ujjwal writes this adapter and the execution prompts.
-5. If Naive is unavailable, the labeled scripted-agent fallback described in the demo plan.
+Your agreed scope is the six research tickets in `.scratch/agent-research/issues`; they come first and are not changed by this document.
+The research spec, the readiness report, and a live Naive research experiment are already merged.
 
-Everything below is the longer-term brief; live supplier checkout is a stretch goal after milestone 6.
+1. Research on the path you tested: `startResearch(event)` creates a session with `web_search` and a required `submit_output`, and `advanceResearch(event, run)` reads it by sequence, validates it, and returns a ResearchResult.
+   The backend calls both and stores the result; there is no worker.
+2. The contract's ResearchResult, Candidate, and Run fields come from your spec; review them in the contracts PR before they are frozen.
+3. The backend owns the atomic stale-revision write, the single-flight lease, and deriving a bookable Plan from your result.
+   You carry run and brief identities through the result and own the validator, the one corrective message, and the evidence content.
+
+Not part of your six tickets, and not assigned to you here: execution, supplier cancellation, the simulated supplier adapter, the MCP hello session, and the scripted-agent fallback.
+They remain part of the wider product scope.
+Ujjwal covers them until you and he explicitly agree otherwise.
+
+Everything below is the longer-term brief and is not the current batch; live supplier checkout is a stretch goal.
 
 ## Deliverables
 

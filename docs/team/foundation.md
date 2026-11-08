@@ -33,7 +33,7 @@ Keep this PR minimal; anything not listed here waits until after the contract is
 1. Translate the [contract draft](../contracts-draft.md) into initial shared schemas with Tony and Leo reviewing inputs, outputs, and states.
 2. Add Zod and the three simulated fixtures listed in contract 0.4: plan ready, booked, and canceled with a pending refund.
 3. Add a typecheck script and a test runner (Vitest) with a test script.
-   Add one minimal GitHub Actions workflow that runs both commands, because main requires PRs; if it takes more than 15 minutes to get working, merge without it and add it afterwards.
+   Add a GitHub Actions workflow that runs both commands; the research tickets require CI, and main requires PRs.
 4. Establish server-only boundaries and verify browser-facing schemas do not import credentials or backend dependencies.
 5. Document commands, required environment variable names, and the exact contract version that other branches should consume.
 
