@@ -3,7 +3,7 @@
 Status: draft package ready for team review.
 There are four human owners: one pitch owner, one frontend developer, and two backend developers.
 Tony owns agent workflow, Leo owns frontend, and Ujjwal owns transactions and integration.
-The fourth teammate owns pitch; their name has not been specified.
+Ferdinand owns pitch and the demo narrative.
 
 | Role | Assigned teammate | Start document | Main deliverable |
 | --- | --- | --- | --- |
@@ -14,6 +14,8 @@ The fourth teammate owns pitch; their name has not been specified.
 
 Read the [product baseline](../product-spec.md), [architecture draft](../architecture-draft.md), [contract draft](../contracts-draft.md), and [ownership rules](ownership.md) before starting.
 Use the [demo acceptance checklist](../demo-acceptance.md) as the shared definition of working behavior.
+
+Before each session, follow the [coordination workflow](coordination.md) and inspect the [team status index](status/README.md).
 
 ## Integration order
 
