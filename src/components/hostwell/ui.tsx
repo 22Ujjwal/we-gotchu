@@ -120,6 +120,7 @@ export function Photo({
 }) {
   const [index, setIndex] = useState(0)
   const n = photos.length
+  if (n === 0) return <div role="img" aria-label={alt} className={`shrink-0 bg-cream ${className}`} />
   const go = (d: number) => setIndex((i) => (i + d + n) % n)
   const arrow =
     'absolute top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center bg-white/85 hover:bg-white focus-visible:outline-2 focus-visible:outline-gold'
@@ -174,7 +175,7 @@ export function Photo({
   )
 }
 
-const money = (n: number) => `€${n.toFixed(2)}`
+const money = (n: number) => `$${n.toFixed(2)}`
 
 /** Checklist of add-ons plus a free-text "something else" row. */
 export function AddOnList({ boxed = false }: { boxed?: boolean }) {

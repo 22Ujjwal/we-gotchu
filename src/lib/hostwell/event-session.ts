@@ -4,8 +4,16 @@ import { createEventApi, EventApiError, mergeEventView } from './event-api'
 export type EventSessionKey = { eventId: string | null; identity: string | null }
 export type EventSessionState = { view: EventView | null; loading: boolean; error: EventApiError | null; pending: boolean }
 
+// Research results are published a moment before the plan is saved. Keep reading
+// briefly so the plan appears, without polling forever if it never does.
+function savingPlan(view: EventView): boolean {
+  const result = view.researchResult
+  return !!result && ['succeeded', 'partial'].includes(view.run?.state ?? '') &&
+    Date.now() - Date.parse(result.createdAt) < 30_000
+}
+
 function needsPolling(view: EventView): boolean {
-  return view.event.status === 'researching' && view.run?.state === 'running' ||
+  return view.event.status === 'researching' && (view.run?.state === 'running' || savingPlan(view)) ||
     ['awaiting_payment', 'executing', 'canceling'].includes(view.event.status) ||
     view.payment?.refundState === 'pending' ||
     view.payment?.state === 'pending' && !view.event.cancelRequestedAt

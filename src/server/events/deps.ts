@@ -5,6 +5,7 @@ import { createStripeAdapter, type StripeLike } from '../payments/stripe'
 import { simulatedResearchPort } from './simulatedResearch'
 import { getStore } from '../runtime'
 import { scriptedAgentHooks } from '../execution/scripted-agent'
+import { createConfiguredNotifications, type Notifications } from '../email/quote-ready'
 
 // Dependency wiring for the customer API and payment flow. Server-only.
 // Handlers take a Deps value so tests can swap in fakes without network calls.
@@ -53,6 +54,8 @@ export type Deps = {
   research: ResearchPort
   requireCustomerId: () => Promise<string>
   hooks: Hooks
+  /** Customer emails. Absent when AgentMail is not configured. */
+  notifications?: Notifications | null
   config: DepsConfig
 }
 
@@ -105,6 +108,10 @@ export function getDeps(): Deps {
       overrides.requireCustomerId ?? (async () => (await import('../auth')).requireCustomerId()),
     // The scripted agent drives execution and cancellation until Naive sessions are wired.
     hooks: overrides.hooks ?? (process.env.AGENT_MODE === 'naive' ? defaultHooks : scriptedAgentHooks),
+    notifications:
+      overrides.notifications !== undefined
+        ? overrides.notifications
+        : createConfiguredNotifications(overrides.config?.appUrl ?? process.env.APP_URL ?? 'http://localhost:3000'),
     config: overrides.config ?? {
       appUrl: process.env.APP_URL ?? 'http://localhost:3000',
       stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,

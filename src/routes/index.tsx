@@ -1,13 +1,16 @@
-import { localPreview } from '#/lib/local-preview'
-import { PlanningIntake } from '#/components/hostwell/planning-chat'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useUser } from '@clerk/tanstack-react-start'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DateTimePicker } from '#/components/hostwell/date-time-picker'
 import type { ScheduleField } from '#/components/hostwell/date-time-picker'
+import { ReceiptLoader } from '#/components/hostwell/receipt-loader'
 import { Button, Header } from '#/components/hostwell/ui'
+import { briefFromPreview } from '#/lib/hostwell/brief-adapter'
+import { EventApiError, createEventApi } from '#/lib/hostwell/event-api'
 import type { Brief } from '#/lib/hostwell/fixture'
 import { useHostwell } from '#/lib/hostwell/store'
+import { localPreview } from '#/lib/local-preview'
 
 export const Route = createFileRoute('/')({ component: BriefPage })
 
@@ -18,7 +21,7 @@ type Sentence = Array<string | { key: Key; label: string; optional?: boolean; pl
 const sentences: Array<Sentence> = [
   ["I'm planning ", { key: 'occasion', label: 'Occasion', placeholder: 'Franz’s 30th birthday' }, ' for ', { key: 'guests', label: 'Number of guests', placeholder: '24' }, ' people.'],
   ["It's on ", { key: 'date', label: 'Date', placeholder: 'Sat 12 Dec' }, ' from ', { key: 'from', label: 'Start time', placeholder: '7pm' }, ' till ', { key: 'till', label: 'End time', placeholder: '11pm' }, ', in ', { key: 'area', label: 'Area', placeholder: 'Kreuzberg or Neukölln' }, '.'],
-  ["I'll spend up to ", { key: 'budget', label: 'Budget', placeholder: '€900' }, ', and can lose ', { key: 'canLose', label: 'Acceptable cancellation loss', placeholder: '$10' }, ' if plans change.'],
+  ["I'll spend up to $", { key: 'budget', label: 'Budget in dollars', placeholder: '900' }, ', and can lose $', { key: 'canLose', label: 'Acceptable cancellation loss in dollars', placeholder: '10' }, ' if plans change.'],
   ["We'll need ", { key: 'needs', label: 'What you need', placeholder: 'table candles' }, ', and the vibe should be ', { key: 'vibe', label: 'Vibe', optional: true, placeholder: 'cosy? fancy?' }],
 ]
 
@@ -26,22 +29,74 @@ function BriefPage() {
   return localPreview ? <PreviewBriefPage /> : <ConnectedBriefPage />
 }
 
-function ConnectedBriefPage() {
+// Preview has no real research run, so play the loader once, then move on.
+function PreviewBriefPage() {
   const navigate = useNavigate()
-  return <div className="flex min-h-screen flex-col">
-    <Header step="brief" />
-    <main className="flex flex-1 flex-col items-center justify-center px-5 pt-10 pb-8 lg:px-12">
-      <PlanningIntake onCreated={id => void navigate({ href: `/planning/${encodeURIComponent(id)}` })} />
-    </main>
-  </div>
+  return <BriefFlow onSearch={async () => {}} onLoaderDone={() => navigate({ to: '/settings' })} />
 }
 
-function PreviewBriefPage() {
-  const { brief, setBrief } = useHostwell()
+const savedBrief = 'arrange:brief'
+
+function ConnectedBriefPage() {
+  const { user, isLoaded } = useUser()
   const navigate = useNavigate()
+  const [locked, setLocked] = useState(false)
+  return (
+    <BriefFlow
+      disabled={!isLoaded || locked}
+      onSearch={async (draft) => {
+        if (!user) {
+          // Keep the answers across the sign-in redirect.
+          sessionStorage.setItem(savedBrief, JSON.stringify(draft))
+          window.location.assign('/sign-in?redirect_url=%2F')
+          return new Promise<never>(() => {})
+        }
+        const brief = briefFromPreview(draft)
+        try {
+          const { event } = await createEventApi().create(brief)
+          sessionStorage.removeItem(savedBrief)
+          await navigate({ to: '/events/$eventId', params: { eventId: event.eventId } })
+        } catch (error) {
+          if (!(error instanceof EventApiError) || error.status === 0 || error.status >= 500 ||
+              error.code === 'invalid_response' || error.code === 'outcome_unknown') {
+            setLocked(true)
+            throw new Error('We could not tell if your event was created. Please do not submit again.')
+          }
+          throw error
+        }
+      }}
+    />
+  )
+}
+
+function BriefFlow({
+  onSearch,
+  onLoaderDone,
+  disabled = false,
+}: {
+  onSearch: (brief: Brief) => Promise<void>
+  onLoaderDone?: () => void
+  disabled?: boolean
+}) {
+  const { brief, setBrief } = useHostwell()
   const [draft, setDraft] = useState(brief)
   const [step, setStep] = useState(0)
   const [scheduleField, setScheduleField] = useState<ScheduleField | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(savedBrief)
+    if (!saved || localPreview) return
+    try {
+      const restored = { ...brief, ...(JSON.parse(saved) as Brief) }
+      setDraft(restored)
+      setBrief(restored)
+      setStep(sentences.length - 1)
+    } catch {
+      sessionStorage.removeItem(savedBrief)
+    }
+  }, [])
 
   const sentence = sentences[step]
   const last = step === sentences.length - 1
@@ -51,11 +106,24 @@ function PreviewBriefPage() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!complete) return
+    if (!complete || disabled) return
     setBrief(draft)
-    if (last) navigate({ to: '/settings' })
-    else setStep(step + 1)
+    setError('')
+    if (!last) return setStep(step + 1)
+    setSearching(true)
+    onSearch(draft).catch((cause: unknown) => {
+      setSearching(false)
+      setError(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')
+    })
   }
+
+  if (searching)
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header step="setting" />
+        <ReceiptLoader onDone={onLoaderDone} />
+      </div>
+    )
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -112,13 +180,20 @@ function PreviewBriefPage() {
             )}
           </div>
 
+          {error && (
+            <p role="alert" className="m-0 text-center font-body text-[17px] leading-6 text-body">
+              {error}
+            </p>
+          )}
           <Button
             type="submit"
-            disabled={!complete}
+            disabled={!complete || disabled}
             className="w-full py-[17px] text-[18px] leading-[22px] font-bold lg:w-auto lg:px-14"
           >
             {last ? 'Find venues' : 'Next'}
           </Button>
+          {!localPreview && (import.meta.env.DEV || import.meta.env.VITE_PLANNING_ENABLED === 'true') &&
+            <Link to="/planning" className="text-[16px] text-stone underline underline-offset-4">Plan with our research assistant</Link>}
         </form>
       </main>
       {scheduleField && (

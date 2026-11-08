@@ -73,6 +73,36 @@ body {
   );
 }
 
+/* Receipts page: one paper texture per kind of receipt. */
+.paper-thermal {
+  background:
+    radial-gradient(circle at 18% 22%, rgb(150 120 70 / 0.07) 0%, transparent 35%),
+    radial-gradient(circle at 82% 68%, rgb(150 120 70 / 0.06) 0%, transparent 40%),
+    repeating-linear-gradient(0deg, rgb(120 95 60 / 0.04) 0 1px, transparent 1px 4px),
+    linear-gradient(rgb(255 255 255 / 0), rgb(214 196 160 / 0.22)),
+    #fffdf7;
+}
+.paper-notepad {
+  background:
+    repeating-linear-gradient(transparent 0 31px, rgb(110 140 180 / 0.35) 31px 32px),
+    linear-gradient(90deg, transparent 32px, rgb(200 80 70 / 0.45) 32px 33px, transparent 33px),
+    radial-gradient(circle at 70% 30%, rgb(160 120 40 / 0.08) 0%, transparent 45%),
+    #fbf2cf;
+}
+.paper-invoice {
+  background:
+    linear-gradient(in oklab 180deg, #0000 49.6%, #786e5a1a 50%, #ffffff99 50.4%, #0000 51%),
+    radial-gradient(circle farthest-corner at 85% 15% in oklab, #8c82640f 0%, #0000 40%),
+    radial-gradient(circle farthest-corner at 10% 90% in oklab, #8c826412 0%, #0000 45%),
+    #fffffe;
+}
+.paper-card {
+  background:
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.024) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, rgb(0 0 0 / 0.04) 0%, transparent 12%, transparent 88%, rgb(0 0 0 / 0.04) 100%),
+    #f3f3ef;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .rise {
     animation: rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -93,5 +123,87 @@ body {
   from {
     opacity: 0;
     translate: 0 -24px;
+  }
+}
+
+/* Loading page: receipts pop onto the page and get typed out. */
+@keyframes loading-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.92) rotate(calc(var(--r, 0deg) - 5deg));
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.01) rotate(calc(var(--r, 0deg) + 0.6deg));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(var(--r, 0deg));
+  }
+}
+.loading-pop {
+  animation: loading-pop 450ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  transform: rotate(var(--r, 0deg));
+}
+
+@keyframes loading-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.loading-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1em;
+  margin-left: 1px;
+  vertical-align: -0.15em;
+  background: currentColor;
+  animation: loading-blink 0.9s steps(1) infinite;
+}
+
+@keyframes loading-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.8) rotate(-14deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-14deg);
+  }
+}
+.loading-stamp {
+  animation: loading-stamp 260ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+@keyframes loading-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+.loading-pulse {
+  animation: loading-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes loading-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}
+.loading-dots::after {
+  display: inline-block;
+  width: 1.2em;
+  content: "";
+  animation: loading-dots 1.2s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-pop,
+  .loading-stamp,
+  .loading-pulse,
+  .loading-caret,
+  .loading-dots::after {
+    animation: none;
   }
 }

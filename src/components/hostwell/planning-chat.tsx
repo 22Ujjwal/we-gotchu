@@ -7,7 +7,7 @@ import { Button } from './ui'
 export function PlanningIntake({ onCreated }: { onCreated: (id: string) => void }) {
   const { user, isLoaded } = useUser()
   if (!isLoaded) return <p role="status">Loading sign-in...</p>
-  if (!user) return <a href="/sign-in?redirect_url=%2F" className="text-[17px] font-semibold underline">Sign in to plan your event</a>
+  if (!user) return <a href="/sign-in?redirect_url=%2Fplanning" className="text-[17px] font-semibold underline">Sign in to plan your event</a>
   return <PlanningChat key={user.id} onCreated={onCreated} />
 }
 export function ConnectedPlanningPage({ id }: { id: string }) {
@@ -56,7 +56,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     {notice && <div className="flex flex-col gap-3">
       <p role="alert" tabIndex={-1} ref={alert}>{notice}</p>
       {id && <Button className="self-start px-6 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>{session.uncertain ? 'Check saved status' : 'Refresh plan'}</Button>}
-      {session.error?.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/')}`}>Sign in again</a>}
+      {session.error?.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/planning')}`}>Sign in again</a>}
     </div>}
     {view && <>
       <section aria-label="Conversation" className="flex flex-col gap-4">

@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router'
 import { expect, test, vi } from 'vitest'
-import { Route as HomeRoute } from '../../routes/index'
+import { Route as HomeRoute } from '../../routes/planning.index'
 import { Route as PlanningRoute } from '../../routes/planning.$id'
 import type { PlanningView } from '../../agent/planning/contract'
 
@@ -12,12 +12,12 @@ function routerAt(path: string) {
   const root = createRootRoute({ component: Outlet })
   return createRouter({ history: createMemoryHistory({ initialEntries: [path] }),
     routeTree: root.addChildren([
-      createRoute({ getParentRoute: () => root, path: '/', component: HomeRoute.options.component }),
+      createRoute({ getParentRoute: () => root, path: '/planning', component: HomeRoute.options.component }),
       createRoute({ getParentRoute: () => root, path: '/planning/$id', component: PlanningRoute.options.component }),
     ]), defaultPendingMinMs: 0 })
 }
 
-test('homepage opens the saved planning URL and the same URL reload only reads it', async () => {
+test('planning entry opens the saved planning URL and the same URL reload only reads it', async () => {
   vi.stubGlobal('scrollTo', vi.fn())
   const saved: PlanningView = { id: 'saved-plan', version: 1, status: 'ready', selections: [], progress: null, error: null,
     messages: [{ id: 'm1', role: 'user', text: 'Dinner next weekend', createdAt: '2026-11-07T12:00:00Z' }],
@@ -34,7 +34,7 @@ test('homepage opens the saved planning URL and the same URL reload only reads i
     expect(path).toBe('/api/planning/saved-plan')
     return Response.json(saved)
   })
-  const router = routerAt('/')
+  const router = routerAt('/planning')
   const page = render(<RouterProvider router={router} />)
   const user = userEvent.setup()
   await user.type(await screen.findByRole('textbox', { name: 'Tell us about your event' }), 'Dinner next weekend')

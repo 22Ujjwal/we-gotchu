@@ -6,6 +6,7 @@ import { ApiError } from './errors'
 import { approve, cancel, createEvent, getEventView, updateBrief } from './service'
 import { simulatedResult } from './simulatedResearch'
 import { makeDeps, validBrief } from './testFakes'
+import type { QuoteReady } from '../email/quote-ready'
 
 async function expectApiError(p: Promise<unknown>, status: number, errorCode?: string) {
   const err = await p.then(
@@ -289,6 +290,23 @@ describe('approve', () => {
     expect(second.checkoutUrl).toBe(first.checkoutUrl)
     expect(second.approval.approvalId).toBe(first.approval.approvalId)
     expect(stripe.createCalls).toHaveLength(1)
+  })
+
+  it('sends one quote-ready email per approval, even when approved twice', async () => {
+    const { deps, eventId, view } = await planReady()
+    const sent: QuoteReady[] = []
+    deps.notifications = { quoteReady: async (i) => void sent.push(i) }
+    const first = await approve(deps, eventId, view.plan!.planId, 1)
+    await approve(deps, eventId, view.plan!.planId, 1)
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toMatchObject({ customerId: 'user_alice', eventId, approvalId: first.approval.approvalId })
+  })
+
+  it('still returns Checkout when the quote-ready email fails', async () => {
+    const { deps, eventId, view } = await planReady()
+    deps.notifications = { quoteReady: async () => { throw new Error('mail down') } }
+    const res = await approve(deps, eventId, view.plan!.planId, 1)
+    expect(res.checkoutUrl).toBeTruthy()
   })
 
   it('rejects approval and expires Checkout when cancellation wins during session creation', async () => {
