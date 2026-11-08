@@ -24,10 +24,15 @@ export type PlanningRecord = {
   view: PlanningView
   paymentHistory?: import('../../agent/planning/offer-contract').PlanningPaymentLink[]
   inquiryHistory?: PlanningInquiry[]
+  companyFollowups?: Record<string, { content: { recipient: string; subject: string; text: string }; status: string }>
+  companyReplyTurns?: Record<string, { sessionId?: string }>
+  companySession?: { id: string; arrangementId: string }
+  notifications?: Record<string, { to: string; subject: string; text: string; status: 'uncertain' | 'accepted' | 'failed'; messageId?: string }>
 }
 export type ReplyJob = { customerId: string; conversationId: string; inquiryId: string; replyId: string }
 export interface PlanningRepository {
   getById(id: string): Promise<PlanningRecord | null>
+  pendingArrangements?(limit: number): Promise<PlanningRecord[]>
   pendingReplyJobs(limit: number, now: number): Promise<ReplyJob[]>
   get(customerId: string, id: string): Promise<PlanningRecord | null>
   insert(record: PlanningRecord): Promise<PlanningRecord>
@@ -37,6 +42,11 @@ export interface PlanningRepository {
 export function createPlanningRepository(db: PgDatabase<PgQueryResultHKT, typeof schema>): PlanningRepository {
   const table = planningConversations
   return {
+    async pendingArrangements(limit) {
+      const rows = await db.select().from(table).where(sql`${table.data}->'view'->'arrangement'->>'status' IN ('requested', 'preparing', 'awaiting_reply')`)
+        .limit(Math.max(1, Math.min(5, limit)))
+      return rows.map(row => ({ ...row.data, revision: row.revision }))
+    },
     // Internal webhook/job lookup; customer HTTP handlers must use the owner-scoped get below.
     async getById(id) {
       const [row] = await db.select().from(table).where(eq(table.id, id))

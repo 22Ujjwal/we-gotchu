@@ -1,4 +1,8 @@
+import { continueArrangement } from './arrangement-followup'
+import { arrangementAcknowledgment, sendCustomerNotification } from './customer-notifications'
 import { waitUntil } from '@vercel/functions'
+import { createCompanyTools } from './company-tools'
+import { prepareCompanyInquiry } from './company-preparation'
 import { dispatchReplyProcessing, withReplyProcessing } from './reply-dispatch'
 import { createConfiguredOfferGenerator } from '../../agent/planning/offer-generator'
 import { createConfiguredPlanningAgent } from '../../agent/planning/provider'
@@ -10,7 +14,7 @@ import { ApiError } from '../events/errors'
 import { createPlanningMail } from './mail-integration'
 import { processReplyJobs } from './reply-worker'
 import { prepareReplyOffer } from './reply-offer'
-import type { PlanningDeps } from './service'
+import { commandPlanning, type PlanningDeps } from './service'
 
 type Storage = Awaited<ReturnType<typeof createLocalPlanningRepository>>
 export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
@@ -37,16 +41,79 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     }
     return mail
   }
+  const followUp = async (record: import('./repository').PlanningRecord) => {
+    const mail = (await getMail())?.transport
+    if (!mail || !env.AGENTMAIL_API_KEY || !env.AGENTMAIL_INBOX_ID) return
+    await continueArrangement((await getStorage()).repository, record,
+      createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY, inboxId: env.AGENTMAIL_INBOX_ID }), env)
+  }
   const processReplies = async () => {
     const saved = await getStorage()
+    if (env.NAIVE_COMPANY_AGENT_ID && env.PLANNING_TOOLS_SECRET && env.NAIVE_API_KEY) {
+      for (const record of await saved.repository.pendingArrangements?.(1) ?? []) {
+        await prepareCompanyInquiry(saved.repository, record, env)
+        const current = await saved.repository.get(record.customerId, record.id)
+        if (current) await followUp(current)
+      }
+    }
     return processReplyJobs(saved.repository, createConfiguredReplyInterpreter(env), 5,
-      job => prepareReplyOffer(saved.repository, saved.offers, createConfiguredOfferGenerator(env), job))
+      async job => {
+        try { await prepareReplyOffer(saved.repository, saved.offers, createConfiguredOfferGenerator(env), job) }
+        catch { console.error('[planning] Offer preparation could not finish; original reply is retained.') }
+        const current = await saved.repository.get(job.customerId, job.conversationId)
+        if (current) await followUp(current)
+      })
   }
   return {
+    async getCompanyTools() {
+      if (!env.PLANNING_TOOLS_SECRET || env.PLANNING_TOOLS_SECRET.length < 32) throw new ApiError(503, 'tools_unavailable', 'Company tools are not configured.')
+      const saved = await getStorage()
+      const followupTransport = (await getMail())?.transport
+      return createCompanyTools(saved.repository, env.PLANNING_TOOLS_SECRET, async record => {
+        const arrangement = record.view.arrangement
+        const inquiry = record.view.inquiry
+        // This local rehearsal may contact only the recipient explicitly configured by the operator.
+        if (env.NODE_ENV !== 'development' || !env.PLANNING_TEST_SUPPLIER_EMAIL || !arrangement?.controlled
+          || arrangement.inquiryId !== inquiry?.id || arrangement.status !== 'needs_attention'
+          || inquiry.recipient !== env.PLANNING_TEST_SUPPLIER_EMAIL || inquiry.delivery) return
+        const mail = (await getMail())?.transport
+        if (!mail) return
+        const view = await commandPlanning({ repository: saved.repository, mail, requireCustomerId: async () => record.customerId,
+          agent: () => createConfiguredPlanningAgent(env) }, record.id, {
+          kind: 'send_inquiry', requestId: `arrangement-send:${arrangement.id}`, expectedVersion: record.view.version,
+          inquiryId: inquiry.id, expectedDraftRevision: inquiry.revision,
+        })
+        const current = await saved.repository.get(record.customerId, record.id)
+        if (!current || current.view.arrangement?.id !== arrangement.id || current.view.arrangement.status === 'stale') return
+        const accepted = view.inquiry?.delivery?.status === 'accepted'
+        await saved.repository.compareAndSet(current, { ...current, view: { ...current.view, version: current.view.version + 1,
+          arrangement: { ...current.view.arrangement, status: accepted ? 'awaiting_reply' : 'needs_attention',
+            detail: accepted ? 'The email provider accepted the controlled inquiry. We are waiting for the test supplier reply. Delivery is not yet confirmed.'
+              : 'The inquiry send needs review. We will check the saved provider result before trying again.' } } })
+      }, env.NODE_ENV === 'development' && followupTransport && env.PLANNING_TEST_SUPPLIER_EMAIL
+        ? { transport: followupTransport, recipient: env.PLANNING_TEST_SUPPLIER_EMAIL } : undefined)
+    },
     async getTransactionStore() { return (await getStorage()).store },
     async getDeps(): Promise<PlanningDeps> {
       return { repository: (await getStorage()).repository, offers: (await getStorage()).offers,
         generateOffer: record => createConfiguredOfferGenerator(env)(record), mail: (await getMail())?.transport, requireCustomerId,
+        ...(env.NODE_ENV === 'development' && env.PLANNING_TEST_SUPPLIER_EMAIL ? { testSupplierEmail: env.PLANNING_TEST_SUPPLIER_EMAIL } : {}),
+        ...(env.NAIVE_COMPANY_AGENT_ID && env.PLANNING_TOOLS_SECRET && env.NAIVE_API_KEY ? {
+          arrange: (record: import('./repository').PlanningRecord) => {
+            const work = getStorage().then(async saved => {
+              if (env.AGENTMAIL_API_KEY && env.AGENTMAIL_INBOX_ID && record.view.arrangement?.customerEmail) {
+                await sendCustomerNotification(saved.repository,
+                  createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY, inboxId: env.AGENTMAIL_INBOX_ID }),
+                  record, `${record.view.arrangement.id}:acknowledgment`, arrangementAcknowledgment(record))
+              }
+              const current = await saved.repository.get(record.customerId, record.id)
+              if (current) await prepareCompanyInquiry(saved.repository, current, env)
+            }).catch(() => {
+              console.error('[planning] inquiry preparation could not finish')
+            })
+            waitUntil(work)
+          },
+        } : {}),
         allowResearchReview: env.NODE_ENV === 'development' && !!env.PLANNING_LOCAL_DB_DIR,
         agent: () => createConfiguredPlanningAgent(env) }
     },
@@ -78,3 +145,5 @@ export const processPlanningReplies = () => runtime.processReplies()
 
 export const dispatchPlanningReplies = () => runtime.dispatchReplies()
 export const getPlanningTransactionStore = () => runtime.getTransactionStore()
+
+export const getPlanningCompanyTools = () => runtime.getCompanyTools()

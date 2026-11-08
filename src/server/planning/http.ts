@@ -5,7 +5,7 @@ import type { PlanningDeps } from './service'
 
 function present(deps: PlanningDeps, view: PlanningView) {
   const { approvals, ...customer } = view
-  return { ...customer, canReviewResearch: !!deps.allowResearchReview, ...(deps.mail ? { canSendInquiry: true } : {}),
+  return { ...customer, canReviewResearch: !!deps.allowResearchReview, canArrange: !!deps.arrange, ...(deps.mail ? { canSendInquiry: true } : {}),
     ...(deps.allowResearchReview ? { approvals } : {}) }
 }
 

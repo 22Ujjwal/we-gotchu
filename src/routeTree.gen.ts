@@ -26,6 +26,7 @@ import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 import { Route as ApiPlanningIdRouteImport } from './routes/api/planning.$id'
 import { Route as ApiPlanningReplyJobsRouteImport } from './routes/api/planning.reply-jobs'
+import { Route as ApiPlanningToolsRouteImport } from './routes/api/planning.tools'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiSupplierMailWebhookRouteImport } from './routes/api/supplier-mail.webhook'
 import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
@@ -120,6 +121,11 @@ const ApiPlanningReplyJobsRoute = ApiPlanningReplyJobsRouteImport.update({
   path: '/reply-jobs',
   getParentRoute: () => ApiPlanningRoute,
 } as any)
+const ApiPlanningToolsRoute = ApiPlanningToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => ApiPlanningRoute,
+} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/planning/reply-jobs': typeof ApiPlanningReplyJobsRoute
+  '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/planning/reply-jobs': typeof ApiPlanningReplyJobsRoute
+  '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/planning/reply-jobs': typeof ApiPlanningReplyJobsRoute
+  '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/planning/reply-jobs'
+    | '/api/planning/tools'
     | '/api/stripe/webhook'
     | '/api/supplier-mail/webhook'
     | '/api/events/$id/approve'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/planning/reply-jobs'
+    | '/api/planning/tools'
     | '/api/stripe/webhook'
     | '/api/supplier-mail/webhook'
     | '/api/events/$id/approve'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/planning/reply-jobs'
+    | '/api/planning/tools'
     | '/api/stripe/webhook'
     | '/api/supplier-mail/webhook'
     | '/api/events/$id/approve'
@@ -472,6 +484,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlanningReplyJobsRouteImport
       parentRoute: typeof ApiPlanningRoute
     }
+    '/api/planning/tools': {
+      id: '/api/planning/tools'
+      path: '/tools'
+      fullPath: '/api/planning/tools'
+      preLoaderRoute: typeof ApiPlanningToolsRouteImport
+      parentRoute: typeof ApiPlanningRoute
+    }
     '/api/stripe/webhook': {
       id: '/api/stripe/webhook'
       path: '/api/stripe/webhook'
@@ -575,11 +594,13 @@ const ApiPlanningIdRouteWithChildren = ApiPlanningIdRoute._addFileChildren(
 interface ApiPlanningRouteChildren {
   ApiPlanningIdRoute: typeof ApiPlanningIdRouteWithChildren
   ApiPlanningReplyJobsRoute: typeof ApiPlanningReplyJobsRoute
+  ApiPlanningToolsRoute: typeof ApiPlanningToolsRoute
 }
 
 const ApiPlanningRouteChildren: ApiPlanningRouteChildren = {
   ApiPlanningIdRoute: ApiPlanningIdRouteWithChildren,
   ApiPlanningReplyJobsRoute: ApiPlanningReplyJobsRoute,
+  ApiPlanningToolsRoute: ApiPlanningToolsRoute,
 }
 
 const ApiPlanningRouteWithChildren = ApiPlanningRoute._addFileChildren(

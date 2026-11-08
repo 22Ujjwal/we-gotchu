@@ -16,6 +16,8 @@ export type PlanningDeps = {
   mail?: SupplierMailTransport
   agent: () => PlanningAgent
   requireCustomerId: () => Promise<string>
+  arrange?: (record: PlanningRecord) => void
+  testSupplierEmail?: string
   allowResearchReview?: boolean
   timeoutMs?: number
   now?: () => number
@@ -176,6 +178,22 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (record.pending && record.view.status !== 'uncertain' && record.pending.expiresAt > now(deps)) throw busy()
   const requests = { ...record.requests, [command.requestId]: fingerprint }
   if (record.view.inquiry?.delivery?.status === 'pending') throw busy()
+  if (command.kind === 'arrange') {
+    if (!deps.arrange) throw new ApiError(503, 'arrangement_unavailable', 'Arrangement requests are not connected yet.')
+    if (record.pending || record.view.status !== 'ready' || record.view.paymentLink) throw busy()
+    if (!record.view.selections.some(option => option.kind === 'venue')) throw new ApiError(422, 'venue_required', 'Choose a setting first.')
+    if (record.view.arrangement && record.view.arrangement.status !== 'stale') return record.view
+    if (record.view.inquiry?.delivery) throw new ApiError(409, 'inquiry_in_progress', 'An inquiry is already in progress. Review its saved status before starting another.')
+    let inquiry = record.view.inquiry?.status === 'draft' ? record.view.inquiry : prepareInquiry(record.view, now(deps))
+    if (deps.testSupplierEmail) inquiry = { ...inquiry, revision: inquiry.revision + 1, recipient: deps.testSupplierEmail, contactSourceUrl: null }
+    const saved = await save(deps, record, { ...record, requests, view: changed(record, { inquiry,
+      arrangement: { id: `arrangement_${randomUUID()}`, inquiryId: inquiry.id, requestedAt: new Date(now(deps)).toISOString(),
+        status: 'requested', customerEmail: command.customerEmail, selections: record.view.selections, controlled: !!deps.testSupplierEmail,
+        detail: 'Your request is saved. We are preparing the venue inquiry and checking the details. Nothing is booked or paid.' },
+    }) })
+    deps.arrange(saved)
+    return saved.view
+  }
   if (command.kind === 'release_payment') {
     if (!deps.offers) throw new ApiError(503, 'offer_unavailable', 'Offer preparation is not configured.')
     return (await deps.offers.release(customerId, id, record.view.version, command.eventId,
@@ -255,6 +273,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
       inquiry = prepareInquiry({ ...record.view, selections }, now(deps))
     }
     return (await save(deps, record, { ...record, requests, view: changed(record, { selections,
+      arrangement: record.view.arrangement ? { ...record.view.arrangement, status: 'stale', detail: 'Your selections changed. Review them and request an updated arrangement.' } : undefined,
       inquiry }) })).view
   }
   if (command.kind === 'confirm') {
@@ -279,6 +298,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
     },
     view: changed(record, {
       status: 'working', progress: null, error: null, inquiry: staleInquiry(record.view),
+      arrangement: record.view.arrangement ? { ...record.view.arrangement, status: 'stale', detail: 'Your event requirements changed. Review the updated options before arranging them.' } : undefined,
       messages: [...record.view.messages, {
         id: `user:${command.requestId}`, role: 'user', text: command.message, createdAt: new Date(now(deps)).toISOString(),
       }],
