@@ -49,20 +49,27 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
   }
   const processReplies = async () => {
     const saved = await getStorage()
+    const advanceReply = async (job: import('./repository').ReplyJob) => {
+      try { await prepareReplyOffer(saved.repository, saved.offers, createConfiguredOfferGenerator(env), job) }
+      catch {
+        console.error('[planning] Offer preparation could not finish; original reply is retained for the next worker run.')
+        return
+      }
+      const current = await saved.repository.get(job.customerId, job.conversationId)
+      if (current) await followUp(current)
+    }
     if (env.NAIVE_COMPANY_AGENT_ID && env.PLANNING_TOOLS_SECRET && env.NAIVE_API_KEY) {
       for (const record of await saved.repository.pendingArrangements?.(1) ?? []) {
         await prepareCompanyInquiry(saved.repository, record, env)
         const current = await saved.repository.get(record.customerId, record.id)
-        if (current) await followUp(current)
+        const inquiry = current?.view.inquiry
+        const reply = inquiry?.replies?.at(-1)
+        if (current && inquiry && reply?.status === 'ready') {
+          await advanceReply({ customerId: current.customerId, conversationId: current.id, inquiryId: inquiry.id, replyId: reply.id })
+        } else if (current) await followUp(current)
       }
     }
-    return processReplyJobs(saved.repository, createConfiguredReplyInterpreter(env), 5,
-      async job => {
-        try { await prepareReplyOffer(saved.repository, saved.offers, createConfiguredOfferGenerator(env), job) }
-        catch { console.error('[planning] Offer preparation could not finish; original reply is retained.') }
-        const current = await saved.repository.get(job.customerId, job.conversationId)
-        if (current) await followUp(current)
-      })
+    return processReplyJobs(saved.repository, createConfiguredReplyInterpreter(env), 5, advanceReply)
   }
   return {
     async getCompanyTools() {
