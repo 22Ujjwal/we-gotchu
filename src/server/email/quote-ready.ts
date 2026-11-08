@@ -1,4 +1,4 @@
-import type { Brief, Plan } from '../../contracts'
+import type { Brief, Plan, PlannedAction } from '../../contracts'
 
 // "Your quotes are in" email, sent once when a plan is approved, before Checkout,
 // and "It's happening" once every supplier of the paid booking has confirmed.
@@ -17,6 +17,15 @@ export interface Notifications {
 }
 
 export type QuoteReadyEmail = { subject: string; text: string; html: string }
+
+/** Just what the emails show, so the demo can build one without a stored event. */
+export type EmailInput = {
+  eventId: string
+  brief: Pick<Brief, 'eventType' | 'location' | 'startsAt' | 'endsAt' | 'timezone' | 'headcount'>
+  plan: Pick<Plan, 'total' | 'currency'> & { actions: Array<Pick<PlannedAction, 'supplierName' | 'target' | 'maximumAmount'>> }
+  /** Where the button goes; defaults to the event page. */
+  link?: string
+}
 
 /** Amounts are minor units, so read the currency's decimal places from Intl. */
 function formatMoney(amount: number, currency: string): string {
@@ -54,14 +63,14 @@ function receiptRow(left: string, right: string, opts: { strong?: boolean; detai
 const rule = `<tr><td colspan="2" style="padding:10px 0;"><div style="border-top:1px dashed ${c.rule};height:1px;line-height:1px;font-size:1px;">&nbsp;</div></td></tr>`
 
 /** What both emails show: when, who, where, each supplier and the total. */
-function summarize(input: QuoteReady, appUrl: string) {
+function summarize(input: EmailInput, appUrl: string) {
   const { brief, plan, eventId } = input
   const dateFormat = new Intl.DateTimeFormat('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: brief.timezone,
   })
   const minutes = brief.endsAt ? Math.round((Date.parse(brief.endsAt) - Date.parse(brief.startsAt)) / 60000) : 0
   const when = `${dateFormat.format(new Date(brief.startsAt))}${brief.endsAt ? ` – ${dateFormat.format(new Date(brief.endsAt))}` : ''} (${brief.timezone})${minutes > 0 ? ` · ${Math.floor(minutes / 60)}h ${minutes % 60}m` : ''}`
-  const link = `${appUrl.replace(/\/$/, '')}/events/${encodeURIComponent(eventId)}`
+  const link = input.link ?? `${appUrl.replace(/\/$/, '')}/events/${encodeURIComponent(eventId)}`
   const items = plan.actions.map((a) => ({
     what: a.target === a.supplierName ? a.supplierName : `${a.supplierName}: ${a.target}`,
     price: formatMoney(a.maximumAmount, plan.currency),
@@ -80,7 +89,7 @@ type Copy = {
   footnote: string
 }
 
-function render(input: QuoteReady, appUrl: string, copy: Copy): QuoteReadyEmail {
+function render(input: EmailInput, appUrl: string, copy: Copy): QuoteReadyEmail {
   const { brief, when, link, items, total } = summarize(input, appUrl)
   const { subject, heading, intro, stamp, totalLabel, cta, footnote } = copy
 
@@ -153,7 +162,7 @@ ${receiptRow(esc(totalLabel.toUpperCase()), esc(total), { strong: true })}
   return { subject, text, html }
 }
 
-export function buildQuoteReadyEmail(input: QuoteReady, appUrl: string): QuoteReadyEmail {
+export function buildQuoteReadyEmail(input: EmailInput, appUrl: string): QuoteReadyEmail {
   const count = input.plan.actions.length
   return render(input, appUrl, {
     subject: `We're done: your ${count} ${count === 1 ? 'quote is' : 'quotes are'} in`,
@@ -166,8 +175,22 @@ export function buildQuoteReadyEmail(input: QuoteReady, appUrl: string): QuoteRe
   })
 }
 
+/** The local demo's version: Arrange is the last step there, so the button moves on to the party. */
+export function buildDemoQuotesEmail(input: EmailInput, appUrl: string): QuoteReadyEmail {
+  const count = input.plan.actions.length
+  return render(input, appUrl, {
+    subject: `We're done: your ${count} ${count === 1 ? 'quote is' : 'quotes are'} in`,
+    heading: 'Your quotes are&nbsp;in',
+    intro: `We're done getting quotes for your ${input.brief.eventType}.`,
+    stamp: 'QUOTED',
+    totalLabel: 'Total',
+    cta: 'See your party',
+    footnote: "We're booking it all now.",
+  })
+}
+
 /** "It's all set" email, sent once when every supplier has confirmed a paid booking. */
-export function buildAllSetEmail(input: AllSet, appUrl: string): QuoteReadyEmail {
+export function buildAllSetEmail(input: EmailInput, appUrl: string): QuoteReadyEmail {
   return render(input, appUrl, {
     subject: `It's happening: your ${input.brief.eventType} is all set`,
     heading: 'It&#39;s happening!',
@@ -179,7 +202,7 @@ export function buildAllSetEmail(input: AllSet, appUrl: string): QuoteReadyEmail
   })
 }
 
-type Sender = { send(to: string, email: QuoteReadyEmail, idempotencyKey: string): Promise<void> }
+export type Sender = { send(to: string, email: QuoteReadyEmail, idempotencyKey: string): Promise<void> }
 
 export function createQuoteReadyNotifications(opts: {
   appUrl: string
@@ -209,9 +232,8 @@ export function createQuoteReadyNotifications(opts: {
 
 /** Real wiring, or null when AgentMail is not configured. */
 export function createConfiguredNotifications(appUrl: string): Notifications | null {
-  const apiKey = process.env.AGENTMAIL_API_KEY
-  const inboxId = process.env.AGENTMAIL_INBOX_ID
-  if (!apiKey || !inboxId) return null
+  const sender = createConfiguredSender()
+  if (!sender) return null
   return createQuoteReadyNotifications({
     appUrl,
     async lookupEmail(customerId) {
@@ -220,12 +242,20 @@ export function createConfiguredNotifications(appUrl: string): Notifications | n
       const primary = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId) ?? user.emailAddresses[0]
       return primary?.emailAddress ?? null
     },
-    sender: {
-      async send(to, email, idempotencyKey) {
-        const { AgentMailClient } = await import('agentmail')
-        const client = new AgentMailClient({ apiKey })
-        await client.inboxes.messages.send(inboxId, { to, subject: email.subject, text: email.text, html: email.html }, { idempotencyKey })
-      },
-    },
+    sender,
   })
+}
+
+/** AgentMail delivery, or null when it is not configured. */
+export function createConfiguredSender(): Sender | null {
+  const apiKey = process.env.AGENTMAIL_API_KEY
+  const inboxId = process.env.AGENTMAIL_INBOX_ID
+  if (!apiKey || !inboxId) return null
+  return {
+    async send(to, email, idempotencyKey) {
+      const { AgentMailClient } = await import('agentmail')
+      const client = new AgentMailClient({ apiKey })
+      await client.inboxes.messages.send(inboxId, { to, subject: email.subject, text: email.text, html: email.html }, { idempotencyKey })
+    },
+  }
 }

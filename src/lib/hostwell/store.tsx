@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   VAT_RATE,
@@ -8,6 +8,7 @@ import {
   venues,
 } from './fixture'
 import type { AddOn, Brief, ReceiptLine, Venue } from './fixture'
+import { localPreview } from '#/lib/local-preview'
 
 type State = {
   brief: Brief
@@ -18,7 +19,14 @@ type State = {
   addRequest: (label: string) => void
   bookedVenueId: string | null
   setBookedVenueId: (id: string) => void
+  /** False until the demo has restored its saved state on this tab. */
+  ready: boolean
 }
+
+// The demo keeps its choices in this browser, so a link from the demo email
+// opens the same booking in a new tab.
+const demoKey = 'arrange:demo'
+type Saved = { brief: Brief; addOns: Array<AddOn>; selected: Array<string>; bookedVenueId: string | null }
 
 const Ctx = createContext<State | null>(null)
 
@@ -29,6 +37,29 @@ export function HostwellProvider({ children }: { children: ReactNode }) {
     () => new Set<string>(),
   )
   const [bookedVenueId, setBookedVenueId] = useState<string | null>(null)
+  const [ready, setReady] = useState(!localPreview)
+
+  useEffect(() => {
+    if (!localPreview) return
+    try {
+      const saved = JSON.parse(localStorage.getItem(demoKey) ?? 'null') as Saved | null
+      if (saved) {
+        setBrief(saved.brief)
+        setAddOns(saved.addOns)
+        setSelected(new Set(saved.selected))
+        setBookedVenueId(saved.bookedVenueId)
+      }
+    } catch {
+      localStorage.removeItem(demoKey)
+    }
+    setReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!localPreview || !ready) return
+    const saved: Saved = { brief, addOns, selected: [...selected], bookedVenueId }
+    localStorage.setItem(demoKey, JSON.stringify(saved))
+  }, [ready, brief, addOns, selected, bookedVenueId])
 
   const value = useMemo<State>(
     () => ({
@@ -49,8 +80,9 @@ export function HostwellProvider({ children }: { children: ReactNode }) {
       },
       bookedVenueId,
       setBookedVenueId,
+      ready,
     }),
-    [brief, addOns, selected, bookedVenueId],
+    [brief, addOns, selected, bookedVenueId, ready],
   )
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
