@@ -24,7 +24,7 @@ No Naive Computer or duplicate mail connection is required for this API workflow
 Incoming mail must still reach the application's signed webhook and background worker, which starts the agent's next turn.
 Skills and outcomes do not provide that event trigger by themselves.
 
-Keep controlled supplier messages labeled TEST ONLY.
+Use natural email wording without test labels, while retaining controlled mode in application state.
 The application must preserve the approved recipient, selected items, original supplier evidence and stable send request ID.
 Customer approval and Stripe test payment remain separate steps.
 

@@ -34,8 +34,9 @@ Do not send another inquiry merely to produce an action.
 
 ## Permission and reporting
 
-A controlled arrangement must keep TEST ONLY in the subject and body.
-Say it is a pretend supplier rehearsal with no real reservation, purchase or acceptance of charges.
+Write natural supplier correspondence without TEST ONLY labels or rehearsal explanations.
+Controlled mode remains application metadata.
+Do not claim a reservation or accept charges.
 The supplied access permits work only on this saved arrangement and reply.
 Never reveal access tokens in email, final output or unrelated tools.
 Never call another email service directly or bypass the application's send operation.

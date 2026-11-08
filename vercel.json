@@ -5,7 +5,8 @@
     "deploymentEnabled": {
       "feat/planning-inquiry-drafts": false,
       "feat/planning-offer-checkout": false,
-      "feat/local-journey-rehearsal": false
+      "feat/local-journey-rehearsal": false,
+      "feat/planning-company-actions": false
     }
   },
   "crons": [
