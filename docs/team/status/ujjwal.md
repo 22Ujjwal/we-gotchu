@@ -57,3 +57,15 @@ Contract 0.4 is unchanged. Transaction fixes (#28), hosting (#33), DOM harness (
 4. Continue small, reversible commits; report verified, failed, simulated, and pending outcomes separately. No real bookings or supplier commitments during these tests.
 
 The untracked HANDOFF-CODEX.md and original stash `8de106d6fd9a61ca772b059646c753759c0188b3` are preserved.
+
+## Backend edge-case review
+
+Reviewed against main `b1518257371f09c4143b2ce4d7a44045e9c61e65`; reviewed server/contracts files have no diff from this checkout. No production behavior was changed. Prioritize the first two before a completed sandbox payment rehearsal.
+
+1. **High: concurrent completed webhooks can refund a valid payment.** In `src/server/payments/webhook.ts:115-128`, two deliveries can both read awaiting_payment. One moves to executing; the other's conditional update loses and is treated as late/revoked. Before supplier attempts exist, it requests a full refund while the first delivery still starts execution. A temporary controlled-provider regression reproduced one execution hook and one unexpected refund (expected zero).
+2. **Medium: interrupted expiration cannot repair event status on retry.** In `src/server/payments/webhook.ts:72-78`, payment is marked expired before the event returns to plan_ready. If that status update throws, the next delivery sees changed=false, skips repair, and records the webhook as processed. A temporary regression reproduced awaiting_payment after retry (expected plan_ready).
+3. **Medium: research result publication and event finalization are separate commits.** `src/server/events/service.ts:99,123-127` publishes a terminal run before saving its plan/status. A database error or terminated request between them leaves researching plus a finished run. GET only advances running runs (`:142`), so reload does not repair it. This is a transaction-service recovery gap, separate from Tony's provider fix; confirmed by code/transaction boundaries, not a new live failure experiment.
+
+Existing verification: 89 focused webhook/execution/event/store/MCP tests and 35 contract tests passed. Hosted signed-out event read/create returned 401; malformed Stripe signature returned 400. Existing tests cover sequential duplicate webhooks, interrupted refunds/execution handoffs, cancellation/approval races, ownership denial, stale revisions, and test-payment refusal for live actions. The two temporary regressions failed as expected and were removed after diagnosis; no provider calls were used for those reproductions.
+
+Limits: completed sandbox payment/refund remains untested; asynchronous refund state reconciliation is not implemented. Clerk instance must remain the existing claimed instance to preserve customer ownership of saved events. No concrete cross-user bypass found. No purchases or supplier commitments were made during this review.
