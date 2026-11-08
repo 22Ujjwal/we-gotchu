@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 import { BriefIntake } from './brief-intake'
@@ -45,4 +46,14 @@ test('signed out intake does not submit and offers sign in', () => {
   render(<BriefIntake identity={null} onCreated={vi.fn()} />)
   expect(screen.getByRole('link', { name: 'Sign in to plan your event' })).toHaveAttribute('href', expect.stringContaining('/sign-in'))
   expect(fetch).not.toHaveBeenCalled()
+})
+
+
+test('keyboard submission moves focus to the next sentence', async () => {
+  const user = userEvent.setup()
+  render(<BriefIntake identity="alice" onCreated={vi.fn()} />)
+  await user.click(screen.getByLabelText('Occasion'))
+  await user.type(screen.getByLabelText('Occasion'), 'Birthday')
+  await user.type(screen.getByLabelText('Number of guests'), '24{Enter}')
+  expect(screen.getByLabelText('Date')).toHaveFocus()
 })
