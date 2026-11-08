@@ -229,7 +229,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
     if (record.pending || record.view.status !== 'ready') throw busy()
     if (record.view.inquiry?.delivery?.status === 'uncertain') throw busy()
     if (command.kind === 'prepare_inquiry' && record.view.inquiry?.status === 'draft' && record.view.inquiry.delivery?.status !== 'failed') {
-      throw new ApiError(409, 'draft_exists', 'An inquiry draft already exists. Edit the saved draft.')
+      return record.view
     }
     let inquiry = record.view.inquiry
     if (command.kind === 'prepare_inquiry') inquiry = prepareInquiry(record.view, now(deps))
@@ -247,9 +247,14 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   }
   if (command.kind === 'select') {
     const selections = toggle(record.view.selections, record.view.proposal?.options ?? [], command.optionId)
+    const selectedVenue = selections.find(option => option.kind === 'venue')
+    const previousVenue = record.view.selections.find(option => option.kind === 'venue')
+    let inquiry = selectedVenue?.id !== previousVenue?.id ? staleInquiry(record.view) : record.view.inquiry
+    if (selectedVenue && !inquiry && !record.pending && record.view.status === 'ready') {
+      inquiry = prepareInquiry({ ...record.view, selections }, now(deps))
+    }
     return (await save(deps, record, { ...record, requests, view: changed(record, { selections,
-      ...(selections.find(option => option.kind === 'venue')?.id !== record.view.selections.find(option => option.kind === 'venue')?.id
-        ? { inquiry: staleInquiry(record.view) } : {}) }) })).view
+      inquiry }) })).view
   }
   if (command.kind === 'confirm') {
     if (!deps.allowResearchReview) throw new ApiError(403, 'operator_required', 'Research review is handled by the planning team.')
