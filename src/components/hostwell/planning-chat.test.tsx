@@ -608,7 +608,7 @@ test('research loading does not hide an existing inquiry delivery status', async
   expect(screen.getByRole('button', { name: 'Check send status' })).toBeEnabled()
 })
 
-test('source images and credit arrive without delaying venue selection and survive choosing the venue', async () => {
+test('source images arrive without delaying selection and stay visible without a photo-source caption', async () => {
   let resolveImages!: (response: Response) => void
   let saved = view()
   vi.mocked(fetch).mockImplementation((input, init) => {
@@ -623,11 +623,11 @@ test('source images and credit arrive without delaying venue selection and survi
     status: 'available', images: [{ url: 'https://example.com/room.jpg', sourcePage: venue.url,
       attribution: { text: 'Garden room', url: venue.url }, provider: 'source-page', evidence: 'page-metadata', description: null }] })))
   expect(await screen.findByRole('img', { name: 'Garden room' })).toHaveAttribute('src', 'https://example.com/room.jpg')
-  expect(screen.getByRole('link', { name: 'Photo source: Garden room' })).toHaveAttribute('href', venue.url)
+  expect(screen.queryByText(/Photo source:/)).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Choose Garden room' }))
   expect(await screen.findByRole('button', { name: 'Remove Garden room' })).toBeVisible()
   expect(screen.getByRole('img', { name: 'Garden room' })).toHaveAttribute('src', 'https://example.com/room.jpg')
-  expect(screen.getByRole('link', { name: 'Photo source: Garden room' })).toBeVisible()
+  expect(screen.queryByText(/Photo source:/)).not.toBeInTheDocument()
 })
 
 test('exhausted photo reads offer an explicit retry without sending a planning command', async () => {

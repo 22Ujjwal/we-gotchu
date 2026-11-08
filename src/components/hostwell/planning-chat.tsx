@@ -71,7 +71,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const venueOptions = [...options.values()].filter(option => option.kind === 'venue')
   const supplyOptions = [...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id))
   const venueCards = venueOptions.map(option => ({ id: option.id, name: displayCopy(option.name), photos: (venueImages[option.id] ?? []).map(image => image.url),
-    photoCredit: <>{(venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[13px] underline">Photo source: {displayCopy(image.attribution.text)}</a>)}</>,
     evidence: <details className="text-[15px] leading-6"><summary className="cursor-pointer underline">Budget sources and details</summary>
       <p className="mt-3">{displayCopy(option.why)}</p>
       {option.facts.map((fact, index) => <p key={index} className="mt-2">{displayFactLabel(fact.label)}: {displayFactValue(fact.value)} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></p>)}

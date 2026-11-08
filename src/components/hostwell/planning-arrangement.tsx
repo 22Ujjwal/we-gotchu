@@ -64,7 +64,6 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
   return <VenueView embedded brief={view.brief ?? defaultBrief}
     venue={{ name: venue.name, neighbourhood: view.brief?.area ?? '', photos: (images[venue.id] ?? []).map(image => image.url), description: venue.why,
       detailFeatures: venue.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests' : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: fact.value })) }}
-    photoCredit={<>{(images[venue.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[13px] underline">Photo source: {image.attribution.text}</a>)}</>}
     back={<button type="button" className="underline" onClick={onBack}>Back to settings</button>}
     extras={extras} receipt={receipt} action={<span />} onArrange={() => {}} />
 }
