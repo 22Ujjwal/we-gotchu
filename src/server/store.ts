@@ -69,6 +69,7 @@ export interface Store {
   /** Stores a plan; unique on (eventId, revision). Sets Event.planRevision. */
   savePlan(plan: Plan): Promise<void>
   getPlan(eventId: string): Promise<Plan | null>
+  validatePlanOffer?(plan: Plan, now: Date): Promise<boolean>
 
   // Approval and payment
   /** Returns an unexpired, unrevoked approval for this plan revision with its payment, if any. */
