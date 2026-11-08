@@ -125,3 +125,41 @@ test('releases only a canceled settled payment plan and preserves its history', 
   const updated = await db.offers.save('customer', 'conversation', released.view.version, { ...offer, revision: 2 })
   expect(updated.view.offer?.revision).toBe(2)
 })
+
+test('linked offer uses signed payment handling and simulated execution once across duplicate delivery', async () => {
+  const { default: Stripe } = await import('stripe')
+  const { makeDeps, WEBHOOK_SECRET } = await import('../events/testFakes')
+  const { approve } = await import('../events/service')
+  const { handleStripeWebhook } = await import('../payments/webhook')
+  const { scriptedAgentHooks } = await import('../execution/scripted-agent')
+  const { configureStore } = await import('../runtime')
+  const { setDepsForTests } = await import('../events/deps')
+  await db.offers.save('customer', 'conversation', 0, offer)
+  const link = await db.offers.prepare('customer', 'conversation', 'offer', 1, now)
+  const { deps, stripe } = makeDeps({ store: db.store, requireCustomerId: async () => 'customer', now: () => now, hooks: scriptedAgentHooks })
+  configureStore(db.store)
+  setDepsForTests(deps)
+  try {
+    const first = await approve(deps, link.eventId, link.planId, 1)
+    const repeated = await approve(deps, link.eventId, link.planId, 1)
+    expect(repeated.payment.paymentId).toBe(first.payment.paymentId)
+    expect(stripe.createCalls).toHaveLength(1)
+    expect(stripe.createCalls[0].params.line_items[0].price_data.unit_amount).toBe(20000)
+    const payload = JSON.stringify({ id: 'controlled-payment', object: 'event', type: 'checkout.session.completed',
+      created: Math.floor(now.getTime() / 1000), data: { object: { id: first.payment.checkoutSessionId,
+        payment_status: 'paid', payment_intent: 'pi_controlled', currency: 'usd', amount_total: 20000,
+        metadata: { approvalId: first.approval.approvalId, eventId: link.eventId, planRevision: '1' } } } })
+    const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET })
+    expect(await handleStripeWebhook(deps, payload, signature)).toBe('paid')
+    expect(await handleStripeWebhook(deps, payload, signature)).toBe('duplicate')
+    const restored = await db.store.getEventView(link.eventId)
+    expect(restored?.payment).toMatchObject({ state: 'paid', amount: 20000, mode: 'test' })
+    expect(restored?.attempts).toHaveLength(1)
+    expect(restored?.attempts[0]).toMatchObject({ state: 'succeeded', mode: 'simulated', actualAmount: 20000 })
+    expect(restored?.event.status).toBe('booked')
+    expect((await db.repository.getById('conversation'))?.view.paymentLink).toEqual(link)
+  } finally {
+    setDepsForTests(null)
+    configureStore(null)
+  }
+})
