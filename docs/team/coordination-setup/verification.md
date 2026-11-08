@@ -1,5 +1,15 @@
 # Verification record
 
+## Human briefing update
+
+The human-readable renderer was tested at `b409f72`, with coverage wording and shorter displayed head commits checked at `c6db58f`.
+All 25 standalone tests passed on Node 26 and Node 22.23.4; all 15 renderer and queue tests passed again after the wording change.
+Application typecheck and all 135 application tests passed at `b409f72`.
+The update changes only Markdown presentation; JSON still contains every original queue item and its full provenance.
+Tests cover action sections, source links, historical-reference grouping, source escaping, incomplete collection, and missing-report uncertainty.
+The Markdown briefing does not claim to collect inline review comments or track changes since the previous snapshot.
+The chief reads current GitHub reviews separately before recommending a merge.
+
 ## Review-fix verification
 
 The current tested coordination implementation is `42b8a2590e0b6d04bae6db4503720a22996e7714`.

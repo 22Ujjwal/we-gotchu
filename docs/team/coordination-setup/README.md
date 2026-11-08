@@ -15,7 +15,11 @@ node tools/team-coordination/refresh.mjs
 cat tools/team-coordination/output/queue.md
 ```
 
-Open `tools/team-coordination/output/queue.md` in your editor for the review queue.
+Open `tools/team-coordination/output/queue.md` in your editor for the human briefing.
+It puts blockers and decision requests first, then open PRs and grouped handoff follow-ups.
+Each item names a next step and links to the exact source or PR; detailed evidence stays in JSON.
+Historical PR references are grouped by source report so repeated mentions do not crowd out current work.
+The briefing does not read inline review discussions or compare changes against the previous refresh; the chief must inspect discussions before recommending a merge.
 The adjacent `queue.json` includes the collected handoff text and PR metadata for an agent to inspect.
 Both files are local, ignored by Git, and overwritten on refresh.
 The collector uses the existing `gh` credential store without displaying credentials or raw command errors.
