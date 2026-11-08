@@ -86,9 +86,7 @@ export function MetaLine({ children }: { children: ReactNode }) {
 
 export function Guests({ n }: { n: string }) {
   return (
-    <span className="font-normal text-sage">
-      <span className="font-semibold text-ink">{n}</span> guests
-    </span>
+    <span className="font-semibold text-ink">{n} guests</span>
   )
 }
 
