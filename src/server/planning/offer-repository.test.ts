@@ -126,7 +126,7 @@ test('releases only a canceled settled payment plan and preserves its history', 
   expect(updated.view.offer?.revision).toBe(2)
 })
 
-test('linked offer uses signed payment handling and simulated execution once across duplicate delivery', async () => {
+test.each([false, true])('linked offer handles signed payment once, changed offer: %s', async changed => {
   const { default: Stripe } = await import('stripe')
   const { makeDeps, WEBHOOK_SECRET } = await import('../events/testFakes')
   const { approve } = await import('../events/service')
@@ -145,18 +145,28 @@ test('linked offer uses signed payment handling and simulated execution once acr
     expect(repeated.payment.paymentId).toBe(first.payment.paymentId)
     expect(stripe.createCalls).toHaveLength(1)
     expect(stripe.createCalls[0].params.line_items[0].price_data.unit_amount).toBe(20000)
+    if (changed) {
+      const before = (await db.repository.getById('conversation'))!
+      await db.repository.compareAndSet(before, { ...before, view: { ...before.view, selections: [], version: before.view.version + 1 } })
+    }
     const payload = JSON.stringify({ id: 'controlled-payment', object: 'event', type: 'checkout.session.completed',
       created: Math.floor(now.getTime() / 1000), data: { object: { id: first.payment.checkoutSessionId,
         payment_status: 'paid', payment_intent: 'pi_controlled', currency: 'usd', amount_total: 20000,
         metadata: { approvalId: first.approval.approvalId, eventId: link.eventId, planRevision: '1' } } } })
     const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET })
-    expect(await handleStripeWebhook(deps, payload, signature)).toBe('paid')
+    expect(await handleStripeWebhook(deps, payload, signature)).toBe(changed ? 'refunded_late_or_revoked' : 'paid')
     expect(await handleStripeWebhook(deps, payload, signature)).toBe('duplicate')
     const restored = await db.store.getEventView(link.eventId)
     expect(restored?.payment).toMatchObject({ state: 'paid', amount: 20000, mode: 'test' })
-    expect(restored?.attempts).toHaveLength(1)
-    expect(restored?.attempts[0]).toMatchObject({ state: 'succeeded', mode: 'simulated', actualAmount: 20000 })
-    expect(restored?.event.status).toBe('booked')
+    expect(restored?.attempts).toHaveLength(changed ? 0 : 1)
+    if (changed) {
+      expect(stripe.refundCalls).toHaveLength(1)
+      expect(restored?.payment?.refundState).toBe('pending')
+      expect(restored?.event.status).toBe('canceled')
+    } else {
+      expect(restored?.attempts[0]).toMatchObject({ state: 'succeeded', mode: 'simulated', actualAmount: 20000 })
+      expect(restored?.event.status).toBe('booked')
+    }
     expect((await db.repository.getById('conversation'))?.view.paymentLink).toEqual(link)
   } finally {
     setDepsForTests(null)
