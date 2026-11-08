@@ -28,7 +28,7 @@ export function BriefForm({ initial, onSubmit, pending = false, disabled = false
   const renderSentence = (parts: Sentence) => parts.map((part, j) => typeof part === 'string'
     ? <Fragment key={j}>{part}</Fragment>
     : <input key={part.key} type="text" aria-label={part.label} value={draft[part.key]} placeholder={part.placeholder}
-        autoComplete="off" disabled={pending || disabled}
+        autoComplete="off" autoFocus={!edit && j === 1} disabled={pending || disabled}
         onChange={e => setDraft({ ...draft, [part.key]: e.currentTarget.value })}
         style={{ width: `${Math.max((draft[part.key] || part.placeholder).length, 3)}ch` }}
         className={`blank mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${draft[part.key] ? 'decoration-sand' : 'decoration-ink'}`} />)
