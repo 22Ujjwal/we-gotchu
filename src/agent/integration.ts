@@ -4,7 +4,7 @@ import type { ResearchPort } from '../server/events/deps'
 import type { Store } from '../server/store'
 import type { ResearchCheckpoint } from './checkpoint'
 import { researchEvent, type Discovery, type ResearchProviders } from './research'
-import type { ResearchSession } from './session'
+import { RESEARCH_BUDGET_MICRO_USD, type ResearchSession } from './session'
 
 export type IntegrationProviders = {
   discover: ResearchProviders['discover']
@@ -140,7 +140,7 @@ export function createResearchIntegration(options: {
             if (snapshot.last_seq < c.lastSequence) return running
             const advanced = snapshot.last_seq > c.lastSequence
             await save({ lastSequence: snapshot.last_seq, sessionStopped: ['completed', 'failed', 'cancelled'].includes(snapshot.status) }, advanced ? 'Research comparison progress saved.' : undefined)
-            if ((snapshot.consumed_micro_usd ?? 0) > 500_000) {
+            if ((snapshot.consumed_micro_usd ?? 0) > RESEARCH_BUDGET_MICRO_USD) {
               await finish('Research reached its usage limit; only retrieved evidence is shown.')
               return running
             }
