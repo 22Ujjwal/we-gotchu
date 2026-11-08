@@ -79,6 +79,8 @@ Full crash recovery, unrestricted provider coverage, and separate refund or supp
 
 This spec synthesizes the existing product and transaction contracts and the approved local fixes. It is published through the repository's local specification tracker; ready-for-agent is its triage label, not evidence of deployment or team approval.
 
-Contracts, Clerk, backend core, standalone research, and the fixture-backed frontend are merged. The route repair, deployment, supplier evidence, research integration, and coordination CI have separate PRs. Check current PR state and the owner's status before integrating them.
+Contracts, Clerk, backend core, standalone research, fixture-backed frontend, route repair, deployment configuration, supplier evidence, research integration, and coordination CI are merged as of main ce2d672. The transaction follow-up remains on PR #28. Check current PR state and the owner's status before integrating later changes.
+
+Real research currently returns partial results with unknown final costs and no bookable Plan. Rehearsing payment and booking therefore needs verified costs and terms or an explicitly labeled simulated path. Real execution/cancellation session starters remain unwired; selecting naive execution currently chooses placeholder hooks, while the scripted fallback is implemented. These are remaining integration tasks, not capabilities established by this spec.
 
 The hackathon ends at 11:00 AM Pacific on November 8, 2026. Prioritize one working event flow with honest mode labels and evidence of agent decisions and human intervention.
