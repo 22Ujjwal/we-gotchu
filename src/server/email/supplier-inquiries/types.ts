@@ -4,6 +4,7 @@ export type InquiryInput = {
   conversationId: string
   inquiryId: string
   draftRevision: number
+  replyToMessageId?: string
   to: string
   subject: string
   text: string
@@ -50,7 +51,7 @@ export type ProviderMessage = ProviderReferences & {
 export interface MailProvider {
   readonly inboxId: string
   /** One bounded attempt, no SDK retries. */
-  send(input: Pick<InquiryInput, 'to' | 'subject' | 'text'>, idempotencyKey: string): Promise<ProviderReferences>
+  send(input: Pick<InquiryInput, 'to' | 'subject' | 'text' | 'replyToMessageId'>, idempotencyKey: string): Promise<ProviderReferences>
   /** Fetch only by provider identity; never infer acceptance by subject/name. */
   getMessage(messageId: string): Promise<ProviderMessage>
 }

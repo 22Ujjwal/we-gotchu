@@ -71,7 +71,14 @@ export function toolInputSchema(tool: ToolDefinition<any>): Record<string, unkno
   return schema
 }
 
-export async function handleJsonRpc(raw: string, tools: readonly ToolDefinition<any>[]): Promise<ProtocolOutcome> {
+export type ServerDescription = { info: { name: string; version: string }; instructions: string }
+
+const DEFAULT_SERVER: ServerDescription = {
+  info: SERVER_INFO,
+  instructions: 'We Gotchu guarded execution tools. Every purchase is checked against a stored, paid customer approval.',
+}
+
+export async function handleJsonRpc(raw: string, tools: readonly ToolDefinition<any>[], server: ServerDescription = DEFAULT_SERVER): Promise<ProtocolOutcome> {
   let message: unknown
   try {
     message = JSON.parse(raw)
@@ -100,9 +107,9 @@ export async function handleJsonRpc(raw: string, tools: readonly ToolDefinition<
           : SUPPORTED_PROTOCOL_VERSIONS[0]
       return ok(id, {
         protocolVersion,
-        serverInfo: SERVER_INFO,
+        serverInfo: server.info,
         capabilities: { tools: { listChanged: false } },
-        instructions: 'We Gotchu guarded execution tools. Every purchase is checked against a stored, paid customer approval.',
+        instructions: server.instructions,
       })
     }
     case 'ping':

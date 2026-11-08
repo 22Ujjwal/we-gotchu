@@ -79,3 +79,24 @@ async function openPglitePlanningRepository(dataDir?: string) {
     throw error
   }
 }
+
+/** A Neon drizzle database for modules that bring their own repository code. */
+export function createNeonDb(databaseUrl: string) {
+  return neonDb(databaseUrl).db
+}
+
+/** A PGlite drizzle database with migrations applied: in memory, or file-backed for local development. */
+export async function openPgliteDb(dataDir?: string) {
+  const [{ PGlite }, { drizzle }, { migrate }] = await Promise.all([
+    import('@electric-sql/pglite'), import('drizzle-orm/pglite'), import('drizzle-orm/pglite/migrator'),
+  ])
+  const client = new PGlite(dataDir)
+  try {
+    const db = drizzle({ client, schema })
+    await migrate(db, { migrationsFolder })
+    return { db, close: () => client.close() }
+  } catch (error) {
+    await client.close()
+    throw error
+  }
+}

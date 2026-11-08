@@ -10,7 +10,14 @@ export function createAgentMailProvider(opts: { apiKey: string; inboxId: string;
     inboxId: opts.inboxId,
     async send(input, idempotencyKey) {
       try {
-        return await client.inboxes.messages.send(opts.inboxId, input, { ...requestOptions, idempotencyKey })
+        const { replyToMessageId, ...message } = input
+        if (replyToMessageId) {
+          // AgentMail owns threading. Override recipients so quoted email cannot redirect the reply.
+          return await client.inboxes.messages.reply(opts.inboxId, replyToMessageId,
+            { to: message.to, cc: [], bcc: [], replyAll: false, text: message.text },
+            { ...requestOptions, idempotencyKey })
+        }
+        return await client.inboxes.messages.send(opts.inboxId, message, { ...requestOptions, idempotencyKey })
       } catch (error) {
         // Conflict and server/network errors can conceal a previous acceptance.
         if (error instanceof AgentMailError && error.statusCode && [400, 401, 403, 404, 422, 429].includes(error.statusCode)) {

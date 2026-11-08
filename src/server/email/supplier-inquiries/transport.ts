@@ -11,6 +11,7 @@ const inputSchema = z.object({
   to: z.email().max(320),
   subject: z.string().min(1).max(998).regex(/^[^\r\n]+$/),
   text: z.string().min(1).max(100_000),
+  replyToMessageId: z.string().min(1).max(998).optional(),
 })
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 
@@ -37,7 +38,7 @@ export function createSupplierInquiryTransport(opts: {
       const uncertain: SendResult = { operationId: operation.id, provider: 'agentmail', status: 'uncertain' }
       let result: SendResult
       try {
-        const refs = await provider.send({ to: input.to, subject: input.subject, text: input.text }, operation.idempotencyKey)
+        const refs = await provider.send({ to: input.to, subject: input.subject, text: input.text, ...(input.replyToMessageId ? { replyToMessageId: input.replyToMessageId } : {}) }, operation.idempotencyKey)
         if (!refs.messageId) return uncertain
         Object.assign(uncertain, refs)
         result = { operationId: operation.id, provider: 'agentmail', status: 'accepted', ...refs, acceptedAt: now().toISOString() }

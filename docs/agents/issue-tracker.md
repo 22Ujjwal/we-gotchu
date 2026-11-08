@@ -21,6 +21,7 @@ Published specifications:
 
 - Tony: [Research event options with verified evidence](../../.scratch/specs/agent-research.md).
 - Ujjwal: [Approve, pay, and cancel an event safely](../../.scratch/specs/transactions.md).
+- Unassigned: [ARRANGE: an event-planning company that runs itself](../../.scratch/specs/arrange-autonomous-company.md).
 
 ## Implementation tickets
 
