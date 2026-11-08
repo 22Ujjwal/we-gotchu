@@ -39,7 +39,12 @@ export const planningInquirySchema = inquiryFieldsSchema.extend({
 export type PlanningInquiry = z.infer<typeof planningInquirySchema>
 
 const requestId = text.max(128)
-export const planningCreateSchema = z.object({ requestId, message: text.max(8000) }).strict()
+export const planningBriefSchema = z.object({
+  occasion: z.string().max(500), guests: z.string().max(20), date: z.string().max(100),
+  from: z.string().max(30), till: z.string().max(30), area: z.string().max(500),
+  budget: z.string().max(30), canLose: z.string().max(30), needs: z.string().max(2000), vibe: z.string().max(2000),
+}).strict()
+export const planningCreateSchema = z.object({ requestId, message: text.max(8000), brief: planningBriefSchema.optional() }).strict()
 const version = z.number().int().nonnegative()
 export const planningCommandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('release_payment'), requestId, expectedVersion: version, eventId: text }).strict(),
@@ -65,6 +70,7 @@ export const planningActivitySchema = z.object({
 export type PlanningActivity = z.infer<typeof planningActivitySchema>
 export type PlanningView = {
   id: string
+  brief?: z.infer<typeof planningBriefSchema>
   version: number
   status: 'working' | 'ready' | 'failed' | 'uncertain' | 'blocked'
   messages: PlanningMessage[]

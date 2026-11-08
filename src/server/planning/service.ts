@@ -136,9 +136,9 @@ export async function createPlanning(deps: PlanningDeps, input: unknown): Promis
   const customerId = await deps.requireCustomerId()
   const parsed = planningCreateSchema.safeParse(input)
   if (!parsed.success) throw new ApiError(422, 'invalid_input', 'Provide a request ID and a message of at most 8000 characters.')
-  const { requestId, message } = parsed.data
+  const { requestId, message, brief } = parsed.data
   const id = `planning_${randomUUID()}`
-  const fingerprint = JSON.stringify({ kind: 'create', message })
+  const fingerprint = JSON.stringify({ kind: 'create', message, ...(brief ? { brief } : {}) })
   const record: PlanningRecord = {
     id, customerId, createRequestId: requestId, initialMessage: message, revision: 0,
     sessionId: null, sequence: 0,
@@ -146,6 +146,7 @@ export async function createPlanning(deps: PlanningDeps, input: unknown): Promis
     requests: { [requestId]: fingerprint },
     view: {
       id, version: 0, status: 'working',
+      ...(brief ? { brief } : {}),
       messages: [{ id: `user:${requestId}`, role: 'user', text: message, createdAt: new Date(now(deps)).toISOString() }],
       proposal: null, selections: [], progress: null, error: null,
     },
