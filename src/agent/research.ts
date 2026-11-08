@@ -9,7 +9,20 @@ export type ResearchProviders = {
 }
 
 export async function researchEvent(rawInput: unknown, providers: ResearchProviders): Promise<ResearchResult> {
-  const input = ResearchInput.parse(rawInput)
+  const parsed = ResearchInput.safeParse(rawInput)
+  if (!parsed.success) {
+    // Invalid identities are programmer errors; invalid brief fields need customer input.
+    const identity = ResearchInput.omit({ brief: true }).parse(rawInput)
+    const currency = (rawInput as { brief?: { currency?: unknown } }).brief?.currency
+    if (typeof currency !== 'string' || currency.length !== 3) throw parsed.error
+    return ResearchResult.parse({
+      ...identity, outcome: 'awaiting_input',
+      missing: [...new Set(parsed.error.issues.filter(issue => issue.path[0] === 'brief').map(issue => String(issue.path[1] ?? 'brief')))],
+      candidates: [], recommendations: [], budgetFit: 'unknown', budgetBasis: 'Essential requirements need clarification.',
+      currency, warnings: [], sourceChecks: [], superseded: false, createdAt: new Date().toISOString(),
+    })
+  }
+  const input = parsed.data
   const signal = new AbortController().signal
   const evidence = await providers.discover(input, signal)
   const output = await providers.recommend(input, evidence.candidates, signal, false) as { candidateIds: string[] }
