@@ -38,3 +38,10 @@ test('rejects production, duplicate entries, self-send, short tool secret and li
   assert.equal(result.groups.sandboxPayment.configured, false)
   assert.equal(JSON.stringify(result).includes('sk_live_private'), false)
 })
+
+test('rejects fixture preview mode for the connected demo', () => {
+  const result = checkDemoEnvironment('', { ...env, VITE_LOCAL_PREVIEW: 'true' })
+  assert.equal(result.ok, false)
+  assert.equal(result.groups.research.configured, false)
+  assert.ok(result.issues.some(issue => issue.includes('VITE_LOCAL_PREVIEW')))
+})

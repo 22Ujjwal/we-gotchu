@@ -13,6 +13,7 @@ export function checkDemoEnvironment(fileText, env) {
     if (seen.has(name)) issues.push(`Duplicate environment entry: ${name}`)
     seen.add(name)
   }
+  if (env.VITE_LOCAL_PREVIEW === 'true') issues.push('VITE_LOCAL_PREVIEW must be disabled for the connected demo.')
   if (env.NODE_ENV !== 'development') issues.push('NODE_ENV must be development for this controlled local rehearsal.')
   if (!env.PLANNING_LOCAL_DB_DIR?.trim()) issues.push('PLANNING_LOCAL_DB_DIR must select the local database.')
   function group(names, invalid = []) {
