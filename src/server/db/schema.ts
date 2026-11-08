@@ -109,6 +109,7 @@ export const payments = pgTable('payments', {
     .references(() => approvals.id),
   checkoutSessionId: text('checkout_session_id').notNull().unique('payments_checkout_session_id_unique'),
   paymentIntentId: text('payment_intent_id'),
+  paidAt: ts('paid_at'),
   amount: bigint('amount', { mode: 'number' }).notNull(),
   currency: text('currency').notNull(),
   state: text('state').notNull(),
