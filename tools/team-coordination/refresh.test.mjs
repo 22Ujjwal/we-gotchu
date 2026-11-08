@@ -57,3 +57,12 @@ test('missing status inventory is reported rather than silently omitting owners'
   });
   assert.ok(result.errors.some(x => x.includes('status inventory')));
 });
+
+test('collector ignores foreign PR URLs including their Markdown labels', () => {
+  const { execute, calls } = fake();
+  const result = collect((cmd, args) => args[0] === 'show'
+    ? '[PR #5](https://github.com/other/library/pull/5) and https://github.com/22Ujjwal/we-gotchu/pull/16'
+    : execute(cmd, args));
+  assert.deepEqual(calls.filter(([cmd, args]) => cmd === 'gh' && args[1] === 'view').map(([, args]) => args[2]), ['16']);
+  assert.deepEqual(result.errors, []);
+});

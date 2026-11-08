@@ -56,3 +56,13 @@ test('multiple resolved PR references on one line produce unique queue IDs', () 
   const result = buildQueue(snapshot({ documents: [doc('Review PR #16 and PR #17.')], prs: [pr({ state: 'MERGED' }), pr({ number: 17, state: 'CLOSED' })] }));
   assert.equal(new Set(result.items.map(x => x.id)).size, result.items.length);
 });
+
+test('foreign PR links cannot reconcile a local PR with the same number', () => {
+  const result = buildQueue(snapshot({ documents: [doc('[PR #16](https://github.com/other/library/pull/16)')], prs: [pr({ state: 'MERGED' })] }));
+  assert.equal(result.items.length, 0);
+});
+
+test('same-repository URLs and explicit shorthand preserve local references', () => {
+  const result = buildQueue(snapshot({ documents: [doc('https://github.com/22Ujjwal/we-gotchu/pull/16/files?diff=split\nPR #16')], prs: [pr({ state: 'MERGED' })] }));
+  assert.equal(result.items.filter(x => x.kind === 'reconcile').length, 2);
+});
