@@ -90,6 +90,7 @@ export interface Store {
   repairExpiredCheckout(checkoutSessionId: string): Promise<string | null>
   /** Updates only the same paid refund and observed state; false means retry with fresh Stripe state. */
   reconcileRefund(input: { paymentId: string; refundId: string; paymentIntentId: string; expectedState: Payment['refundState']; refundState: Payment['refundState'] }): Promise<boolean>
+  /** Persists the create response without replacing another refund or overwriting a terminal reconciliation. */
   setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }): Promise<void>
   /** Records a Stripe event id; returns true only the first time. */
   recordStripeEvent(stripeEventId: string): Promise<boolean>

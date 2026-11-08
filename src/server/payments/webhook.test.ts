@@ -286,6 +286,30 @@ describe('refund reconciliation', () => {
     expect(await handleStripeWebhook(deps, older.payload, older.header)).toBe('refund_updated')
   })
 
+  it('retries our refund update received before initial refund persistence', async () => {
+    const { deps, store, stripe, session, payment, approval } = await awaitingPayment()
+    await store.markPaymentPaid(session.id, 'pi_test_1')
+    const refund = { id: 're_early', status: 'succeeded', payment_intent: 'pi_test_1', metadata: { paymentId: payment.paymentId, approvalId: approval.approvalId } }
+    Object.assign(stripe.refunds, { retrieve: async () => refund })
+    const delivery = signed('refund.updated', refund)
+    await expect(handleStripeWebhook(deps, delivery.payload, delivery.header)).rejects.toThrow('Refund is awaiting initial persistence')
+    await store.setRefund(payment.paymentId, { refundId: refund.id, refundState: 'pending', refundReason: 'late_or_revoked' })
+    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('refund_updated')
+    expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
+  })
+
+  it('preserves a reconciled terminal refund when a cached create response is persisted later', async () => {
+    const { deps, store, stripe, payment, refundId, eventId } = await pendingRefund()
+    Object.assign(stripe.refunds, {
+      retrieve: async () => ({ id: refundId, status: 'failed', payment_intent: 'pi_test_1' }),
+      create: async () => ({ id: refundId, status: 'pending' }),
+    })
+    const delivery = signed('refund.failed', { id: refundId })
+    await handleStripeWebhook(deps, delivery.payload, delivery.header)
+    await issueFinalRefund(deps, eventId)
+    expect(store.payments.get(payment.paymentId)).toMatchObject({ refundId, refundState: 'failed', refundReason: 'late_or_revoked' })
+  })
+
   it.each(['unknown_refund', 'wrong_intent', 'wrong_refund'])( 'does not change payment for %s', async (kind) => {
     const { deps, store, stripe, payment, refundId } = await pendingRefund()
     Object.assign(stripe.refunds, { retrieve: async () => ({ id: kind === 'wrong_refund' ? 're_other' : refundId, status: 'succeeded', payment_intent: kind === 'wrong_intent' ? 'pi_other' : 'pi_test_1' }) })

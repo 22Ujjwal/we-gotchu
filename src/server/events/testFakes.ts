@@ -255,7 +255,10 @@ export class MemoryStore implements Store {
     return true
   }
   async setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }) {
-    Object.assign(this.payments.get(paymentId)!, refund)
+    const payment = this.payments.get(paymentId)
+    if (payment && (!payment.refundId || (payment.refundId === refund.refundId && ['none', 'pending'].includes(payment.refundState)))) {
+      Object.assign(payment, refund)
+    }
   }
   async hasStripeEvent(id: string) { return this.stripeEvents.has(id) }
   async recordStripeEvent(id: string) {

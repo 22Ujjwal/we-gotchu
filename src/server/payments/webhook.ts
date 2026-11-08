@@ -69,7 +69,19 @@ async function dispatchStripeEvent(deps: Deps, event: { type: string; created: n
     const incoming = event.data.object as RefundLike
     if (!incoming || typeof incoming.id !== 'string') return 'mismatch'
     const payment = await deps.store.getPaymentByRefundId(incoming.id)
-    if (!payment) return 'ignored'
+    if (!payment) {
+      // Stripe can deliver an update before refunds.create returns and its ID is
+      // stored. Only our matching paid payment warrants a retry; unrelated
+      // refunds must not acquire a local payment through metadata alone.
+      const approvalId = incoming.metadata?.approvalId
+      const pending = approvalId && await deps.store.getPaymentByApproval(approvalId)
+      const intent = typeof incoming.payment_intent === 'string' ? incoming.payment_intent : incoming.payment_intent?.id
+      if (pending && pending.state === 'paid' && !pending.refundId &&
+          pending.paymentId === incoming.metadata?.paymentId && intent && pending.paymentIntentId === intent) {
+        throw new Error('Refund is awaiting initial persistence; retry delivery')
+      }
+      return 'ignored'
+    }
     // Events can arrive out of order. Read Stripe's current state rather than
     // applying the delivery's historical snapshot or trusting its metadata.
     const current = await deps.stripe.refunds.retrieve(incoming.id)

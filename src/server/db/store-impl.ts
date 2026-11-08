@@ -655,7 +655,8 @@ export function createStore(db: Db): Store {
       await db
         .update(payments)
         .set({ refundId: refund.refundId, refundState: refund.refundState, refundReason: refund.refundReason })
-        .where(eq(payments.id, paymentId))
+        .where(and(eq(payments.id, paymentId), or(isNull(payments.refundId),
+          and(eq(payments.refundId, refund.refundId), inArray(payments.refundState, ['none', 'pending'])))))
     },
 
     async hasStripeEvent(stripeEventId) {

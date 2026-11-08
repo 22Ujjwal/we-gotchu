@@ -42,7 +42,7 @@ export type RefundCreateParams = {
   metadata: Record<string, string>
 }
 
-export type RefundLike = { id: string; status: string | null; payment_intent?: string | { id: string } | null }
+export type RefundLike = { id: string; status: string | null; payment_intent?: string | { id: string } | null; metadata?: Record<string, string> | null }
 
 export interface StripeLike {
   checkout: {
