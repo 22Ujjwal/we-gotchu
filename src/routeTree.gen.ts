@@ -25,6 +25,7 @@ import { Route as SettingsVenueIdRouteImport } from './routes/settings.$venueId'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiArrangeEventsRouteImport } from './routes/api/arrange.events'
+import { Route as ApiArrangeLocalRouteImport } from './routes/api/arrange.local'
 import { Route as ApiArrangeMcpRouteImport } from './routes/api/arrange.mcp'
 import { Route as ApiDemoQuotesReadyRouteImport } from './routes/api/demo.quotes-ready'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
@@ -119,6 +120,11 @@ const SignUpSplatRoute = SignUpSplatRouteImport.update({
 const ApiArrangeEventsRoute = ApiArrangeEventsRouteImport.update({
   id: '/api/arrange/events',
   path: '/api/arrange/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiArrangeLocalRoute = ApiArrangeLocalRouteImport.update({
+  id: '/api/arrange/local',
+  path: '/api/arrange/local',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiArrangeMcpRoute = ApiArrangeMcpRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/arrange/events': typeof ApiArrangeEventsRouteWithChildren
+  '/api/arrange/local': typeof ApiArrangeLocalRoute
   '/api/arrange/mcp': typeof ApiArrangeMcpRoute
   '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
@@ -251,6 +258,7 @@ export interface FileRoutesByTo {
   '/receipts': typeof ReceiptsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/api/arrange/events': typeof ApiArrangeEventsRouteWithChildren
+  '/api/arrange/local': typeof ApiArrangeLocalRoute
   '/api/arrange/mcp': typeof ApiArrangeMcpRoute
   '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/arrange/events': typeof ApiArrangeEventsRouteWithChildren
+  '/api/arrange/local': typeof ApiArrangeLocalRoute
   '/api/arrange/mcp': typeof ApiArrangeMcpRoute
   '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
@@ -320,6 +329,7 @@ export interface FileRouteTypes {
     | '/receipts/'
     | '/settings/'
     | '/api/arrange/events'
+    | '/api/arrange/local'
     | '/api/arrange/mcp'
     | '/api/demo/quotes-ready'
     | '/api/events/$id'
@@ -353,6 +363,7 @@ export interface FileRouteTypes {
     | '/receipts'
     | '/settings'
     | '/api/arrange/events'
+    | '/api/arrange/local'
     | '/api/arrange/mcp'
     | '/api/demo/quotes-ready'
     | '/api/events/$id'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/receipts/'
     | '/settings/'
     | '/api/arrange/events'
+    | '/api/arrange/local'
     | '/api/arrange/mcp'
     | '/api/demo/quotes-ready'
     | '/api/events/$id'
@@ -420,6 +432,7 @@ export interface RootRouteChildren {
   ReceiptsIndexRoute: typeof ReceiptsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   ApiArrangeEventsRoute: typeof ApiArrangeEventsRouteWithChildren
+  ApiArrangeLocalRoute: typeof ApiArrangeLocalRoute
   ApiArrangeMcpRoute: typeof ApiArrangeMcpRoute
   ApiDemoQuotesReadyRoute: typeof ApiDemoQuotesReadyRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
@@ -542,6 +555,13 @@ declare module '@tanstack/react-router' {
       path: '/api/arrange/events'
       fullPath: '/api/arrange/events'
       preLoaderRoute: typeof ApiArrangeEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/arrange/local': {
+      id: '/api/arrange/local'
+      path: '/api/arrange/local'
+      fullPath: '/api/arrange/local'
+      preLoaderRoute: typeof ApiArrangeLocalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/arrange/mcp': {
@@ -733,6 +753,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReceiptsIndexRoute: ReceiptsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   ApiArrangeEventsRoute: ApiArrangeEventsRouteWithChildren,
+  ApiArrangeLocalRoute: ApiArrangeLocalRoute,
   ApiArrangeMcpRoute: ApiArrangeMcpRoute,
   ApiDemoQuotesReadyRoute: ApiDemoQuotesReadyRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,

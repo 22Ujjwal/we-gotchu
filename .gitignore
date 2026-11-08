@@ -21,3 +21,7 @@ todos.json
 
 # Local planning conversations
 .scratch/local-planning-db/
+
+# Local ARRANGE records and verification output
+.scratch/local-arrange-db/
+.scratch/arrange-local-evidence.json
