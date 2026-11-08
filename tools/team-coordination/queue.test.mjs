@@ -85,3 +85,31 @@ test('rendered priority key covers the implemented PR blocking conditions', () =
   assert.match(md, /requested changes/);
   assert.match(md, /merge conflicts/);
 });
+
+test('human briefing groups actionable requests and links evidence without dumping JSON', () => {
+  const q = buildQueue(snapshot({ documents: [doc('Needs from Tony: review Candidate fields.\nBlockers: waiting for endpoint.')], prs: [pr()] }));
+  const md = renderMarkdown(q);
+  assert.match(md, /## Needs attention/);
+  assert.match(md, /## Decisions to confirm/);
+  assert.match(md, /## Pull requests to review/);
+  assert.match(md, /\[Open PR #16\]\(https:\/\/github.com\/22Ujjwal\/we-gotchu\/pull\/16\)/);
+  assert.match(md, /\/blob\/baseline\/docs\/team\/status\/ujjwal.md#L1/);
+  assert.ok(!md.includes('"headRefOid"'));
+  assert.ok(!md.includes('digest'));
+  assert.match(md, /queue.json/);
+});
+
+test('repeated historical references become one follow-up per source report', () => {
+  const q = buildQueue(snapshot({ documents: [doc('PR #16 merged.\nReview PR #16.\nEarlier PR #17.')], prs: [pr({ state: 'MERGED' }), pr({ number: 17, state: 'CLOSED' })] }));
+  const md = renderMarkdown(q);
+  assert.equal((md.match(/### Check references in/g) || []).length, 1);
+  assert.match(md, /historical references may already be accurate/);
+  assert.equal(q.items.filter(x => x.kind === 'reconcile').length, 3);
+});
+
+test('incomplete collection leads the briefing and missing reports never imply inactivity', () => {
+  const md = renderMarkdown(buildQueue(snapshot({ errors: ['Cannot read open PRs.'], documents: [doc("Status: awaiting the owner's first update.")] })));
+  assert.ok(md.indexOf('INCOMPLETE') < md.indexOf('##'));
+  assert.match(md, /Activity elsewhere is unknown/);
+  assert.match(md, /Do not treat missing items as resolved/);
+});
