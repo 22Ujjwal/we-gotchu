@@ -4,7 +4,7 @@ Owner: Ujjwal.
 Updated: 2026-11-07T21:34:11-08:00
 Baseline and hosted test commit: `5b180cc8c57c85c876852579cf448f9cbc7c627a`.
 Branch: [fix/webhook-concurrent-delivery](https://github.com/22Ujjwal/we-gotchu/tree/fix/webhook-concurrent-delivery).
-PR: publication pending for the concurrent webhook fix; earlier hosted handoff #43 is merged.
+PR: [#48](https://github.com/22Ujjwal/we-gotchu/pull/48), on branch and not deployed; earlier hosted handoff #43 is merged.
 Availability: backend, DOM harness (#39), and connected journey (#41) merged. Hosted database, sign-in, event persistence, and direct MCP verified. Stripe sandbox delivery is verified; successful research and a full test-payment/refund flow remain pending.
 
 ## Current hosted result
@@ -74,6 +74,6 @@ Limits: completed sandbox payment/refund remains untested; asynchronous refund s
 
 Implementation baseline: `b1518257371f09c4143b2ce4d7a44045e9c61e65`. Main subsequently advanced through unrelated UI changes; payment files are unchanged. The losing awaiting_payment-to-executing update now throws a retryable error before refund, execution handoff, or acknowledgment. Stripe retry reads fresh state and can observe the winner’s receipt or a real cancellation. No migration, public schema, provider configuration, or Tony-owned code change.
 
-Regression first failed with one unexpected refund; after the six-line guard it passes with one execution handoff, zero refunds, one retryable loser, and a harmless duplicate retry. All 376 application tests, typecheck, and production build passed. Independent review found no blockers. Existing sequential late/revoked refund and retry coverage stays green. No real provider payment was performed for this fix.
+Regression first failed with one unexpected refund; after the six-line guard it passes with one execution handoff, zero refunds, one retryable loser, and a harmless duplicate retry. All 376 application tests, 25 coordination tests, typecheck, and production build passed. Independent review found no blockers. Existing sequential late/revoked refund and retry coverage stays green. No real provider payment was performed for this fix.
 
 The interrupted-expiration and research-finalization gaps remain separate follow-ups. Stripe remains sandbox-only in configuration; an explicit code-level live-payment lock is still a separate safeguard proposal.
