@@ -33,7 +33,7 @@ export function DateTimePicker({ value, field, onSave, onClose }: {
   const [from, setFrom] = useState(value.from ? to24h(value.from) : '19:00')
   const [till, setTill] = useState(value.till ? to24h(value.till) : '23:00')
 
-  const [editing, setEditing] = useState<string | null>(`${field === 'till' ? 'till' : 'from'}-hour`)
+  const [editing, setEditing] = useState<string | null>(null)
 
   useEffect(() => {
     const element = dialog.current!
