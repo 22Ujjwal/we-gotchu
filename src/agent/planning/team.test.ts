@@ -5,6 +5,8 @@ test('the event lead has a pinned roster and delegates without changing transact
   const definition = coordinatorDefinition('model', [ { id: 'maya', version: 2 }, { id: 'sam', version: 3 } ])
   expect(definition.multiagent).toEqual({ type: 'coordinator', agents: [ { type: 'agent', id: 'maya', version: 2 }, { type: 'agent', id: 'sam', version: 3 } ], board: false })
   expect(definition.handoffs).toBe('team')
+  expect(definition.structured_output_required).toBe(true)
+  expect(definition.output_schema?.properties).toHaveProperty('options')
   expect(definition.tools?.configs?.send_to_agent.permission).toBe('allow')
   expect(definition.tools?.configs?.wait_for_agents.permission).toBe('allow')
   expect(definition.mcp_servers).toEqual([])
@@ -21,7 +23,7 @@ test('specialists can research but cannot spawn another team or inherit customer
     for (const config of Object.values(definition.tools?.configs ?? {})) expect(config.permission).toBe('allow')
     expect(definition.system).toContain('Use native public research tools')
     expect(definition.system).not.toContain('Use Monid directly')
-    expect(definition.structured_output_required).toBe(true)
-    expect(definition.output_schema?.properties).not.toHaveProperty('selectedOptionId')
+    expect(definition.structured_output_required).toBe(false)
+    expect(definition.output_schema).toBeNull()
   }
 })
