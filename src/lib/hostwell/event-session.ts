@@ -11,6 +11,9 @@ function needsPolling(view: EventView): boolean {
     view.payment?.state === 'pending' && !view.event.cancelRequestedAt
 }
 
+// Payment confirmation waits on a webhook; research still advances every second.
+const pollDelay = (view: EventView) => view.event.status === 'awaiting_payment' ? 5000 : 1000
+
 const inactiveError = () => new EventApiError(0, 'session_inactive', 'This event session is no longer active.')
 const asApiError = (error: unknown) => error instanceof EventApiError ? error
   : new EventApiError(0, 'connection_failed', 'Could not load the event. Check your connection.')
@@ -63,7 +66,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
         uncertain = false
         failures = 0
         publish({ view: merged, error: mutationError, loading: false })
-        if (needsPolling(merged)) nextDelay = 1000
+        if (needsPolling(merged)) nextDelay = pollDelay(merged)
       } catch (error) {
         if (!current(version) || mutation !== mutationVersion || abort.signal.aborted) return
         const failure = asApiError(error)
@@ -118,7 +121,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
         writeAbort = undefined
         publish({ pending: false })
         if (reconcile) schedule(0)
-        else if (state.view && needsPolling(state.view)) schedule(1000)
+        else if (state.view && needsPolling(state.view)) schedule(pollDelay(state.view))
       }
     }
   }
