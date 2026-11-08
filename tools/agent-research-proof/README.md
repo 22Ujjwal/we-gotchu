@@ -35,7 +35,8 @@ Keep credentials out of prompts, command arguments, and tracked files.
 
 The proof creates a temporary agent and a conversation, retrieves a proposal, sends a selection and cheaper-plan request, and reads the second proposal from the same session.
 Direct mode provisions a temporary agent-bound credential in a temporary Naive vault.
-The current application key cannot create that vault because it lacks admin scope.
+The original key could not create that vault because it lacked admin scope.
+The updated local key successfully created a vault and credential in the connection test below.
 This is one-time setup work for production, not a reason to grant admin access to every customer request.
 The script cancels its session and removes only its own agent and vault on normal completion or a caught failure.
 A hard process kill can bypass cleanup; use the IDs saved in the output record to inspect only those resources.
@@ -57,3 +58,35 @@ Use a reusable configured research agent, its hosted sessions and events, and a 
 Do not copy this temporary provisioning and cleanup script into each customer request.
 Keep customer selections authoritative in application storage; an agent recommendation is not a customer selection.
 See the focused spec and ticket under .scratch/specs/agent-led-event-planning.md and .scratch/agent-conversation/issues.
+
+## Direct connection verified
+
+The local connection test completed on 2026-11-08 UTC using connect.mjs.
+Naive called monid.monid_inspect for channel3 /v1/search and received its actual input specification.
+The session returned that specification through submit_output with no pending approvals.
+This verifies authenticated direct tool use, not a supplier search or the complete application journey.
+Reported Naive consumption was 2445 micro-USD.
+The test session was stopped, while the agent and credential remain available for reuse.
+No production deployment or application contracts changed.
+
+Non-secret resource IDs:
+
+- Agent: agt_95n3aqvyk5qhpd4k9z5pc7bnxt
+- Vault: vlt_gan30nrft94yqfgr5qkxqar8hm
+- Credential: vcr_wr4ang1h8q72ftrsr57p96d7z4
+- Stopped test session: ses_r4fgqb4jm7ap524vfa1915p2y4
+
+The retained agent was subsequently updated to version 2 using configure.ts and src/agent/planning/definition.ts.
+It now has research instructions and Monid discover, inspect, run and get-run access.
+It is separate from execution and cancellation workflows.
+A completed live supplier research turn has not yet been verified because subsequent session requests hit capacity errors and a timeout.
+The ignored evidence record is output/connection-3f382d84-e7b7-4cab-a2d1-1c49143be8c7/result.json.
+Do not rerun connect.mjs casually: a fresh invocation creates resources, and it deliberately refuses to resume a record that already has a session.
+
+## Local application handoff
+
+The local application now uses src/agent/planning/provider.ts for new planning conversations.
+See docs/research/agent-led-planning-local.md for setup, verification and the unresolved session-create attempt.
+The planning.ts proof performs paid hosted research and a selection follow-up, with no purchases or supplier contact.
+Do not rerun it until the uncertain attempt documented in that handoff has been reconciled.
+A new invocation creates a new conversation and is not a retry of an earlier attempt.

@@ -1,14 +1,15 @@
 # Connect agent-led research to customer chat and selection
 
 Type: implementation.
-Status: not started.
+Status: implemented locally; live provider and browser acceptance blocked or pending.
 Owner: Tony.
 Spec: [Agent-led event planning](../../specs/agent-led-event-planning.md).
 Capability proof: tools/agent-research-proof.
 
 ## Prerequisite
 
-Configure the Monid MCP credential in Naive using an administrator-capable setup credential.
+The Monid MCP credential is configured with the updated administrator-capable key.
+A direct inspection call passed; supplier research acceptance is still pending.
 The application should reference the configured agent rather than require admin access on every event.
 Rerun the direct MCP proof and record tool calls and both conversation turns.
 If this path fails, inspect the provider error before introducing a custom adapter.
