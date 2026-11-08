@@ -21,6 +21,7 @@ export const planningCreateSchema = z.object({ requestId, message: text.max(8000
 const version = z.number().int().nonnegative()
 export const planningCommandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('message'), requestId, expectedVersion: version, message: text.max(8000) }).strict(),
+  z.object({ kind: z.literal('confirm'), requestId, expectedVersion: version, approvalId: text, decision: z.enum(['allow', 'deny']) }).strict(),
   z.object({ kind: z.literal('select'), requestId, expectedVersion: version, optionId: text }).strict(),
 ])
 export type PlanningCommand = z.infer<typeof planningCommandSchema>

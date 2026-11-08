@@ -5,7 +5,8 @@ import { planningConversations, schema } from '../db/schema'
 
 export type PendingWrite = {
   requestId: string
-  kind: 'create' | 'message'
+  kind: 'create' | 'message' | 'confirm'
+  approval?: { id: string; decision: 'allow' | 'deny' }
   message: string
   selections: PlanningOption[]
   expiresAt: number

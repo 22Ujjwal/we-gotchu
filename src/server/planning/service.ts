@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
-import { planningCommandSchema, planningCreateSchema, planningProposalSchema } from '../../agent/planning/contract'
+import { planningCommandSchema, planningCreateSchema, planningProposalSchema, planningApprovalSchema } from '../../agent/planning/contract'
 import type { PlanningAgent, PlanningOption, PlanningView } from '../../agent/planning/contract'
 import { ApiError } from '../events/errors'
 import type { PlanningRecord, PlanningRepository } from './repository'
@@ -61,6 +61,11 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord): Promise<Plan
   try {
     const result = await bounded(async () => {
       const agent = deps.agent()
+      if (pending.kind === 'confirm') {
+        if (!agent.confirm || !pending.approval) throw new Error('Approval handler unavailable.')
+        await agent.confirm({ sessionId: record.sessionId!, approvalId: pending.approval.id, decision: pending.approval.decision })
+        return { sequence: record.sequence }
+      }
       if (pending.kind === 'create') {
         return agent.start({ conversationId: record.id, requestId: pending.requestId, message: pending.message })
       }
@@ -72,7 +77,7 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord): Promise<Plan
     }
     after = {
       ...record, sessionId, sequence: result.sequence, pending: null,
-      view: changed(record, { status: 'working', error: null }),
+      view: changed(record, { status: 'working', error: null, approvals: [] }),
     }
   } catch {
     after = { ...record, view: changed(record, { status: 'uncertain', progress: null, error: uncertainError }) }
@@ -128,7 +133,19 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
     const selections = toggle(record.view.selections, record.view.proposal?.options ?? [], command.optionId)
     return (await save(deps, record, { ...record, requests, view: changed(record, { selections }) })).view
   }
-  if (!record.sessionId || record.pending || ['working', 'uncertain'].includes(record.view.status)) throw busy()
+  if (command.kind === 'confirm') {
+    if (!record.sessionId || record.pending || record.view.status !== 'blocked'
+      || !record.view.approvals?.some(approval => approval.id === command.approvalId)) throw stale()
+    const reserved = await save(deps, record, {
+      ...record, requests,
+      pending: { kind: 'confirm', requestId: command.requestId, message: '', selections: [],
+        approval: { id: command.approvalId, decision: command.decision },
+        expiresAt: now(deps) + Math.max(90_000, timeout(deps) + 5_000) },
+      view: changed(record, { status: 'working', progress: null, error: null }),
+    })
+    return deliver(deps, reserved)
+  }
+  if (!record.sessionId || record.pending || ['working', 'uncertain', 'blocked'].includes(record.view.status)) throw busy()
   const reserved = await save(deps, record, {
     ...record, requests,
     pending: {
@@ -161,11 +178,12 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   try {
     result = await bounded(() => deps.agent().read({ sessionId: record.sessionId!, afterSequence: record.sequence }), timeout(deps))
     if (!Number.isSafeInteger(result.sequence) || result.sequence < 0) throw new Error('Invalid sequence.')
+    if (result.approvals) result.approvals = result.approvals.map(approval => planningApprovalSchema.parse(approval))
     if (result.proposal) result.proposal = planningProposalSchema.parse(result.proposal)
   } catch {
     throw new ApiError(503, 'provider_unavailable', 'Could not refresh this conversation. Your saved work is unchanged.')
   }
-  if (result.sequence < record.sequence || (result.sequence === record.sequence && result.status !== 'failed')) return record.view
+  if (result.sequence < record.sequence || (result.sequence === record.sequence && !['failed', 'blocked'].includes(result.status))) return record.view
   const proposal = result.proposal ?? record.view.proposal
   const messages = [...record.view.messages]
   const answersNewTurn = result.status === 'ready' && messages.at(-1)?.role === 'user'
@@ -182,9 +200,9 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   const after: PlanningRecord = {
     ...record,
     // The provider can report the final sequence before it reports completion.
-    sequence: result.status === 'working' ? record.sequence : result.sequence,
+    sequence: ['working', 'blocked'].includes(result.status) ? record.sequence : result.sequence,
     view: changed(record, {
-      proposal, messages, progress: result.progress,
+      proposal, messages, progress: result.progress, approvals: result.approvals ?? [],
       // A read cannot prove whether an unacknowledged write was accepted.
       status: record.pending ? 'uncertain' : result.status,
       error: record.pending ? uncertainError : result.error,
