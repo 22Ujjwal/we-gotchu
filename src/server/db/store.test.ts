@@ -185,6 +185,13 @@ describe('updateBrief', () => {
     expect((await store.updateBrief({ eventId: event.eventId, expectedBriefRevision: 1, brief })).ok).toBe(true)
   })
 
+  it('refuses once cancellation was requested', async () => {
+    const { event } = await store.createEvent({ customerId: 'cust_1', brief })
+    await store.requestCancel(event.eventId, new Date())
+    expect(await store.updateBrief({ eventId: event.eventId, expectedBriefRevision: 1, brief })).toEqual({ ok: false, reason: 'canceled' })
+    expect(await store.getEvent(event.eventId)).toMatchObject({ briefRevision: 1, status: 'canceling' })
+  })
+
   it('savePlan refuses a plan for a stale brief revision', async () => {
     const { event, run } = await store.createEvent({ customerId: 'cust_1', brief })
     await store.updateBrief({ eventId: event.eventId, expectedBriefRevision: 1, brief })

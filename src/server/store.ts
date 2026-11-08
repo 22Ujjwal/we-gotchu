@@ -33,13 +33,13 @@ export interface Store {
   /**
    * Atomically: checks expectedBriefRevision, stores the merged brief with revision + 1, marks the
    * previous result superseded, drops an unapproved plan, marks the old research run canceled, and
-   * creates a new research Run. Refuses if an approval exists for the current plan.
+   * creates a new research Run. Refuses if an approval exists for the current plan or cancellation was requested.
    */
   updateBrief(input: {
     eventId: string
     expectedBriefRevision: number
     brief: Brief
-  }): Promise<{ ok: true; event: Event; run: Run; previousRun: Run | null } | Fail<'not_found' | 'stale_brief' | 'already_approved'>>
+  }): Promise<{ ok: true; event: Event; run: Run; previousRun: Run | null } | Fail<'not_found' | 'canceled' | 'stale_brief' | 'already_approved'>>
   /** Conditional status change: only applies when the current status is in `from`. Returns false otherwise. */
   setEventStatus(eventId: string, from: readonly EventStatus[], to: EventStatus, expectedBriefRevision?: number): Promise<boolean>
   /** Sets cancelRequestedAt once and status canceling; returns null if already canceled. */

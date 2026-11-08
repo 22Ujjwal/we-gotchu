@@ -165,6 +165,7 @@ export async function updateBrief(
   const res = await deps.store.updateBrief({ eventId, expectedBriefRevision, brief })
   if (!res.ok) {
     if (res.reason === 'not_found') throw new ApiError(404, 'not_found', 'Event not found.')
+    if (res.reason === 'canceled') throw new ApiError(409, 'invalid_status', 'The event was canceled; create a new event instead.')
     if (res.reason === 'stale_brief') throw new ApiError(409, 'stale_brief', 'The brief changed since you loaded it. Reload and try again.')
     throw new ApiError(409, 'already_approved', 'The plan is already approved; cancel before changing the brief.')
   }

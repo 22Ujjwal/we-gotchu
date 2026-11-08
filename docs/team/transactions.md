@@ -69,6 +69,7 @@ Duplicate commands, webhooks, and repeated MCP tool calls cannot produce duplica
 An MCP call with a missing or mismatched eventId or actionId is rejected; the backend finds the stored approval, validates it, and derives the execution key server-side.
 A stale or revoked approval prevents execution.
 A cancellation recorded before approval persistence rejects approve with 409, requests expiry of the unused Checkout session, and saves no approval or payment for that request.
+A brief update after cancellation was requested returns 409 `invalid_status` and does not restart research.
 A payment arriving after revocation does not trigger supplier purchases.
 Webhook redelivery after an interrupted refund or execution handoff resumes the owed work using stable identities; a saved paid state alone does not prove that handoff completed.
 Unknown outcomes trigger reconciliation rather than automatic retry.
