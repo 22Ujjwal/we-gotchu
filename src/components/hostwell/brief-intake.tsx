@@ -19,7 +19,10 @@ function AuthenticatedIntake({ onCreated }: { onCreated: (eventId: string) => vo
       const result = await createEventApi().create(brief)
       if (active.current) onCreated(result.event.eventId)
     } catch (error) {
-      if (active.current && (!(error instanceof EventApiError) || error.status === 0 || error.status >= 500 || error.code === 'invalid_response' || error.code === 'outcome_unknown')) setUncertain(true)
+      if (!(error instanceof EventApiError) || error.status === 0 || error.status >= 500 || error.code === 'invalid_response' || error.code === 'outcome_unknown') {
+        if (active.current) setUncertain(true)
+        throw new Error('Creation outcome is unknown. Your event may already exist. Do not submit again or reload to retry. Contact support to locate it.')
+      }
       throw error
     } finally { if (active.current) setPending(false) }
   }} />
