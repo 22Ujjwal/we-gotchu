@@ -1,7 +1,7 @@
 # Ujjwal's status
 
 Owner: Ujjwal.
-Updated: 2026-11-07T19:48:47-08:00
+Updated: 2026-11-07T19:51:35-08:00
 Baseline: main at `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`, including merged #28, #29, and #30.
 Branch and PR: [chore/hosted-mcp-setup](https://github.com/22Ujjwal/we-gotchu/tree/chore/hosted-mcp-setup); hosting handoff [PR #33](https://github.com/22Ujjwal/we-gotchu/pull/33) is open. Transaction fix [#28](https://github.com/22Ujjwal/we-gotchu/pull/28) is merged.
 Availability: backend fixes merged; app and direct MCP ping deployed; shared account, database, and payment setup pending.
@@ -74,4 +74,8 @@ The explicit Vercel build command uses the verified Vite/Nitro build rather than
 
 Remaining: complete shared Clerk account signup/claim and confirm members; supply the intended Neon connection and Stripe test key; run database migrations; configure the Stripe webhook; complete deployed sign-in; test a real Naive session separately. Real research additionally needs NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL.
 
-Current deployment: `dpl_3Rc6st6dchwH2Nfbn4ARC9oqR3sV`, serving the verified application source at `a6afd9f`.
+Current production deployment: `dpl_6DF759cX1FR8Hff39C2hhfC7vYDm`, serving Git main `6f2597989a1b738293f18972312d4d7ddd2f5db9` after PR #32. Vercel reports READY; this automatic Git build supersedes the earlier prebuilt deployment. Refreshed app/sign-in page and direct MCP checks pass. The 213-test local verification above applies to `a6afd9f`, not this newer source.
+
+Production environment names were rechecked: APP_URL, VITE_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, and MCP_BEARER_TOKEN only. DATABASE_URL, Stripe credentials/webhook secret, NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL are not configured. Neither database migration has been applied by this session. Shared Clerk claim/membership and completed login remain unverified.
+
+Leo can wire the existing EventView and poll GET /api/events/{id}?afterSequence=N; hosted end-to-end verification awaits auth, database, and provider setup. Polls advance research stages and must continue until a terminal result. Tony should confirm the shared provider workspace/model, provision research credentials securely, and provide one agreed test brief and expected outcome. Real research completion and Naive-to-MCP connectivity remain separately unverified.
