@@ -106,7 +106,7 @@ function productEvidence(candidate: Candidate, output: unknown, currency: string
   if (product.disclosure) candidate.affiliateDisclosure = [candidate.affiliateDisclosure, product.disclosure].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join('\n')
 }
 
-function pageEvidence(candidate: Candidate, output: unknown, requested: URL): { final: URL; next?: URL } {
+function pageEvidence(candidate: Candidate, output: unknown, requested: URL, matchedFields: Set<string>): { final: URL; next?: URL } {
   const page = Page.parse(output)
   const urls = [page.url, page.metadata.sourceUrl, page.metadata.finalUrl, ...(page.metadata.canonicalUrl ? [page.metadata.canonicalUrl] : [])]
     .map(publicUrl)
@@ -122,6 +122,7 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL): { 
     delivery: /\b(delivery|shipping|pickup)\b/i,
   }
   for (const [field, pattern] of Object.entries(keywords)) {
+    if (matchedFields.has(field)) continue
     const lines = page.markdown.split('\n').filter(line => pattern.test(line)).slice(0, 2)
     if (!lines.length) {
       candidate.verification[field] ??= { status: 'unknown' }
@@ -130,6 +131,7 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL): { 
       continue
     }
     // These are attributed excerpts, never verified booking terms or numerical capacity.
+    matchedFields.add(field)
     const excerpt = lines.join(' ').slice(0, 500)
     candidate.verification[field] = { status: 'unknown', sourceUrl: final.href,
       note: `Unverified supplier-page excerpt: ${excerpt}. Requires review for this event; no supplier was contacted.` }
@@ -189,6 +191,7 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
         continue
       }
       attemptedCandidates++
+      const matchedFields = new Set<string>()
       let target = candidate.kind === 'supply' ? new URL(`https://api.trychannel3.com/v1/products/${productId}`) : original
       for (let page = 0; page < (candidate.kind === 'supply' ? 1 : maxPages); page++) {
         if (signal.aborted) { check(target.href, 'absent', 'Detail not attempted because research stopped.'); break }
@@ -212,7 +215,7 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
           let sourceUrl = target.href
           if (candidate.kind === 'supply') productEvidence(updated, run.output, input.brief.currency, sourceUrl)
           else {
-            const parsed = pageEvidence(updated, run.output, target)
+            const parsed = pageEvidence(updated, run.output, target, matchedFields)
             sourceUrl = parsed.final.href
             next = parsed.next
           }
