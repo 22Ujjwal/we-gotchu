@@ -1,3 +1,4 @@
+import { ApiError } from '../events/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PlanningDeps } from './service'
 import { planningCollectionPost, planningGet, planningPost } from './http'
@@ -66,7 +67,7 @@ it('dispatches saved reply retries independently of the customer connection', as
   const body = { kind: 'retry_reply', requestId: 'retry', expectedVersion: 1, inquiryId: 'inquiry', replyId: 'reply' }
   expect((await planningPost(deps, 'plan', request(body), dispatch)).status).toBe(200)
   expect(dispatch).toHaveBeenCalledTimes(1)
-  service.commandPlanning.mockRejectedValue({ status: 409, errorCode: 'stale' })
+  service.commandPlanning.mockRejectedValue(new ApiError(409, 'stale', 'The plan changed.'))
   expect((await planningPost(deps, 'plan', request(body), dispatch)).status).toBe(409)
   expect(dispatch).toHaveBeenCalledTimes(1)
 })

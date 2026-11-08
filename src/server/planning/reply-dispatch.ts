@@ -7,10 +7,15 @@ export function withReplyProcessing(
   return async (request: Request): Promise<Response> => {
     const response = await receive(request)
     if (response.ok) {
-      waitUntil(Promise.resolve().then(process).catch(() => {
-        console.error('Supplier reply processing interrupted; saved jobs remain available for recovery.')
-      }))
+      dispatchReplyProcessing(process, waitUntil)
     }
     return response
   }
+}
+
+
+export function dispatchReplyProcessing(process: () => Promise<unknown>, waitUntil: (task: Promise<unknown>) => void) {
+  waitUntil(Promise.resolve().then(process).catch(() => {
+    console.error('Supplier reply processing interrupted; saved jobs remain available for recovery.')
+  }))
 }
