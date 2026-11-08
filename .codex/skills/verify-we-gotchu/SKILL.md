@@ -75,3 +75,8 @@ Its exact invocation and limitations are in features/venue-inquiries.md.
 It creates a new labeled test conversation without changing the source conversation, calls the real interpretation model, and never sends email.
 Passing its controlled reply ID instead of the source ID retries interpretation of the same saved reply after failure.
 Run it only with the local database server stopped, then start the application to inspect the result through its actual UI.
+
+The local payment preflight is `tools/local-rehearsal/payment-preflight.mjs`.
+Run `NODE_ENV=development bun --env-file=.env.local tools/local-rehearsal/payment-preflight.mjs` before sandbox payment checks.
+It rejects duplicate environment assignments, missing local mode and non-test Stripe keys without printing values.
+A passing preflight does not prove provider access or matching webhook signing secrets.
