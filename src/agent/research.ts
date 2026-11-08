@@ -7,13 +7,14 @@ export type Discovery = {
   warnings?: string[]
 }
 export type ResearchProviders = {
+  enrich?: (input: ResearchInput, evidence: Discovery, signal: AbortSignal) => Promise<Discovery>
   discover: (input: ResearchInput, signal: AbortSignal) => Promise<Discovery>
   recommend: (input: ResearchInput, candidates: Candidate[], signal: AbortSignal, correction: boolean) => Promise<unknown>
 }
 export type ResearchOptions = {
   timeoutMs?: number
   signal?: AbortSignal
-  onProgress?: (stage: 'discovering' | 'recommending' | 'finished') => void
+  onProgress?: (stage: 'discovering' | 'investigating' | 'recommending' | 'finished') => void
 }
 
 // The model may select and order evidence, but cannot author supplier facts.
@@ -67,7 +68,7 @@ export async function researchEvent(
     progress('discovering')
     const discovery = await bounded(() => providers.discover(input, signal))
     const ids = new Set<string>()
-    const candidates: Candidate[] = []
+    let candidates: Candidate[] = []
     let skipped = 0
     // One malformed or repeated search result must not discard the rest of the evidence.
     for (const raw of discovery.candidates) {
@@ -82,6 +83,17 @@ export async function researchEvent(
       warnings: [...(discovery.warnings ?? []), ...(skipped ? [`${skipped} invalid or duplicate discovery results were skipped.`] : [])],
     }
     if (!candidates.length) return { ...base, sourceChecks: evidence.sourceChecks, warnings: withEvidenceWarnings('No usable supplier candidates were found.') }
+    if (providers.enrich) {
+      progress('investigating')
+      const enriched = await bounded(() => providers.enrich!(input, structuredClone(evidence), signal))
+      const validated = ResearchResult.parse({ ...base, ...enriched })
+      if (validated.candidates.length !== candidates.length || validated.candidates.some((c, i) =>
+        c.candidateId !== candidates[i].candidateId || c.supplierId !== candidates[i].supplierId || c.kind !== candidates[i].kind)) {
+        throw new Error('Detail enrichment changed candidate identities')
+      }
+      evidence = { candidates: validated.candidates, sourceChecks: validated.sourceChecks, warnings: validated.warnings }
+      candidates = evidence.candidates
+    }
     progress('recommending')
     let ranking: z.infer<typeof Ranking> | undefined
     for (let turn = 0; turn < 2; turn++) {
@@ -101,7 +113,7 @@ export async function researchEvent(
       ...base, ...evidence, outcome: 'partial',
       recommendations: ordered.map((candidateId, index) => ({
         candidateId, rank: index + 1, matched: [], unmet: [],
-        unchecked: ['Price, schedule, capacity, and cancellation terms need supplier-detail verification.'],
+        unchecked: ['Final costs, event-date availability, capacity fit, required quantities, and cancellation terms remain unconfirmed.'],
       })),
       warnings: withEvidenceWarnings('Discovery candidates are not confirmed bookings or final quotes.'),
     })

@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest'
-import { CONTRACT_VERSION, planReadyEvent } from '../contracts'
+import { CONTRACT_VERSION, planReadyEvent, type Candidate, type ResearchInput } from '../contracts'
 import { researchEvent } from '../agent/research'
 import { createDiscovery } from './discovery'
 import { createDetailEnricher } from './details'
@@ -33,7 +33,7 @@ function setup(options: { product?: unknown; page?: unknown; failPage?: boolean;
     else output = options.page ?? page
     return new Response(JSON.stringify({ runId: `run-${calls.length}`, status: 'COMPLETED', providerResponse: { httpStatus: 200 }, output }))
   }) as typeof fetch
-  const recommend = vi.fn(async (_input, candidates) => ({ candidateIds: candidates.map((c: any) => c.candidateId) }))
+  const recommend = vi.fn(async (_input: ResearchInput, candidates: Candidate[]) => ({ candidateIds: candidates.map((c: any) => c.candidateId) }))
   const progress: string[] = []
   return { calls, recommend, progress, run: () => researchEvent(input, {
     discover: createDiscovery({ apiKey: 'secret', fetch: fetcher }),
@@ -90,4 +90,27 @@ test('hostile content cannot select tools or follow contact and cross-site links
   expect(ctx.calls.map(c => c.endpoint)).toEqual(['/google/maps', '/v1/search', '/web/scrape/markdown', '/v1/products/{product_id}'])
   expect(result.sourceChecks.some(c => c.candidateId === 'venue:other' && c.reason?.includes('limit'))).toBe(true)
   expect(result.candidates.every(c => !c.cancellationTerms.known)).toBe(true)
+})
+
+
+test.each([
+  { ...page, metadata: { ...page.metadata, finalUrl: 'https://evil.example.com/' } },
+  { ...page, cache_metadata: { age_ms: 86_400_000 } },
+  { ...page, markdown: 'x'.repeat(40_001) },
+  { ...page, markdown: 'x'.repeat(260_000) },
+  { success: false },
+])('unusable pages retain discovery evidence and record a failed check', async invalidPage => {
+  const result = await setup({ page: invalidPage }).run()
+  const venue = result.candidates.find(c => c.kind === 'venue')!
+  expect(venue.sources.every(s => s.stage === 'discovery')).toBe(true)
+  expect(result.sourceChecks.some(c => c.candidateId === venue.candidateId && c.outcome === 'failed')).toBe(true)
+  expect(result.recommendations).toHaveLength(2)
+})
+
+test('conflicting pack statements stay conflicts and do not produce quantity calculations', async () => {
+  const result = await setup({ product: { ...product, key_features: ['Includes 20 plates', 'Includes 8 plates'] } }).run()
+  const supply = result.candidates.find(c => c.kind === 'supply')!
+  expect(supply.verification.packSize.status).toBe('conflict')
+  expect(supply.quantityInfo).toBeUndefined()
+  expect(result.sourceChecks.find(c => c.candidateId === supply.candidateId)?.missingFields).toContain('packSize')
 })
