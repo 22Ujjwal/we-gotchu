@@ -28,3 +28,8 @@ test('empty, overflowing, fractional, and negative amounts cannot establish with
   expect(assessCosts([cost(Number.MAX_SAFE_INTEGER), cost(1)], 100, 'USD').fit).toBe('unknown')
   for (const invalid of [-1, 1.5, NaN, Infinity]) expect(assessCosts([cost(invalid)], 100, 'USD').fit).toBe('unknown')
 })
+
+test('no usable prices remain unknown rather than a zero subtotal', () => {
+  expect(assessCosts([cost(null)], 100, 'USD')).toEqual({ subtotal: null, fit: 'unknown' })
+  expect(assessCosts([cost(10, 'EUR')], 100, 'USD')).toEqual({ subtotal: null, fit: 'unknown' })
+})
