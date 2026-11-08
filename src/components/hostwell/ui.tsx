@@ -107,7 +107,17 @@ export function FeatureRow({ feature }: { feature: Feature }) {
  * Venue photo with an optional gallery: when given more than one photo it
  * shows prev/next arrows (cycling, wraps around) and position dots.
  */
-export function Photo({
+export function Photo(props: {
+  photos: Array<string>
+  alt: string
+  className?: string
+  arrows?: boolean
+}) {
+  // Reset only when the actual source list changes, not on ordinary parent renders.
+  return <PhotoCarousel key={JSON.stringify([props.alt, props.photos])} {...props} />
+}
+
+function PhotoCarousel({
   photos,
   alt,
   className = '',
@@ -118,10 +128,15 @@ export function Photo({
   className?: string
   arrows?: boolean
 }) {
-  const [index, setIndex] = useState(0)
-  const n = photos.length
-  if (n === 0) return <div role="img" aria-label={alt} className={`shrink-0 bg-cream ${className}`} />
-  const go = (d: number) => setIndex((i) => (i + d + n) % n)
+  const [position, setPosition] = useState(0)
+  const [failed, setFailed] = useState<Set<string>>(() => new Set())
+  const usable = photos.filter(photo => !failed.has(photo))
+  const n = usable.length
+  const index = Math.min(position, n - 1)
+  if (n === 0) return <div role="img" aria-label={`${alt}: Photo unavailable`}
+    className={`shrink-0 bg-cream text-[14px] text-stone ${className}`}
+    style={{ height: 'auto', minHeight: 0, aspectRatio: 'auto', padding: '20px 24px' }}>Photo unavailable</div>
+  const go = (d: number) => setPosition((index + d + n) % n)
   const arrow =
     'absolute top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center bg-white/85 hover:bg-white focus-visible:outline-2 focus-visible:outline-gold'
   return (
@@ -132,7 +147,13 @@ export function Photo({
       className={`relative shrink-0 overflow-hidden ${className}`}
     >
       <img
-        src={photos[index]}
+        key={usable[index]}
+        src={usable[index]}
+        onError={() => {
+          const source = usable[index]
+          setFailed(previous => new Set([...previous, source]))
+          setPosition(index)
+        }}
         alt={n > 1 ? `${alt}, photo ${index + 1} of ${n}` : alt}
         className="size-full object-cover"
       />
@@ -142,7 +163,7 @@ export function Photo({
             aria-hidden
             className="absolute inset-x-0 bottom-3.5 flex justify-center gap-1.5"
           >
-            {photos.map((p, i) => (
+            {usable.map((p, i) => (
               <span
                 key={p}
                 className={`size-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/50'}`}
