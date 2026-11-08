@@ -5,6 +5,7 @@ export type ResearchCleanup = { agentId: string | null; sessionId: string | null
 export type ResearchCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | 'correctionsUsed'> & {
   cleanup?: ResearchCleanup | null
   sessionStopped?: boolean
+  readFailures?: number
   version: number
   input: ResearchInput
   stage: 'discovery' | 'investigating' | 'agent' | 'session' | 'ranking' | 'correcting' | 'cleanup' | 'delete_agent' | 'done' | 'uncertain'
