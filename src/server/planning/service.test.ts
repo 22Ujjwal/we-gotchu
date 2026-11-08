@@ -50,6 +50,18 @@ describe('planning service', () => {
     expect(agent.start).toHaveBeenCalledTimes(1)
   })
 
+  it('accepts completion at the same sequence as the last working snapshot', async () => {
+    const initial = await create()
+    vi.mocked(agent.read).mockResolvedValueOnce({ status: 'working', sequence: 8, proposal: null, progress: 'Checking options', error: null })
+    const working = await getPlanning(deps, initial.id)
+    expect(working.status).toBe('working')
+    vi.mocked(agent.read).mockResolvedValueOnce({ status: 'ready', sequence: 8, proposal, progress: null, error: null })
+    const completed = await getPlanning(deps, initial.id)
+    expect(completed.status).toBe('ready')
+    expect(completed.proposal).toEqual(proposal)
+    expect(agent.read).toHaveBeenLastCalledWith({ sessionId: 'session-1', afterSequence: 1 })
+  })
+
   it('toggles snapshots, replaces only the venue, and checks exact versions', async () => {
     let view = await ready()
     for (const optionId of ['venue', 'cups', 'venue2', 'plates', 'cups']) {
