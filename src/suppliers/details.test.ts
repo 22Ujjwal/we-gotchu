@@ -200,3 +200,11 @@ test('the ranking reserve caps a larger configured detail budget', async () => {
   expect(ctx.recommend).toHaveBeenCalledTimes(1)
   expect(result.sourceChecks.some(c => c.outcome === 'failed' && c.candidateId === 'venue:hall')).toBe(true)
 })
+
+test('venue hospitality prose is not capacity evidence and excerpts keep punctuation', async () => {
+  const result = await setup({ page: { ...page, markdown: 'Choose a Hosted Bar where your guests do not worry.\nCapacity up to 50 seated guests.' } }).run()
+  const note = result.candidates[0].verification.capacity.note!
+  expect(note).not.toContain('Hosted Bar')
+  expect(note).toContain('50 seated guests.')
+  expect(note).not.toContain('guests..')
+})
