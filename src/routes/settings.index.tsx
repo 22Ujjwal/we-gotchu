@@ -38,7 +38,7 @@ function PreviewSettingsPage() {
     navigate({ to: '/settings/$venueId', params: { venueId } })
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-clip">
       <Header step="setting" />
       <main className="flex flex-col items-center gap-6 px-5 pt-8 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
         <div className="flex flex-col items-center gap-2 text-center lg:gap-3.5">
@@ -60,12 +60,12 @@ function PreviewSettingsPage() {
 
         <section
           aria-label="Suggested venues"
-          className="flex w-full flex-col items-center gap-5 lg:w-auto lg:flex-row lg:gap-12 lg:pt-2"
+          className="flex w-full flex-col items-center gap-5 lg:w-max lg:flex-row lg:gap-12 lg:pt-2"
         >
           <SideCard venue={prev} onSelect={() => choose(prev.id)} />
           <div
             key={current.id}
-            className="gold-frame rise order-first flex w-full max-w-[468px] shrink-0 p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
+            className="gold-frame rise order-first flex w-full max-w-[468px] shrink-0 lg:w-[468px] p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
           >
             <article className="flex w-full flex-col overflow-hidden bg-white">
               <Photo
@@ -150,7 +150,7 @@ function CardTitle({ venue, large }: { venue: Venue; large?: boolean }) {
 
 function SideCard({ venue, onSelect }: { venue: Venue; onSelect: () => void }) {
   return (
-    <article className="flex w-full max-w-[468px] shrink-0 lg:max-w-[340px] flex-col overflow-hidden border border-line bg-white shadow-[0_12px_32px_#1F1B160F]">
+    <article className="flex w-full max-w-[468px] shrink-0 lg:w-[340px] lg:max-w-[340px] flex-col overflow-hidden border border-line bg-white shadow-[0_12px_32px_#1F1B160F]">
       <Photo
         key={venue.id}
         photos={venue.photos}
