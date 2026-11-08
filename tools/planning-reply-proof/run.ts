@@ -10,6 +10,7 @@ if (process.env.REPLY_LIVE_PROOF !== '1' || process.env.NODE_ENV !== 'developmen
 }
 const sourceId = process.argv[2]
 if (!sourceId) throw new Error('Pass an existing local conversation ID to reuse its authenticated owner.')
+const complete = process.argv.includes('--complete')
 const storage = await createLocalPlanningRepository(process.env.PLANNING_LOCAL_DB_DIR)
 try {
   const source = await storage.repository.getById(sourceId)
@@ -55,7 +56,9 @@ try {
   await storage.repository.insert(record)
   const message = { provider: 'controlled-fixture', messageId: `${id}:reply`, threadId: `${id}:thread`, inReplyTo: `${id}:sent`,
     from: 'venue@example.com', to: ['planner@example.com'], subject: 'Controlled quote',
-    text: 'We can offer the room for 12 adults on December 12, 2026, noon to 3pm America/Los_Angeles. The room price is USD 200. Tax and cleaning are extra; we have not calculated them. A USD 50 deposit is included in the room price. Cancellation terms will follow. This is a quote only, not a reservation.',
+    text: complete
+      ? 'CONTROLLED TEST QUOTE. This is a synthetic venue, not a real supplier. The room is available for 12 adults on December 12, 2026, noon to 3pm America/Los_Angeles. One room booking costs USD 200 total for those three hours, including all taxes, cleaning and fees. No delivery is needed and there are no delivery charges. A USD 50 deposit is included in the USD 200 total, not extra. Cancellation before the event is fully refundable with no retained fees. No supplies are included or required for this room-only inquiry. This quote expires December 1, 2026 at 00:00 UTC. This is a test quote only, not a reservation.'
+      : 'We can offer the room for 12 adults on December 12, 2026, noon to 3pm America/Los_Angeles. The room price is USD 200. Tax and cleaning are extra; we have not calculated them. A USD 50 deposit is included in the room price. Cancellation terms will follow. This is a quote only, not a reservation.',
     receivedAt: new Date().toISOString(), originalRef: `${id}:controlled-original`, mode: 'simulated' }
   const result = await receivePlanningReply(storage.repository, id, record.view.inquiry!.id, message, checkedInterpret)
   const saved = (await storage.repository.getById(id))!
