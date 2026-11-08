@@ -1,13 +1,35 @@
 # Ujjwal's status
 
 Owner: Ujjwal.
-Updated: 2026-11-07T19:51:35-08:00
-Baseline: main at `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`, including merged #28, #29, and #30.
-Branch and PR: [chore/hosted-mcp-setup](https://github.com/22Ujjwal/we-gotchu/tree/chore/hosted-mcp-setup); hosting handoff [PR #33](https://github.com/22Ujjwal/we-gotchu/pull/33) is open. Transaction fix [#28](https://github.com/22Ujjwal/we-gotchu/pull/28) is merged.
-Availability: backend fixes merged; app and direct MCP ping deployed; shared account, database, and payment setup pending.
-Tested application commit: `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`. Hosting branch changes only build configuration, ignore rules, and status documentation.
+Updated: 2026-11-07T20:44:25-08:00
+Baseline: main `38516c9d6d820ea6965d4aac76677c9d40c5950f`.
+Branch: [docs/neon-setup](https://github.com/22Ujjwal/we-gotchu/tree/docs/neon-setup); status-only PR pending publication.
+Availability: Neon database and migrations live-verified; research configuration deployed; shared Clerk claim/sign-in and Stripe setup still pending.
 
-## Current result
+## Current hosted result
+
+App: https://we-gotchu.vercel.app
+MCP: https://we-gotchu.vercel.app/api/mcp
+Production was redeployed after database connection; deployment `dpl_5tzhZQVy7ggx47MzWHpJQKkYW2eT` is READY.
+
+Neon resource `we-gotchu-db` is on Free (`free_v3`) in iad1, connected to this project's production environment. Optional Neon Auth is disabled because the app uses Clerk. DATABASE_URL is configured in production and ignored local configuration; no connection values are published.
+Both committed migrations were applied: initial tables and runs.research_checkpoint. Verified two migration ledger entries, nine public tables, and the checkpoint column. A transaction wrote and read a probe event, then rolled back; its absence was confirmed afterward.
+A bearer-authenticated hosted MCP get_event call for a new nonexistent ID returned event_not_found. This verifies the deployed server queried Neon successfully, separately from the earlier ping-only checks.
+
+NAIVE_API_KEY and MONID_API_KEY are production secrets. An authenticated read of Naive's live catalogue confirmed z-ai/glm-5.3-flash supports immediate execution; NAIVE_MODEL is configured to that exact ID and deployed. The existing 500,000 micro-USD ($0.50) session cap was unchanged. No live research session, real purchase, or supplier commitment was started. Monid credential validity remains unverified by a provider request.
+
+## Remaining handoff
+
+Complete the shared Clerk application claim/access check and actual deployed sign-in. Then, after Tony supplies the final frontend integration commit, agreed brief, revised brief, and expected terminal outcome, verify authenticated event creation, polling through research completion, reload restoration, and changed-brief handling.
+Stripe test keys and signed webhook verification remain pending and separate from research readiness.
+DOM-test prerequisite [PR #39](https://github.com/22Ujjwal/we-gotchu/pull/39) is published; its standard CI passed. Tony and Leo own API wiring and screen coverage; no design changes were made here.
+Hosting [PR #33](https://github.com/22Ujjwal/we-gotchu/pull/33) and transaction [PR #28](https://github.com/22Ujjwal/we-gotchu/pull/28) are merged.
+
+## Historical handoff (superseded where it conflicts with current hosted result)
+
+The following records the earlier application verification at a6afd9f and deployment at 6f25979. Its missing-database/provider statements are historical; use the current hosted result above for readiness.
+
+
 
 Contracts and fixtures (#16), Clerk authentication (#17), standalone research (#18), the fixture-backed frontend (#19), and backend core (#20) are merged.
 The merged baseline remains TanStack Start with Bun; framework-migration PR #6 is closed without merging.
