@@ -48,7 +48,7 @@ export function VenueView({
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
             {venue.name}
           </h1>
-          <MetaLine>
+          {!embedded && <MetaLine>
             <span>
               {brief.date}, {to24h(brief.from)}
             </span>
@@ -56,7 +56,7 @@ export function VenueView({
             <Guests n={brief.guests} />
             <span className="hidden lg:inline">≤ ${brief.budget.replace(/^\$/, '')}</span>
             {back}
-          </MetaLine>
+          </MetaLine>}
         </div>
 
         <div className="flex w-full max-w-[1100px] flex-col items-start gap-8 lg:flex-row lg:gap-14">

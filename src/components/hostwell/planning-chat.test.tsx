@@ -236,7 +236,7 @@ test('selection follows server snapshots for one venue and multiple supplies and
     fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(name) }))
     await waitFor(() => expect(screen.getByRole('checkbox', { name: new RegExp(name) })).toBeChecked())
   }
-  fireEvent.click(screen.getByRole('button', { name: 'Back to settings' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Change venue' }))
   fireEvent.click(screen.getByRole('button', { name: 'Choose Dining hall' }))
   await screen.findByRole('button', { name: 'Remove Dining hall' })
   expect(screen.queryByRole('button', { name: 'Remove Garden room' })).not.toBeInTheDocument()
@@ -663,10 +663,10 @@ test.each(['pending', 'uncertain', 'accepted', 'failed'] as const)('existing %s 
     delivery: { status, requestId: 'send', draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0 },
   } })))
   render(<ConnectedPlanningPage id="plan-a" />)
-  const email = await screen.findByRole('textbox', { name: 'Send my arrangement updates to' })
+  const email = await screen.findByRole('textbox', { name: 'Email for updates' })
   await userEvent.type(email, 'customer@example.com')
   expect(screen.getByRole('button', { name: 'Please arrange this' })).toBeDisabled()
-  expect(screen.getByText('An inquiry already exists for this plan. Check its status below before arranging anything else.')).toBeVisible()
+  expect(screen.getByText('Review existing inquiry.')).toBeVisible()
   expect(screen.getByRole('button', { name: 'Check for venue replies' })).toBeEnabled()
   if (status === 'uncertain') {
     const recovery = screen.getByRole('region', { name: 'Inquiry send status' })
@@ -690,7 +690,20 @@ test('uncertain research permits choosing a saved setting without enabling arran
   const choose = await screen.findByRole('button', { name: 'Choose Garden room' })
   expect(choose).toBeEnabled()
   await userEvent.click(choose)
-  expect(await screen.findByRole('button', { name: 'Back to settings' })).toBeVisible()
+  expect(await screen.findByRole('button', { name: 'Change venue' })).toBeVisible()
   expect(commands).toEqual([expect.objectContaining({ kind: 'select', optionId: venue.id, expectedVersion: 1 })])
   expect(screen.getByRole('button', { name: 'Please arrange this' })).toBeDisabled()
+})
+
+
+test('selected venue omits empty metadata and repeated arrangement explanations', async () => {
+  http(() => Response.json(view({ selections: [venue] })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByText('Quote needed')).toBeVisible()
+  expect(screen.getByRole('textbox', { name: 'Email for updates' })).toBeVisible()
+  expect(screen.queryByText('guests', { exact: true })).not.toBeInTheDocument()
+  expect(screen.queryByText('≤ $', { exact: true })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Back to settings' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Published prices are estimates until/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/Choosing a setting or requesting/)).not.toBeInTheDocument()
 })
