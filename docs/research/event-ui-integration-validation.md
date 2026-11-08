@@ -66,3 +66,14 @@ The tests assert component behavior on a checkout-return URL but do not exercise
 JSDOM verifies the tested focus and keyboard interactions, but does not establish mobile layout, browser visual correctness, or reduced-motion rendering.
 Those checks require separate evidence against the intended environment and deployed commit.
 No live endpoints, credentials, purchases, supplier contacts, or external messages are used by this suite.
+
+## Integration review corrections
+
+The combined implementation review reproduced a duplicate-create risk after a malformed HTTP 201 response.
+Both truncated JSON and structurally invalid successful responses now lock creation while retaining input.
+The review also reproduced a stale editor silently using a newer polled brief revision.
+The editor now retains its original brief revision and passes it explicitly to the session update method.
+A conflict retains typed answers and the original revision even after automatic reconciliation.
+Closing the editor and reopening it loads the current brief for a deliberate new edit.
+Focused regression tests failed before the fixes and passed afterward.
+These checks remain controlled HTTP component tests, not live deployment evidence.

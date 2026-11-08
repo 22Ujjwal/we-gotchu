@@ -5,7 +5,8 @@ Status: claimed
 Label: ready-for-agent
 Owner: Tony.
 Assignee: Tony integration session, branch feat/event-api-connection.
-Blocked by: Ujjwal-coordinated rendered-UI test dependencies and root configuration.
+Local test prerequisite: exact owner-provided DOM setup commit 04bca450 is integrated.
+Remaining gates: final review, upstream integration, and separate live verification.
 Tony explicitly authorizes functional route and API wiring in existing frontend files while preserving Leo's design.
 Live verification additionally requires completed Clerk sign-in/access, database configuration and migrations, research workspace/model credentials, and an agreed test brief.
 Checkout verification also requires Stripe configuration.
@@ -48,10 +49,10 @@ This ticket connects existing capabilities; it does not certify untested live bo
 
 ## Implementation checkpoint
 
-The authenticated customer API client and incremental progress merge are implemented locally.
-Seven focused tests and typecheck pass; screens are not connected yet.
-Ujjwal has provided rendered-UI test setup in PR39; integrate its reviewed commit before screen tests.
-Existing brief inputs omit an explicit timezone and accept ambiguous dates and currency text.
-Existing result/detail/party screens assume fixed photos, complete totals, and successful bookings, with no research pending/error/unknown-cost presentation.
-Request those frontend states from Leo through Tony before making presentation changes.
-Do not claim this ticket or live acceptance complete.
+The customer API client, identity-scoped polling, intake, canonical event screen, and revision-safe actions are implemented locally.
+The owner-provided DOM setup and all 37 fixture/rendered journey checks are integrated.
+Functional loading, errors, evidence, and payment states use existing styles; no browser layout verification is claimed.
+Review reproduced two bugs: malformed successful creation allowed another submission, and an open editor used a newer revision fetched by polling.
+Regression tests now pass for uncertain-create locking and edits tied to their original revision, with conflicting input retained.
+Final combined checks and independent re-review remain required before the implementation PR is ready.
+Live acceptance remains separate and incomplete.
