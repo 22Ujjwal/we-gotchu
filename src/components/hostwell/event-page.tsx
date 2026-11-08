@@ -24,7 +24,7 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
   eventId: string; identity: string | null; onCheckout: (url: string) => void;
 }) {
   const session = useEventSession({ eventId, identity })
-  const [editing, setEditing] = useState<Brief | null>(null)
+  const [editing, setEditing] = useState<{ brief: Brief; revision: number } | null>(null)
   const [actionError, setActionError] = useState('')
   const errorRef = useRef<HTMLParagraphElement>(null)
   const active = useRef(true)
@@ -45,12 +45,12 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
     {session.error && <Button disabled={session.pending || session.loading} onClick={() => void act(session.refresh)} className="px-6 py-[13px]">Refresh event</Button>}
     {session.view && <>
       {editing && <section aria-label="Edit event brief" className="flex w-full flex-col items-center gap-6">
-        <BriefForm initial={draftFromBrief(editing)} edit submitLabel="Update brief" pending={session.pending} onSubmit={async next => {
+        <BriefForm initial={draftFromBrief(editing.brief)} edit submitLabel="Update brief" pending={session.pending} onSubmit={async next => {
           // Compare normalized form values so unchanged timestamps and supply text are not rewritten.
-          const baseline = briefFromDraft(draftFromBrief(editing))
+          const baseline = briefFromDraft(draftFromBrief(editing.brief))
           const changes = Object.fromEntries(Object.entries(next).filter(([key, value]) =>
             JSON.stringify(value) !== JSON.stringify(baseline[key as keyof Brief]))) as Partial<Brief>
-          await session.update(changes)
+          await session.update(changes, editing.revision)
           if (active.current) setEditing(null)
         }} />
         <button type="button" disabled={session.pending} onClick={() => setEditing(null)} className="underline">Close editor</button>
@@ -59,7 +59,7 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
       <EventDetails view={session.view} pending={session.pending || !!session.error} onEdit={() => void act(async () => {
         const brief = session.view!.event.brief
         draftFromBrief(brief)
-        setEditing(brief)
+        setEditing({ brief, revision: session.view!.event.briefRevision })
       })}
         onApprove={() => void act(async () => {
           const url = await session.approve()

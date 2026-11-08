@@ -149,8 +149,8 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
       if (!state.pending) mutationError = null
       return load()
     },
-    async update(changes: Partial<Brief>): Promise<void> {
-      await mutate((view, signal) => api.update(key.eventId!, view.event.briefRevision, changes, signal),
+    async update(changes: Partial<Brief>, expectedBriefRevision: number): Promise<void> {
+      await mutate((_view, signal) => api.update(key.eventId!, expectedBriefRevision, changes, signal),
         view => publish({ view: accept(view) }))
     },
     async approve(): Promise<string> {

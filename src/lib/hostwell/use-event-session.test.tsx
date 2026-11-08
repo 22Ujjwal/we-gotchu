@@ -13,7 +13,7 @@ function Screen({ eventId = 'evt_sim_1', identity = 'user' }: { eventId?: string
     <p>{session.view?.payment?.state ?? 'No payment'}</p>
     <button onClick={() => { void session.approve().catch(() => {}) }}>Approve</button>
     <button onClick={() => { void session.cancel().catch(() => {}) }}>Cancel</button>
-    <button onClick={() => { void session.update({ headcount: 30 }).catch(() => {}) }}>Update</button>
+    <button onClick={() => { void session.update({ headcount: 30 }, 1).catch(() => {}) }}>Update</button>
     <button onClick={() => { void session.refresh() }}>Refresh</button>
   </>
 }
