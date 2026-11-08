@@ -17,40 +17,72 @@ type Images = Record<string, PlanningVenueImage[]>
 const empty: Images = Object.freeze(Object.create(null))
 
 /** Images enrich a proposal independently; they never update or delay its planning state. */
-export function usePlanningImages(conversationId: string | undefined, options: readonly PlanningOption[], version: number): Images {
+export function usePlanningImages(conversationId: string | undefined, options: readonly PlanningOption[], version: number) {
   const venues = [...new Map(options.filter(option => option.kind === 'venue')
     .map(option => [option.id, { id: option.id, url: option.url, name: option.name }])).values()]
   // Version-only polling updates must not continually abort slower image reads.
   const scope = JSON.stringify([conversationId ?? null, venues])
   const currentVersion = useRef(version)
   currentVersion.current = version
-  const [saved, setSaved] = useState<{ scope: string; images: Images }>({ scope, images: empty })
+  const [saved, setSaved] = useState<{ scope: string; images: Images; canRetry: boolean }>({ scope, images: empty, canRetry: false })
+  const retryAction = useRef<{ scope: string; run: () => void } | null>(null)
 
   useEffect(() => {
     const [id, sources] = JSON.parse(scope) as [string | null, { id: string }[]]
-    const requestedVersion = currentVersion.current
     const controller = new AbortController()
-    setSaved({ scope, images: empty })
-    if (id) for (const source of sources) {
-      void (async () => {
-        try {
-          const response = await fetch(`/api/planning/${encodeURIComponent(id)}/options/${encodeURIComponent(source.id)}/images`, {
-            method: 'GET', credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
-          })
-          if (!response.ok) return
-          const parsed = responseSchema.safeParse(await response.json())
-          if (controller.signal.aborted || !parsed.success) return
-          const result = parsed.data
-          if (result.conversationId !== id || result.optionId !== source.id || result.version < requestedVersion
-            || result.status !== 'available') return
-          setSaved(previous => previous.scope === scope ? { scope,
-            images: Object.assign(Object.create(null), previous.images, { [source.id]: result.images.slice(0, 4) }),
-          } : previous)
-        } catch { /* A missing or unavailable image never blocks the saved proposal. */ }
-      })()
+    const timers = new Set<ReturnType<typeof setTimeout>>()
+    const failed = new Set<string>()
+    setSaved({ scope, images: empty, canRetry: false })
+    function transientFailure(optionId: string, attempt: number, requestedVersion: number) {
+      if (controller.signal.aborted) return
+      if (attempt < 2) {
+        const timer = setTimeout(() => { timers.delete(timer); void read(optionId, attempt + 1, requestedVersion) }, 1000 * (attempt + 1))
+        timers.add(timer)
+      } else {
+        failed.add(optionId)
+        setSaved(previous => previous.scope === scope ? { ...previous, canRetry: true } : previous)
+      }
     }
-    return () => controller.abort()
+    async function read(optionId: string, attempt: number, requestedVersion: number) {
+      if (controller.signal.aborted || !id) return
+      let response: Response
+      try {
+        response = await fetch(`/api/planning/${encodeURIComponent(id)}/options/${encodeURIComponent(optionId)}/images`, {
+          method: 'GET', credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+        })
+      } catch {
+        transientFailure(optionId, attempt, requestedVersion)
+        return
+      }
+      if (controller.signal.aborted) return
+      if (response.status >= 500) { transientFailure(optionId, attempt, requestedVersion); return }
+      if (!response.ok) return
+      try {
+        const parsed = responseSchema.safeParse(await response.json())
+        if (controller.signal.aborted || !parsed.success) return
+        const result = parsed.data
+        if (result.conversationId !== id || result.optionId !== optionId || result.version < requestedVersion) return
+        if (result.status === 'unavailable') { transientFailure(optionId, attempt, requestedVersion); return }
+        if (result.status !== 'available') return
+        setSaved(previous => previous.scope === scope ? { ...previous,
+          images: Object.assign(Object.create(null), previous.images, { [optionId]: result.images.slice(0, 4) }),
+        } : previous)
+      } catch { /* Invalid image responses are not retried and never block the proposal. */ }
+    }
+    retryAction.current = { scope, run: () => {
+      if (controller.signal.aborted || !failed.size) return
+      const retryIds = [...failed]
+      // Clear synchronously, so repeated clicks cannot launch overlapping requests.
+      failed.clear()
+      setSaved(previous => previous.scope === scope ? { ...previous, canRetry: false } : previous)
+      for (const optionId of retryIds) void read(optionId, 0, currentVersion.current)
+    } }
+    if (id) for (const source of sources) void read(source.id, 0, currentVersion.current)
+    return () => { controller.abort(); for (const timer of timers) clearTimeout(timer) }
   }, [scope])
 
-  return saved.scope === scope ? saved.images : empty
+  return { images: saved.scope === scope ? saved.images : empty,
+    canRetry: saved.scope === scope && saved.canRetry,
+    retry: () => { if (retryAction.current?.scope === scope) retryAction.current.run() },
+  }
 }

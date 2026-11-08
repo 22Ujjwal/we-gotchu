@@ -589,6 +589,32 @@ test('source images and credit arrive without delaying venue selection and survi
   expect(screen.getByRole('link', { name: 'Photo source: Garden room' })).toBeVisible()
 })
 
+test('exhausted photo reads offer an explicit retry without sending a planning command', async () => {
+  vi.useFakeTimers()
+  let recovered = false
+  const methods: string[] = []
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    methods.push(init?.method ?? 'GET')
+    if (!String(input).endsWith('/images')) return Response.json(view())
+    if (!recovered) return new Response('', { status: 503 })
+    return Response.json({ conversationId: 'plan-a', optionId: 'venue-a', version: 1, status: 'available', images: [{
+      url: 'https://example.com/room.jpg', sourcePage: venue.url, attribution: { text: venue.name, url: venue.url },
+      provider: 'source-page', evidence: 'page-metadata', description: null,
+    }] })
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await act(async () => {})
+  expect(screen.getByRole('button', { name: 'Choose Garden room' })).toBeEnabled()
+  expect(screen.queryByRole('button', { name: 'Retry photos' })).not.toBeInTheDocument()
+  await act(async () => { await vi.advanceTimersByTimeAsync(3000) })
+  recovered = true
+  fireEvent.click(screen.getByRole('button', { name: 'Retry photos' }))
+  await act(async () => {})
+  expect(screen.getByRole('img', { name: 'Garden room' })).toHaveAttribute('src', 'https://example.com/room.jpg')
+  expect(screen.queryByRole('button', { name: 'Retry photos' })).not.toBeInTheDocument()
+  expect(methods.every(method => method === 'GET')).toBe(true)
+})
+
 test.each(['pending', 'uncertain', 'accepted', 'failed'] as const)('existing %s inquiry prevents a competing arrangement request', async status => {
   http(() => Response.json(view({ canArrange: true, selections: [venue], inquiry: {
     id: 'inquiry-a', revision: 1, status: 'draft', venue, recipient: 'venue@example.com', contactSourceUrl: null,

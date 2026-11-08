@@ -57,7 +57,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   for (const option of view?.proposal?.options ?? []) options.set(option.id, option)
   // Saved snapshots remain authoritative even if a later proposal changes or omits the option.
   for (const option of view?.selections ?? []) options.set(option.id, option)
-  const venueImages = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
+  const { images: venueImages, canRetry: canRetryPhotos, retry: retryPhotos } = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
   const selected = new Set(view?.selections.map(option => option.id))
   const proposalText = view?.proposal && [view.proposal.summary, view.proposal.nextQuestion].filter(Boolean).join('\n\n')
   const offer = view?.offer
@@ -160,6 +160,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           if (selected.has(optionId)) return
           void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId })
         }} />}
+      {canRetryPhotos && <Button className="self-start px-5 py-3" onClick={retryPhotos}>Retry photos</Button>}
       {!view.selections.some(option => option.kind === 'venue') && options.size > 0 && <section aria-label="Supplies and sources" className="mx-auto grid w-full max-w-[1000px] gap-5 md:grid-cols-2">
         {[...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id)).map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
