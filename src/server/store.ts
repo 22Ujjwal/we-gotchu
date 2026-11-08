@@ -83,8 +83,11 @@ export interface Store {
   setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }): Promise<void>
   /** Records a Stripe event id; returns true only the first time. */
   recordStripeEvent(stripeEventId: string): Promise<boolean>
+  hasStripeEvent(stripeEventId: string): Promise<boolean>
 
   // Attempts
+  /** Atomically authorize and claim a commitment, serialized with cancellation. */
+  claimCommit(attempt: Attempt, now: Date): Promise<{ attempt: Attempt; replayed: boolean } | null>
   /** Inserts with a unique executionKey. On conflict returns the existing attempt with replayed true. */
   insertAttempt(attempt: Attempt): Promise<{ attempt: Attempt; replayed: boolean }>
   /** Conditional transition: applies only when the row is in `from`. Returns the updated row or null. */
