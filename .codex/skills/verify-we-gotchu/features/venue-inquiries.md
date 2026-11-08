@@ -36,6 +36,9 @@ An incoming event with the exact outgoing message ID must not create a supplier 
 Record message.received separately from message.delivered; a delivery event does not enqueue reply interpretation.
 Deliver a controlled reply through the real signed webhook when the transport is integrated.
 Close the customer tab during reply processing, then reopen and inspect the saved reply and its original message.
+Before opening the detail page, perform an authenticated GET with ?saved=1 and retain its timestamp and saved reply status.
+Do not click refresh, retry or run a worker before this first read when proving browser-closed processing.
+An already interpreted reply in that first saved-only response supports completion before reopening, but does not establish the exact processing time.
 A supplier question needs a useful next action, not an invented quote.
 A quote without currency, required charges or terms must retain those unknowns.
 Use Check for venue replies and verify it reads ?saved=1 without a research refresh or mail write.
@@ -62,6 +65,8 @@ Preserve evidence and controlled records after cleanup.
 The self-send at `c18416fd37145864717498b09446d2dc5bf302e7` produced a signed incoming receipt for the original outgoing message.
 The receipt completed as unmatched and created zero replies or jobs, as intended.
 A separate controlled reply produced a delivery event but no observed incoming-message webhook.
-Tony deferred the external reply test until a different team-controlled address is available.
-Do not replace this missing proof with a seeded fixture or another self-send.
-The temporary provider endpoints have been removed, so future verification needs new forwarding and private signing configuration.
+An external acknowledgment later passed the linked reply check on cbfb230.
+The first saved-only read at 15:10 UTC found the real incoming reply already interpreted, with no extracted price facts or offer.
+See docs/research/linked-mail-live-verification.md for the evidence and its limits.
+A complete external quote-to-payment journey remains separate and unverified by that acknowledgment.
+Revalidate forwarding and private signing configuration before each new live check; temporary endpoints are not permanent infrastructure.
