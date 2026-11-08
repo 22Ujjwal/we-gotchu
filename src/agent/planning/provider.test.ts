@@ -52,3 +52,11 @@ it('keeps a coordinator working while its teammates research', async () => {
   snapshot.stop_reason = 'awaiting_delegation'
   expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', proposal: null, progress: 'Your research team is checking options.' })
 })
+
+it('uses the matching completion event instead of a stale session output', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 182
+  const latest = { ...proposal, summary: 'One pack is $4.49 less before delivery.' }
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [{ seq: 182, type: 'session.idle', data: { structured_output: latest } }] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 91 })).toMatchObject({ status: 'ready', sequence: 182, proposal: latest })
+})
