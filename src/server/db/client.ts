@@ -1,3 +1,4 @@
+import { createPlanningRepository } from '../planning/repository'
 import { fileURLToPath } from 'node:url'
 import { Pool } from '@neondatabase/serverless'
 import { drizzle as drizzleNeon } from 'drizzle-orm/neon-serverless'
@@ -41,4 +42,33 @@ export async function createTestStore(): Promise<Store> {
   const db = drizzlePglite({ client: new PGlite(), schema })
   await migratePglite(db, { migrationsFolder })
   return createStore(db)
+}
+
+// Isolated from the transaction Store so planning never creates payment records.
+export function createNeonPlanningRepository(databaseUrl: string) {
+  return createPlanningRepository(neonDb(databaseUrl).db)
+}
+
+export function createTestPlanningRepository(dataDir?: string) {
+  return openPglitePlanningRepository(dataDir)
+}
+
+// Only the explicit development runtime uses this path; Neon never migrates on startup.
+export function createLocalPlanningRepository(dataDir: string) {
+  return openPglitePlanningRepository(dataDir)
+}
+
+async function openPglitePlanningRepository(dataDir?: string) {
+  const [{ PGlite }, { drizzle }, { migrate }] = await Promise.all([
+    import('@electric-sql/pglite'), import('drizzle-orm/pglite'), import('drizzle-orm/pglite/migrator'),
+  ])
+  const client = new PGlite(dataDir)
+  try {
+    const db = drizzle({ client, schema })
+    await migrate(db, { migrationsFolder })
+    return { repository: createPlanningRepository(db), close: () => client.close() }
+  } catch (error) {
+    await client.close()
+    throw error
+  }
 }

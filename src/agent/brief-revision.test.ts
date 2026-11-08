@@ -194,8 +194,8 @@ test('revised location and guest count change real discovery requests with contr
   await updateBrief(deps, initial.event.eventId, 1, { location: 'Oakland, CA', headcount: 48, budget: 10000 })
   const current = await finish(deps, initial.event.eventId)
   expect(queries).toEqual([
-    'birthday event venue San Francisco, CA', 'paper plates for 20 people',
-    'birthday event venue Oakland, CA', 'paper plates for 48 people',
+    'birthday event venue San Francisco, CA', 'paper plates for a birthday with 20 people',
+    'birthday event venue Oakland, CA', 'paper plates for a birthday with 48 people',
   ])
   expect(current.researchResult!.recommendations.map(r => r.candidateId)).toEqual(['venue:oakland', 'supply:plates48'])
   expect(vi.mocked(session.start).mock.lastCall![0].brief.budget).toBe(10000)

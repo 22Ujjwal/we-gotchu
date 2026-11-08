@@ -1,5 +1,5 @@
 import { useUser } from '@clerk/tanstack-react-start'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DateTimePicker } from '#/components/hostwell/date-time-picker'
@@ -192,6 +192,8 @@ function BriefFlow({
           >
             {last ? 'Find venues' : 'Next'}
           </Button>
+          {!localPreview && (import.meta.env.DEV || import.meta.env.VITE_PLANNING_ENABLED === 'true') &&
+            <Link to="/planning" className="text-[16px] text-stone underline underline-offset-4">Plan with our research assistant</Link>}
         </form>
       </main>
       {scheduleField && (

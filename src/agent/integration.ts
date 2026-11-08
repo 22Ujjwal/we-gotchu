@@ -84,8 +84,9 @@ export function createResearchIntegration(options: {
         c = { ...next, version: c!.version + 1 }
       }
       const finish = async (warning: string, processed: Partial<ResearchCheckpoint> = {}) => {
-        const result = await validate(c!, async () => { throw new Error('No usable ranking') })
-        await save({ ...processed, result: { ...result, warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
+        // Finalization preserves saved evidence without pretending another provider call failed.
+        const result = c!.evidence ?? await validate(c!, supportedOrder)
+        await save({ ...processed, result: { ...result, recommendations: [], warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
       }
       const pendingOperation = (kind: 'agent' | 'session' | 'correction') => ({
         kind, idempotencyKey: researchOperationKey(run.runId, kind), startedAt: new Date().toISOString(),
@@ -126,18 +127,37 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'investigating': {
-            // Reuse the shared enrichment validator and its cooperative-abort grace period.
-            // Discovery is already saved and recommendation here is only a private ID order.
+            const evidence = evidenceOf(c)
+            const investigated = c.investigatedCandidateIds ?? []
+            // Alternate venues and supplies, and save each attempt before the next poll.
+            const venues = evidence.candidates.filter(candidate => candidate.kind === 'venue')
+            const supplies = evidence.candidates.filter(candidate => candidate.kind === 'supply')
+            const ordered = Array.from({ length: Math.max(venues.length, supplies.length) },
+              (_, i) => [venues[i], supplies[i]]).flat().filter(candidate => !!candidate)
+            const candidate = ordered.find(candidate => !investigated.includes(candidate.candidateId))
+            if (!candidate) {
+              await save({ stage: 'agent' })
+              return running
+            }
             const remaining = stepDeadline - Date.now()
             if (remaining < 4) throw new Error('Investigation request deadline reached')
             const reserve = Math.max(1, Math.floor(remaining / 10))
-            const result = await bounded(() => researchEvent(c!.input, {
-              discover: async () => evidenceOf(c!), enrich: options.providers.enrich, recommend: supportedOrder,
+            const detail = await bounded(() => researchEvent(c!.input, {
+              discover: async () => ({ candidates: [candidate], sourceChecks: [], warnings: [] }),
+              enrich: options.providers.enrich, recommend: supportedOrder,
             }, { timeoutMs: remaining - reserve, detailTimeoutMs: remaining - reserve,
               rankingReserveMs: reserve, signal }))
-            result.warnings = [...new Set(result.warnings)]
-            await save({ evidence: result, stage: result.candidates.length ? 'agent' : 'done',
-              result: result.candidates.length ? null : result }, 'Supplier investigation evidence saved.')
+            const combined = {
+              candidates: evidence.candidates.map(saved => saved.candidateId === candidate.candidateId
+                ? detail.candidates.find(updated => updated.candidateId === saved.candidateId) ?? saved : saved),
+              sourceChecks: [...evidence.sourceChecks, ...detail.sourceChecks],
+              warnings: [...new Set([...(evidence.warnings ?? []), ...detail.warnings])],
+            }
+            const result = await validate(c, supportedOrder, async () => combined)
+            const completed = [...investigated, candidate.candidateId]
+            await save({ evidence: result, investigatedCandidateIds: completed,
+              stage: completed.length >= ordered.length ? 'agent' : 'investigating',
+            }, `Supplier details checked for ${completed.length} of ${ordered.length} options.`)
             return running
           }
           case 'agent': {
