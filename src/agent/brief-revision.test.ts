@@ -158,3 +158,47 @@ test('an array is not a partial brief object and cannot replace the active run',
   expect((await store.getEvent(initial.event.eventId))!.briefRevision).toBe(1)
   expect(start).not.toHaveBeenCalled()
 })
+
+test('revised location and guest count change real discovery requests with controlled HTTP', async () => {
+  const { createDiscovery } = await import('../suppliers/discovery')
+  const { deps, session } = setup()
+  const queries: string[] = []
+  const rankings = new Map<string, string[]>()
+  const fetcher: typeof fetch = vi.fn(async (_url, init) => {
+    const body = JSON.parse(String(init!.body))
+    const venue = body.provider === 'litescrape'
+    const query: string = venue ? body.input.queryParams.q : body.input.body.query
+    queries.push(query)
+    const listingId = venue ? (query.includes('Oakland') ? 'oakland' : 'sf')
+      : (query.includes('48 people') ? 'plates48' : 'plates20')
+    return new Response(JSON.stringify({ runId: `controlled:${listingId}`, status: 'COMPLETED',
+      providerResponse: { httpStatus: 200 }, output: venue
+        ? { local_results: [{ title: listingId, place_id: listingId, website: `https://example.com/${listingId}` }] }
+        : { products: [{ id: listingId, title: listingId, offers: [{ url: `https://example.com/${listingId}` }] }] },
+    }))
+  })
+  vi.mocked(session.start).mockImplementation(async (input, candidates) => {
+    rankings.set(input.runId, candidates.map(c => c.candidateId))
+    return input.runId
+  })
+  vi.mocked(session.poll).mockImplementation(async sessionId => ({ id: sessionId,
+    status: 'completed', stop_reason: 'end_turn', last_seq: 1,
+    structured_output: { candidateIds: rankings.get(sessionId) },
+  }))
+  deps.research = createResearchIntegration({ store, providers: { session,
+    discover: createDiscovery({ apiKey: 'controlled-test-key', fetch: fetcher }),
+  } })
+  const initial = await createEvent(deps, validBrief)
+  const first = await finish(deps, initial.event.eventId)
+  expect(first.researchResult!.recommendations.map(r => r.candidateId)).toEqual(['venue:sf', 'supply:plates20'])
+  await updateBrief(deps, initial.event.eventId, 1, { location: 'Oakland, CA', headcount: 48, budget: 10000 })
+  const current = await finish(deps, initial.event.eventId)
+  expect(queries).toEqual([
+    'birthday event venue San Francisco, CA', 'paper plates for 20 people',
+    'birthday event venue Oakland, CA', 'paper plates for 48 people',
+  ])
+  expect(current.researchResult!.recommendations.map(r => r.candidateId)).toEqual(['venue:oakland', 'supply:plates48'])
+  expect(vi.mocked(session.start).mock.lastCall![0].brief.budget).toBe(10000)
+  expect(current.researchResult!.budgetFit).toBe('unknown')
+  expect(current.plan).toBeNull()
+})
