@@ -69,12 +69,12 @@ export const baseLines = [candleLine, deliveryLine]
 
 export const venues: Array<Venue> = [
   {
-    id: 'kiezgarten-loft',
-    name: 'Kiezgarten Loft',
+    id: 'cafe-botanico',
+    name: 'Café Botanico',
     neighbourhood: 'Neukölln',
-    photo: '/venues/kiezgarten-loft.jpg',
+    photo: '/venues/cafe-botanico.jpg',
     photos: [1, 2, 3, 4].map((i) =>
-      i === 1 ? '/venues/kiezgarten-loft.jpg' : `/venues/kiezgarten-loft-${i}.jpg`,
+      i === 1 ? '/venues/cafe-botanico.jpg' : `/venues/cafe-botanico-${i}.jpg`,
     ),
     total: 768.2,
     cardFeatures: [
@@ -82,61 +82,61 @@ export const venues: Array<Venue> = [
       { icon: 'fee', label: '$8 fee after 1 Dec' },
     ],
     description:
-      'A converted factory floor wrapped around a courtyard garden, with tall steel windows, long oak tables and plenty of plants. Warm and loud in the best way.',
+      'A small restaurant on Richardstraße with its own permaculture garden out back. The kitchen cooks seasonal plates from what grows there. Cosy, candlelit and a little hidden.',
     detailFeatures: [
       { icon: 'guests', label: 'Seats 28' },
-      { icon: 'leaf', label: 'Courtyard garden' },
-      { icon: 'train', label: '6 min from Hermannplatz' },
+      { icon: 'leaf', label: 'Own kitchen garden' },
+      { icon: 'train', label: '5 min from Karl-Marx-Straße' },
     ],
     venueLine: {
       qty: 1,
-      item: 'Kiezgarten Loft',
+      item: 'Café Botanico',
       amount: 650,
-      notes: ['Sat 12 Dec, 19:00–23:00', 'Garden room, 3 tables'],
+      notes: ['Sat 12 Dec, 19:00–23:00', 'Back room, 3 tables'],
       noteAmount: 'incl.',
     },
     vat: 59.3,
     freeCancellationUntil: '01 Dec 23:59',
   },
   {
-    id: 'spreeblick-terrace',
-    name: 'Spreeblick Terrace',
+    id: 'brownhouse-studio',
+    name: 'Brownhouse Studio',
     neighbourhood: 'Kreuzberg',
-    photo: '/venues/spreeblick-terrace.jpg',
+    photo: '/venues/brownhouse-studio.jpg',
     photos: [1, 2, 3, 4].map((i) =>
-      i === 1 ? '/venues/spreeblick-terrace.jpg' : `/venues/spreeblick-terrace-${i}.jpg`,
+      i === 1 ? '/venues/brownhouse-studio.jpg' : `/venues/brownhouse-studio-${i}.jpg`,
     ),
     total: 842.6,
     cardFeatures: [
-      { icon: 'guests', label: 'Seats 30, rooftop' },
+      { icon: 'guests', label: 'Seats 30, private area' },
       { icon: 'leaf', label: 'Vegetarian menu' },
       { icon: 'calendar', label: 'Free cancellation until 5 Dec' },
     ],
     description:
-      'A glass-roofed rooftop above the Spree with long communal tables, string lights and the TV tower in view. Heated through winter, with a small in-house kitchen that cooks for groups.',
+      'A brewery built from shipping containers at the edge of Park am Gleisdreieck. Long wooden tables next to the brew kettles, beer brewed on site and a vegetable-forward kitchen that cooks for groups.',
     detailFeatures: [
       { icon: 'guests', label: 'Seats 30' },
       { icon: 'flame', label: 'Heated' },
       { icon: 'leaf', label: 'Vegetarian menu' },
-      { icon: 'train', label: '4 min from Schlesisches Tor' },
+      { icon: 'train', label: '3 min from Gleisdreieck' },
     ],
     venueLine: {
       qty: 1,
-      item: 'Spreeblick Terrace',
+      item: 'Brownhouse Studio',
       amount: 720,
-      notes: ['Sat 12 Dec, 19:00–23:00', 'Heaters, 4 tables'],
+      notes: ['Sat 12 Dec, 19:00–23:00', 'Private area, 4 tables'],
       noteAmount: 'incl.',
     },
     vat: 63.7,
     freeCancellationUntil: '05 Dec 23:59',
   },
   {
-    id: 'hafenhalle-studio',
-    name: 'Hafenhalle Studio',
+    id: 'max-und-moritz',
+    name: 'Max und Moritz',
     neighbourhood: 'Kreuzberg',
-    photo: '/venues/hafenhalle-studio.jpg',
+    photo: '/venues/max-und-moritz.jpg',
     photos: [1, 2, 3, 4].map((i) =>
-      i === 1 ? '/venues/hafenhalle-studio.jpg' : `/venues/hafenhalle-studio-${i}.jpg`,
+      i === 1 ? '/venues/max-und-moritz.jpg' : `/venues/max-und-moritz-${i}.jpg`,
     ),
     total: 891,
     cardFeatures: [
@@ -144,17 +144,17 @@ export const venues: Array<Venue> = [
       { icon: 'calendar', label: 'Free cancellation until 28 Nov' },
     ],
     description:
-      'A bright former harbour workshop on the canal, with big industrial windows, concrete floors and a long open kitchen. Room to spread out and dance later.',
+      'A Berlin tavern since 1902, with green-tiled walls, dark wood and candles on every table. Hearty Berlin cooking, and a big hall upstairs with room to spread out and dance later.',
     detailFeatures: [
       { icon: 'guests', label: 'Seats 40' },
       { icon: 'flame', label: 'Heated' },
-      { icon: 'train', label: '5 min from Görlitzer Bahnhof' },
+      { icon: 'train', label: '2 min from Moritzplatz' },
     ],
     venueLine: {
       qty: 1,
-      item: 'Hafenhalle Studio',
+      item: 'Max und Moritz',
       amount: 760,
-      notes: ['Sat 12 Dec, 19:00–23:00', 'Studio hall, 5 tables'],
+      notes: ['Sat 12 Dec, 19:00–23:00', 'Upstairs hall, 5 tables'],
       noteAmount: 'incl.',
     },
     vat: 72.1,

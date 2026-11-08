@@ -43,7 +43,6 @@ export function PartyView({
   place,
   timezone,
   receiptsHref,
-  incomplete = false,
 }: {
   brief: Brief
   venue: Venue
@@ -53,8 +52,6 @@ export function PartyView({
   place: string
   timezone: string
   receiptsHref: string
-  /** Not every supplier confirmed (yet). */
-  incomplete?: boolean
 }) {
   const date = parseDate(brief.date)
   const start = to24h(brief.from)
@@ -119,10 +116,10 @@ export function PartyView({
         <GoldSeal />
         <div className="flex flex-col items-center gap-1 text-center lg:gap-1.5">
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[52px] lg:leading-[72px]">
-            {incomplete ? 'In progress' : "It's happening!"}
+            It's happening!
           </h1>
           <p className="m-0 font-body text-[16px] leading-5 text-receipt-muted lg:text-[18px] lg:leading-[22px]">
-            {incomplete ? "We're still confirming a few things." : `Everything is booked for ${occasionShort}.`}
+            Everything is booked for {occasionShort}.
           </p>
         </div>
 

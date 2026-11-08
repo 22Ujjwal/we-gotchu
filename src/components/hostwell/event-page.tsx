@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { settingsFromView } from '../../lib/hostwell/brief-adapter'
 import { useEventSession } from '../../lib/hostwell/use-event-session'
+import { to24h } from '../../lib/hostwell/fixture'
+import { ArrangingView } from './arranging-view'
+import type { ArrangingItem } from './arranging-view'
 import { PartyView } from './party-view'
 import { ReceiptLoader } from './receipt-loader'
 import { SettingsView } from './settings-view'
@@ -12,13 +15,23 @@ import { VenueView } from './venue-view'
 export function ConnectedEventPage({ eventId, paid = false }: { eventId: string; paid?: boolean }) {
   const { user, isLoaded } = useUser()
   if (!isLoaded) return <Loading />
-  return <EventPage key={`${user?.id ?? 'signed-out'}:${eventId}`} eventId={eventId} identity={user?.id ?? null} paid={paid} />
+  return (
+    <EventPage
+      key={`${user?.id ?? 'signed-out'}:${eventId}`}
+      eventId={eventId}
+      identity={user?.id ?? null}
+      email={user?.primaryEmailAddress?.emailAddress ?? null}
+      paid={paid}
+    />
+  )
 }
 
 // Used by the canonical route; explicit identity also supports controlled HTTP journey tests.
-export function EventPage({ eventId, identity, paid = false, onCheckout = (url) => window.location.assign(url), quoteScreenMs = QUOTE_SCREEN_MS }: {
+export function EventPage({ eventId, identity, email = null, paid = false, onCheckout = (url) => window.location.assign(url), quoteScreenMs = QUOTE_SCREEN_MS }: {
   eventId: string
   identity: string | null
+  /** Where the "all set" email goes. */
+  email?: string | null
   /** Back from a completed Stripe checkout. */
   paid?: boolean
   onCheckout?: (url: string) => void
@@ -27,7 +40,7 @@ export function EventPage({ eventId, identity, paid = false, onCheckout = (url) 
 }) {
   const signIn = `/sign-in?redirect_url=${encodeURIComponent(`/events/${encodeURIComponent(eventId)}`)}`
   if (!identity) return <Notice title="Sign in to see your event" action={<a href={signIn}>Sign in</a>} />
-  return <EventSessionPage key={`${identity}:${eventId}`} eventId={eventId} identity={identity} onCheckout={onCheckout} signIn={signIn} paid={paid} quoteScreenMs={quoteScreenMs} />
+  return <EventSessionPage key={`${identity}:${eventId}`} eventId={eventId} identity={identity} email={email} onCheckout={onCheckout} signIn={signIn} paid={paid} quoteScreenMs={quoteScreenMs} />
 }
 
 // Long enough for the first receipt to finish printing.
@@ -54,8 +67,9 @@ export function Notice({ title, action, step = 'setting' }: { title: string; act
   )
 }
 
-function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteScreenMs }: {
+function EventSessionPage({ eventId, identity, email, onCheckout, signIn, paid, quoteScreenMs }: {
   eventId: string
+  email: string | null
   paid: boolean
   quoteScreenMs: number
   identity: string
@@ -67,6 +81,8 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
   const [error, setError] = useState('')
   const [quoting, setQuoting] = useState(false)
   const active = useRef(true)
+  // Once "We're on it!" is up, it stays: the "all set" email says when it's done.
+  const heldArranging = useRef(false)
   useEffect(() => {
     active.current = true
     return () => { active.current = false }
@@ -108,6 +124,20 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
   }
   // Payment is confirmed by Stripe's webhook a few seconds after checkout.
   if (paid && payment?.state === 'pending' && !booked) return <Loading activity="Confirming payment" />
+  const arranging = event.status !== 'booked' ||
+    view.attempts.some((a) => a.kind === 'commit' && a.state !== 'succeeded')
+  if (booked && settings.planned && (arranging || heldArranging.current)) {
+    heldArranging.current = true
+    const { brief } = settings
+    const when = [brief.date, [brief.from, brief.till].filter(Boolean).map(to24h).join('–')].filter(Boolean).join(', ')
+    const items: Array<ArrangingItem> = (view.plan?.actions ?? []).map((a) => a.kind === 'venue_booking'
+      ? { label: 'Venue', title: a.supplierName, detail: when }
+      : { label: 'Extras', title: a.supplierName, detail: a.quantityOrSchedule })
+    if (!items.some((i) => i.label === 'Venue')) {
+      items.unshift({ label: 'Venue', title: settings.planned.name, detail: when })
+    }
+    return <ArrangingView items={items} email={email} />
+  }
   if (booked && settings.planned) {
     return (
       <PartyView
@@ -117,8 +147,6 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
         place={event.brief.location}
         timezone={event.brief.timezone}
         receiptsHref={`/events/${encodeURIComponent(eventId)}/receipts`}
-        incomplete={event.status !== 'booked' ||
-          view.attempts.some((a) => a.kind === 'commit' && a.state !== 'succeeded')}
       />
     )
   }

@@ -182,17 +182,39 @@ test('a paid booking shows the party summary', async () => {
   expect(screen.queryByRole('button', { name: 'Arrange' })).not.toBeInTheDocument()
 })
 
-test('a partial booking does not claim everything is booked', async () => {
+test('a partial booking says we are still arranging it', async () => {
   const view = createEventViewFixture('booked')
   view.event.status = 'partially_booked'
   Object.assign(view.attempts[1], { state: 'unknown', providerReference: null, actualAmount: null,
     evidence: null, errorReason: 'The supplier response was lost.' })
   getOnly(view)
-  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
-  expect(await screen.findByRole('heading', { name: 'In progress' })).toBeVisible()
-  expect(screen.getByText("We're still confirming a few things.")).toBeVisible()
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" email="host@example.test" />)
+  expect(await screen.findByRole('heading', { name: "We're on it!" })).toBeVisible()
+  expect(screen.getByText("You'll get an email as soon as it's all set.")).toBeVisible()
+  expect(screen.getByText('Harbor Loft (simulated)')).toBeVisible()
+  expect(screen.getByText('host@example.test')).toBeVisible()
   expect(screen.queryByRole('heading', { name: "It's happening!" })).not.toBeInTheDocument()
   expect(screen.queryByText(/Everything is booked/)).not.toBeInTheDocument()
+})
+
+test('the arranging screen stays up when the booking finishes; the email says so', async () => {
+  vi.useFakeTimers()
+  const booked = createEventViewFixture('booked')
+  const executing = structuredClone(booked)
+  executing.event.status = 'executing'
+  Object.assign(executing.attempts[1], { state: 'running', providerReference: null, actualAmount: null, evidence: null })
+  let reads = 0
+  controlledHttp(request => {
+    expect(request.method).toBe('GET')
+    return Response.json(++reads === 1 ? executing : booked)
+  })
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  expect(screen.getByRole('heading', { name: "We're on it!" })).toBeVisible()
+  await advance(1000)
+  expect(reads).toBeGreaterThan(1)
+  expect(screen.getByRole('heading', { name: "We're on it!" })).toBeVisible()
+  expect(screen.queryByRole('heading', { name: "It's happening!" })).not.toBeInTheDocument()
 })
 
 test('canceled events do not offer the plan again', async () => {

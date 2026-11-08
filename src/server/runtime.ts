@@ -47,5 +47,13 @@ export function getExecutionDeps(): ExecutionDeps {
     onAllCanceled: async (eventId) => {
       await issueFinalRefund(getDeps(), eventId)
     },
+    // Every supplier confirmed: send the "It's happening" email the arranging screen promised.
+    onAllBooked: async (eventId, approval) => {
+      const { notifications, store } = getDeps()
+      if (!notifications?.allSet) return
+      const [event, plan] = await Promise.all([store.getEvent(eventId), store.getPlan(eventId)])
+      if (!event || !plan || plan.revision !== approval.planRevision) return
+      await notifications.allSet({ customerId: event.customerId, eventId, approvalId: approval.approvalId, brief: event.brief, plan })
+    },
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Brief } from '../../contracts'
 import { planReadyEvent } from '../../contracts/fixtures'
-import { buildQuoteReadyEmail, createQuoteReadyNotifications, type QuoteReady, type QuoteReadyEmail } from './quote-ready'
+import { buildAllSetEmail, buildQuoteReadyEmail, createQuoteReadyNotifications, type QuoteReady, type QuoteReadyEmail } from './quote-ready'
 
 const input: QuoteReady = {
   customerId: 'user_alice',
@@ -73,4 +73,28 @@ it('accepts old briefs but rejects non-positive event durations', () => {
   expect(Brief.safeParse(input.brief).success).toBe(true)
   expect(Brief.safeParse({ ...input.brief, endsAt: input.brief.startsAt }).success).toBe(false)
   expect(Brief.safeParse({ ...input.brief, endsAt: '2020-01-01T00:00:00Z' }).success).toBe(false)
+})
+
+describe('all-set email', () => {
+  it('says it is booked and links back to the event', () => {
+    const { subject, text, html } = buildAllSetEmail(input, 'https://app.test')
+    expect(subject).toBe(`It's happening: your ${input.brief.eventType} is all set`)
+    for (const a of input.plan.actions) expect(text).toContain(a.supplierName)
+    expect(text).toContain('Paid: ')
+    expect(text).toContain(`https://app.test/events/${input.eventId}`)
+    expect(html).toContain('BOOKED')
+    expect(html).not.toContain('Nothing is booked')
+  })
+
+  it('sends once per approval with its own idempotency key', async () => {
+    const keys: string[] = []
+    const notifications = createQuoteReadyNotifications({
+      appUrl: 'https://app.test',
+      lookupEmail: async () => 'alice@example.com',
+      sender: { send: async (_to, _email, key) => void keys.push(key) },
+    })
+    await notifications.quoteReady(input)
+    await notifications.allSet!(input)
+    expect(keys).toEqual(['appr_1-quote-ready', 'appr_1-all-set'])
+  })
 })

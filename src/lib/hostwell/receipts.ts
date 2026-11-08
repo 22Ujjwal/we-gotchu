@@ -200,8 +200,8 @@ function attemptEntries(action: PlannedAction, commit?: Attempt, cancel?: Attemp
 /** Demo receipts for the UI-only local preview. */
 export const previewReceipts: Receipts = (() => {
   const research: Array<TimelineEntry> = [
-    { at: '2026-11-06T20:14:00Z', text: 'Searched 14 rooftops and lofts in Kreuzberg and Neukölln for 24 guests under €900.', dot: 'step' },
-    { at: '2026-11-06T20:16:00Z', text: 'Shortlisted 3. Picked Spreeblick: heated, seats 30, free cancellation.', dot: 'step' },
+    { at: '2026-11-06T20:14:00Z', text: 'Searched 14 restaurants in Kreuzberg and Neukölln for 24 guests under €900.', dot: 'step' },
+    { at: '2026-11-06T20:16:00Z', text: 'Shortlisted 3. Picked Brownhouse Studio: heated, seats 30, vegetarian menu.', dot: 'step' },
   ]
   const approved: TimelineEntry = {
     at: '2026-11-07T13:02:00Z',
@@ -220,34 +220,34 @@ export const previewReceipts: Receipts = (() => {
         id: 'venue',
         style: 'thermal',
         title: 'Booking the venue',
-        supplier: 'Spreeblick',
+        supplier: 'Brownhouse Studio',
         kind: 'Venue hire',
         rows: [
-          { label: 'Rooftop, 19–23h', amount: '720.00' },
+          { label: 'Private area, 19–23h', amount: '720.00' },
           { label: 'Heaters, 4 tables', amount: 'incl.', muted: true },
           { label: 'VAT', amount: '57.60' },
         ],
         amount: '777.60',
         total: '€777.60',
-        reference: 'SB-2291',
+        reference: 'BR-2291',
         issuedAt: '2026-11-07T13:02:00Z',
         timeline: [
           ...research,
           {
             at: '2026-11-06T20:18:00Z',
-            text: 'Emailed Spreeblick',
+            text: 'Emailed Brownhouse',
             dot: 'step',
-            quote: { from: 'ours', text: 'Hi! Is the rooftop free on Sat 12 Dec, 19:00–23:00 for 24 guests? Could you confirm the price and cancellation terms?' },
+            quote: { from: 'ours', text: 'Hi! Is your private area free on Sat 12 Dec, 19:00–23:00 for 24 guests? Could you confirm the price and cancellation terms?' },
           },
           {
             at: '2026-11-07T08:40:00Z',
-            text: 'Spreeblick replied',
+            text: 'Brownhouse replied',
             dot: 'reply',
             quote: { from: 'theirs', text: "Yes, it's free! €720 including heaters and four long tables. Free cancellation until 5 Dec." },
           },
           approved,
-          { at: '2026-11-07T13:02:00Z', text: 'Paid Spreeblick €777.60', dot: 'step' },
-          { at: '2026-11-07T14:41:00Z', text: 'Spreeblick confirmed the booking', dot: 'confirmed', badge: 'confirmed' },
+          { at: '2026-11-07T13:02:00Z', text: 'Paid Brownhouse €777.60', dot: 'step' },
+          { at: '2026-11-07T14:41:00Z', text: 'Brownhouse confirmed the booking', dot: 'confirmed', badge: 'confirmed' },
         ],
       },
       {
@@ -277,7 +277,7 @@ export const previewReceipts: Receipts = (() => {
         id: 'catering',
         style: 'invoice',
         title: 'The catering',
-        supplier: 'Spreeblick Kitchen',
+        supplier: 'Brownhouse Kitchen',
         kind: 'Catering',
         rows: [
           { label: 'Vegetarian menu × 24', amount: '288.00' },
@@ -289,8 +289,8 @@ export const previewReceipts: Receipts = (() => {
         reference: '2292',
         issuedAt: '2026-11-07T13:10:00Z',
         timeline: [
-          { at: '2026-11-07T09:00:00Z', text: 'Asked Spreeblick Kitchen for a vegetarian menu for 24.', dot: 'step' },
-          { at: '2026-11-07T13:10:00Z', text: 'Spreeblick Kitchen confirmed the menu', dot: 'confirmed', badge: 'confirmed' },
+          { at: '2026-11-07T09:00:00Z', text: 'Asked Brownhouse Kitchen for a vegetarian menu for 24.', dot: 'step' },
+          { at: '2026-11-07T13:10:00Z', text: 'Brownhouse Kitchen confirmed the menu', dot: 'confirmed', badge: 'confirmed' },
         ],
       },
       {
