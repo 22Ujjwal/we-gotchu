@@ -15,15 +15,15 @@ export type Brief = {
 }
 
 export const defaultBrief: Brief = {
-  occasion: "Franz's 30th birthday",
-  guests: '24',
-  date: 'Sat 12 Dec',
-  from: '7pm',
-  till: '11pm',
-  area: 'Kreuzberg or Neukölln',
-  budget: '€900',
-  canLose: '€10',
-  needs: 'table candles',
+  occasion: '',
+  guests: '',
+  date: '',
+  from: '',
+  till: '',
+  area: '',
+  budget: '',
+  canLose: '',
+  needs: '',
   vibe: '',
 }
 
