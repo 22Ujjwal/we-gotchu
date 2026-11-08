@@ -14,7 +14,8 @@ let replyNumber = 0
 beforeEach(async () => {
   const pg = await openPgliteDb()
   close = pg.close
-  app = createApp({ db: pg.db, mail: createFakeMail().provider, naive: createFakeNaive().naive, config: {
+  const fixedNow = new Date()
+  app = createApp({ now: () => fixedNow, db: pg.db, mail: createFakeMail().provider, naive: createFakeNaive().naive, config: {
     seedContacts: [{ name: 'Cafe Botanico', email: 'venue@example.test', kind: 'venue' }],
     agentMailWebhookSecret: SECRET, evidenceMode: 'fixture',
   } })
