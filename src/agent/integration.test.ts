@@ -1,3 +1,4 @@
+import { sdkSessionResponse } from './integration.test-fixtures'
 import { beforeAll, expect, test, vi } from 'vitest'
 import { CONTRACT_VERSION, ResearchResult } from '../contracts'
 import { createTestStore } from '../server/db/client'
@@ -14,10 +15,10 @@ let store: Store
 beforeAll(async () => { store = await createTestStore() })
 function setup(overrides: Partial<ResearchSession> = {}) {
   const session: ResearchSession = {
-    createAgent: vi.fn(async () => 'agent'), start: vi.fn(async () => 'session'),
+    start: vi.fn(async () => 'session'),
     poll: vi.fn(async () => ({ id: 'session', status: 'idle', stop_reason: 'end_turn', last_seq: 7,
       structured_output: { candidateIds: discoveryFixture.candidates.map(c => c.candidateId) } })),
-    correct: vi.fn(async () => 8), cancel: vi.fn(async () => {}), deleteAgent: vi.fn(async () => {}), ...overrides,
+    correct: vi.fn(async () => 8), cancel: vi.fn(async () => {}), ...overrides,
   }
   const discover = vi.fn(async () => structuredClone(discoveryFixture))
   const research = createResearchIntegration({ store, providers: { discover, session } })
@@ -37,6 +38,7 @@ test('application start and polls persist evidence and session identity without 
   const started = await createEvent(deps, researchBriefFixture)
   expect(started.run?.state).toBe('running')
   expect(discover).not.toHaveBeenCalled()
+  expect(session.start).not.toHaveBeenCalled()
   await getEventView(deps, started.event.eventId)
   expect((await store.researchCheckpoints!.read(started.run!.runId))!.evidence?.candidates).toEqual(discoveryFixture.candidates)
   expect(session.start).not.toHaveBeenCalled()
@@ -93,7 +95,7 @@ test('missing input and failed discovery finish without hosted calls', async () 
   await research.advanceResearch({ event, run: claimed })
   expect((await store.researchCheckpoints!.read(run.runId))!.result).toMatchObject({ outcome: 'awaiting_input', missing: ['location'] })
   expect(discover).not.toHaveBeenCalled()
-  expect(session.createAgent).not.toHaveBeenCalled()
+  expect(session.start).not.toHaveBeenCalled()
   discover.mockRejectedValueOnce(new Error('private credentials'))
   const started = await createEvent(deps, researchBriefFixture)
   const completed = await finish(deps, started.event.eventId)
@@ -107,7 +109,6 @@ test('cancellation while session creation is in flight discards the late session
   const waiting = new Promise<void>(resolve => { entered = resolve })
   const { deps, session } = setup({ start: vi.fn(() => { entered(); return new Promise<string>(resolve => { accept = resolve }) }) })
   const started = await createEvent(deps, researchBriefFixture)
-  await getEventView(deps, started.event.eventId)
   await getEventView(deps, started.event.eventId)
   const pending = getEventView(deps, started.event.eventId)
   await waiting
@@ -130,7 +131,7 @@ test('consumer fixtures validate without claiming live supplier evidence', () =>
 test('a new integration instance continues from durable evidence and session checkpoints', async () => {
   const { deps, discover, session } = setup()
   const started = await createEvent(deps, researchBriefFixture)
-  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  for (let i = 0; i < 2; i++) await getEventView(deps, started.event.eventId)
   const noDiscovery = vi.fn(async () => { throw new Error('Discovery must not repeat') })
   deps.research = createResearchIntegration({ store, providers: { discover: noDiscovery, session } })
   const completed = await finish(deps, started.event.eventId)
@@ -155,7 +156,6 @@ test('enrichment resumes one candidate per poll before hosted ranking', async ()
   await getEventView(deps, started.event.eventId)
   expect(enrich).toHaveBeenCalledTimes(1)
   expect(enrich.mock.calls[0][1].candidates).toHaveLength(1)
-  expect(session.createAgent).not.toHaveBeenCalled()
   // A replacement service resumes persisted progress without repeating the first candidate.
   deps.research = createResearchIntegration({ store, providers: { discover, session, enrich } })
   const completed = await finish(deps, started.event.eventId)
@@ -185,7 +185,7 @@ test('a revised brief rejects an in-flight provider result', async () => {
   const waiting = new Promise<void>(resolve => { entered = resolve })
   const { deps } = setup({ poll: vi.fn(() => { entered(); return new Promise<Awaited<ReturnType<ResearchSession['poll']>>>(resolve => { accept = resolve }) }) })
   const started = await createEvent(deps, researchBriefFixture)
-  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  for (let i = 0; i < 2; i++) await getEventView(deps, started.event.eventId)
   const pending = getEventView(deps, started.event.eventId)
   await waiting
   await store.updateBrief({ eventId: started.event.eventId, expectedBriefRevision: 1,
@@ -203,7 +203,7 @@ test('cancellation reports an unconfirmed provider stop and schedules no new res
     poll: vi.fn(async () => ({ id: 'cancel-session', status: 'running', last_seq: 0 })),
     cancel: vi.fn(async () => { throw new Error('private failure') }) })
   const started = await createEvent(deps, researchBriefFixture)
-  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  for (let i = 0; i < 2; i++) await getEventView(deps, started.event.eventId)
   const canceled = await cancel(deps, started.event.eventId)
   expect(canceled.run!.state).toBe('canceled')
   expect(canceled.progress.some(p => p.message.includes('stop could not be confirmed'))).toBe(true)
@@ -243,7 +243,7 @@ test('an expired run stops scheduling provider work', async () => {
   const completed = await finish(deps, started.event.eventId)
   expect(completed.researchResult!.outcome).toBe('failed')
   expect(discover).not.toHaveBeenCalled()
-  expect(session.createAgent).not.toHaveBeenCalled()
+  expect(session.start).not.toHaveBeenCalled()
 })
 
 test('real REST adapters work through application polling with controlled HTTP responses', async () => {
@@ -260,16 +260,16 @@ test('real REST adapters work through application polling with controlled HTTP r
         ? { local_results: [{ title: 'Controlled venue', place_id: 'venue', website: 'https://example.com/venue' }] }
         : { products: [{ id: 'plates', title: 'Controlled plates', offers: [{ url: 'https://example.com/plates' }] }] } }
     else if (path.endsWith('/agents')) reply = { id: 'http-agent' }
-    else if (path.endsWith('/sessions')) reply = { id: 'http-session' }
-    else if (path.endsWith('/cancel')) reply = { id: 'http-session', status: 'cancelled' }
+    else if (path.endsWith('/sessions')) reply = { id: 'ses_00000000000000000000000001' }
+    else if (path.endsWith('/cancel')) reply = { id: 'ses_00000000000000000000000001', status: 'cancelled' }
     else if (init?.method === 'DELETE') reply = { id: 'http-agent', deleted: true }
-    else reply = { id: 'http-session', status: 'idle', stop_reason: 'end_turn', last_seq: 12,
+    else reply = { id: 'ses_00000000000000000000000001', status: 'idle', stop_reason: 'end_turn', last_seq: 12,
       structured_output: { candidateIds: ['venue:venue', 'supply:plates'] } }
-    return new Response(JSON.stringify(reply))
+    return new Response(JSON.stringify(sdkSessionResponse(reply)))
   }) as typeof fetch
   const research = createResearchIntegration({ store, providers: {
     discover: createDiscovery({ apiKey: 'controlled-secret', fetch: fetcher }),
-    session: createResearchSession({ apiKey: 'controlled-secret', model: 'controlled-model', fetch: fetcher }),
+    session: createResearchSession({ apiKey: 'controlled-secret', agentId: 'agent', fetch: fetcher }),
   } })
   const { deps } = makeDeps({ store, research, now: () => new Date() })
   const started = await createEvent(deps, researchBriefFixture)
@@ -299,7 +299,7 @@ test('a stalled discovery request terminates within the configured step bound', 
 test('a brief revision after result publication keeps the newer run researching', async () => {
   const { deps } = setup()
   const started = await createEvent(deps, researchBriefFixture)
-  for (let i = 0; i < 6; i++) await getEventView(deps, started.event.eventId)
+  for (let i = 0; i < 4; i++) await getEventView(deps, started.event.eventId)
   expect((await store.researchCheckpoints!.read(started.run!.runId))!.stage).toBe('done')
   const original = store.publishResearchResult.bind(store)
   const spy = vi.spyOn(store, 'publishResearchResult').mockImplementation(async (result, lease) => {
@@ -316,27 +316,11 @@ test('a brief revision after result publication keeps the newer run researching'
   } finally { spy.mockRestore() }
 })
 
-for (const action of ['cancel', 'revise'] as const) {
-  test(`${action} cleans a saved hosted definition before a session exists`, async () => {
-    const { deps, session } = setup()
-    const started = await createEvent(deps, researchBriefFixture)
-    await getEventView(deps, started.event.eventId)
-    await getEventView(deps, started.event.eventId)
-    expect((await store.researchCheckpoints!.read(started.run!.runId))!.agentId).toBe('agent')
-    expect((await store.getRun(started.run!.runId))!.naiveSessionId).toBeNull()
-    if (action === 'cancel') await cancel(deps, started.event.eventId)
-    else await updateBrief(deps, started.event.eventId, 1, { location: 'Updated location' })
-    expect(session.deleteAgent).toHaveBeenCalledTimes(1)
-    expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
-    expect(session.start).not.toHaveBeenCalled()
-  })
-}
-
 test('a poll during brief replacement cannot fail the new revision before its checkpoint exists', async () => {
   let deps: ReturnType<typeof setup>['deps']
   let eventId = ''
   let racedView: Awaited<ReturnType<typeof getEventView>> | undefined
-  const setupResult = setup({ deleteAgent: vi.fn(async () => { racedView = await getEventView(deps, eventId) }) })
+  const setupResult = setup({ cancel: vi.fn(async () => { racedView = await getEventView(deps, eventId) }) })
   deps = setupResult.deps
   const started = await createEvent(deps, researchBriefFixture)
   eventId = started.event.eventId
@@ -355,9 +339,9 @@ test('brief replacement after completion does not repeat confirmed cleanup', asy
   const { deps, session } = setup()
   const started = await createEvent(deps, researchBriefFixture)
   await finish(deps, started.event.eventId)
-  vi.mocked(session.deleteAgent).mockRejectedValueOnce(new Error('already deleted'))
+  vi.mocked(session.cancel).mockRejectedValueOnce(new Error('already deleted'))
   await updateBrief(deps, started.event.eventId, 1, { location: 'New brief' })
-  expect(session.deleteAgent).toHaveBeenCalledTimes(1)
+  expect(session.cancel).toHaveBeenCalledTimes(1)
   expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
 })
 
@@ -365,10 +349,10 @@ test('a failed read cannot prevent explicit cancellation and definition cleanup'
   const { deps, session } = setup({ start: vi.fn(async () => 'failed-read-session'),
     poll: vi.fn(async () => { throw new Error('GET failed') }) })
   const started = await createEvent(deps, researchBriefFixture)
-  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  for (let i = 0; i < 2; i++) await getEventView(deps, started.event.eventId)
   await cancel(deps, started.event.eventId)
   expect(session.cancel).toHaveBeenCalledTimes(1)
-  expect(session.deleteAgent).toHaveBeenCalledTimes(1)
+  expect(session.cancel).toHaveBeenCalledTimes(1)
   expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
 })
 
@@ -455,21 +439,21 @@ test('configured research combines real discovery, detail and ranking adapters w
       else throw new Error('Unexpected read-only endpoint')
       reply = { runId: 'controlled-detail-run', status: 'COMPLETED', providerResponse: { httpStatus: 200 }, output }
     } else if (path.endsWith('/agents')) reply = { id: 'combined-agent' }
-    else if (path.endsWith('/sessions')) reply = { id: 'combined-session' }
+    else if (path.endsWith('/sessions')) reply = { id: 'ses_00000000000000000000000002' }
     else if (path.endsWith('/messages')) { corrected = true; reply = { accepted_seq: 14 } }
-    else if (path.endsWith('/cancel')) reply = { id: 'combined-session', status: 'cancelled' }
+    else if (path.endsWith('/cancel')) reply = { id: 'ses_00000000000000000000000002', status: 'cancelled' }
     else if (init?.method === 'DELETE') reply = { id: 'combined-agent', deleted: true }
-    else if (path.endsWith('/sessions/combined-session')) reply = {
-      id: 'combined-session', status: 'idle', stop_reason: 'end_turn', last_seq: corrected ? 15 : 12,
+    else if (path.endsWith('/sessions/ses_00000000000000000000000002')) reply = {
+      id: 'ses_00000000000000000000000002', status: 'idle', stop_reason: 'end_turn', last_seq: corrected ? 15 : 12,
       structured_output: { candidateIds: corrected ? ['venue:hall', 'supply:plates'] : ['invented'] },
     }
     else throw new Error('Unexpected hosted endpoint')
-    return new Response(JSON.stringify(reply))
+    return new Response(JSON.stringify(sdkSessionResponse(reply)))
   })
   vi.stubGlobal('fetch', fetcher)
   try {
     const research = createConfiguredResearch(store, { RESEARCH_MODE: 'real', NAIVE_API_KEY: 'controlled-secret',
-      MONID_API_KEY: 'controlled-secret', NAIVE_MODEL: 'controlled-model' })
+      MONID_API_KEY: 'controlled-secret', NAIVE_RESEARCH_AGENT_ID: 'agent' })
     const { deps } = makeDeps({ store, research, now: () => new Date() })
     const started = await createEvent(deps, researchBriefFixture)
     const completed = await finish(deps, started.event.eventId)
@@ -496,18 +480,18 @@ test('configured research combines real discovery, detail and ranking adapters w
   } finally { vi.unstubAllGlobals() }
 })
 
-test('an unconfirmed pre-session deletion is durable and retryable', async () => {
-  const { deps, session } = setup({ deleteAgent: vi.fn().mockRejectedValueOnce(new Error('unavailable')).mockResolvedValue(undefined) })
+test('an unconfirmed session stop is durable and retryable', async () => {
+  const { deps, session } = setup({ cancel: vi.fn().mockRejectedValueOnce(new Error('unavailable')).mockResolvedValue(undefined) })
   const started = await createEvent(deps, researchBriefFixture)
   await getEventView(deps, started.event.eventId)
   await getEventView(deps, started.event.eventId)
   const canceled = await cancel(deps, started.event.eventId)
-  expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: false, agentId: 'agent' })
+  expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: false, sessionId: 'session' })
   expect(canceled.progress.some(progress => progress.message.includes('could not be confirmed'))).toBe(true)
   await deps.research.cancelResearch(canceled.run!)
   expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
   await deps.research.cancelResearch(canceled.run!)
-  expect(session.deleteAgent).toHaveBeenCalledTimes(2)
+  expect(session.cancel).toHaveBeenCalledTimes(2)
 })
 
 test('bounded investigation saves evidence returned during cooperative abort', async () => {
@@ -536,7 +520,7 @@ test('cancellation stops a session while a correction to a terminal snapshot is 
     correct: vi.fn(() => { entered(); return new Promise<number>(resolve => { accept = resolve }) }),
   })
   const started = await createEvent(deps, researchBriefFixture)
-  for (let i = 0; i < 4; i++) await getEventView(deps, started.event.eventId)
+  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
   const pending = getEventView(deps, started.event.eventId)
   await waiting
   await cancel(deps, started.event.eventId)

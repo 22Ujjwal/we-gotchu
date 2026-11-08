@@ -13,8 +13,8 @@ export function createConfiguredResearch(store: Store, env: NodeJS.ProcessEnv = 
     if (env.RESEARCH_MODE && !['real', 'simulated'].includes(env.RESEARCH_MODE)) {
       throw new ApiError(503, 'research_not_configured', 'RESEARCH_MODE must be real or simulated.')
     }
-    if (!env.NAIVE_API_KEY?.trim() || !env.MONID_API_KEY?.trim() || !env.NAIVE_MODEL?.trim()) {
-      throw new ApiError(503, 'research_not_configured', 'Real research requires NAIVE_API_KEY, MONID_API_KEY and NAIVE_MODEL.')
+    if (!env.NAIVE_API_KEY?.trim() || !env.MONID_API_KEY?.trim() || !env.NAIVE_RESEARCH_AGENT_ID?.trim()) {
+      throw new ApiError(503, 'research_not_configured', 'Real research requires NAIVE_API_KEY, MONID_API_KEY and NAIVE_RESEARCH_AGENT_ID.')
     }
     if (!store.researchCheckpoints) {
       throw new ApiError(503, 'research_not_configured', 'Real research requires durable checkpoint storage.')
@@ -26,7 +26,7 @@ export function createConfiguredResearch(store: Store, env: NodeJS.ProcessEnv = 
     port = createResearchIntegration({ store, providers: {
       discover: createDiscovery({ apiKey: env.MONID_API_KEY! }),
       enrich: enrich ?? createDetailEnricher({ apiKey: env.MONID_API_KEY! }),
-      session: createResearchSession({ apiKey: env.NAIVE_API_KEY!, model: env.NAIVE_MODEL! }),
+      session: createResearchSession({ apiKey: env.NAIVE_API_KEY!, agentId: env.NAIVE_RESEARCH_AGENT_ID! }),
     } })
     return port
   }

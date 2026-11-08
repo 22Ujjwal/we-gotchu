@@ -21,12 +21,10 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
         const old = row.checkpoint.cleanup
         const sessionStopped = cleanup.sessionStopped === true || cleanup.confirmed ||
           (old?.sessionId === cleanup.sessionId && (old.sessionStopped === true || old.confirmed))
-        const agentDeleted = cleanup.agentDeleted === true || cleanup.confirmed ||
-          (old?.agentId === cleanup.agentId && (old.agentDeleted === true || old.confirmed))
-        const confirmed = sessionStopped && agentDeleted && !cleanup.unresolvedOperation
+        const confirmed = sessionStopped && !cleanup.unresolvedOperation
         await tx.update(runs).set({
           researchCheckpoint: sql`jsonb_set(${runs.researchCheckpoint}, '{cleanup}',
-            ${JSON.stringify({ ...cleanup, sessionStopped, agentDeleted, confirmed })}::jsonb)`,
+            ${JSON.stringify({ ...cleanup, sessionStopped, confirmed })}::jsonb)`,
         }).where(eq(runs.id, runId))
       })
     },
@@ -34,7 +32,16 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
       const [row] = await db.select().from(runs).where(eq(runs.id, runId))
       if (!row?.researchCheckpoint) return null
       // The indexed Run columns remain authoritative for provider identity and cursors.
-      return { ...row.researchCheckpoint, naiveSessionId: row.naiveSessionId,
+      // Old runs retain their hosted session; obsolete definition stages need no provider deletion.
+      const saved = row.researchCheckpoint
+      const stage = saved.stage as string
+      const legacy = saved as typeof saved & { agentId?: unknown }
+      const { agentId: _oldAgent, ...checkpoint } = legacy
+      const pending = saved.pendingOperation as { kind: string; idempotencyKey: string; startedAt: string } | null | undefined
+      return { ...checkpoint,
+        stage: stage === 'agent' ? 'session' : stage === 'delete_agent' ? 'cleanup' : saved.stage,
+        pendingOperation: pending?.kind === 'agent' ? null : saved.pendingOperation,
+        naiveSessionId: row.naiveSessionId,
         lastSequence: row.lastSequence, correctionsUsed: row.correctionsUsed }
     },
     async save(run, expectedVersion, checkpoint, message) {

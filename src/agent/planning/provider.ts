@@ -37,6 +37,20 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
     }
     throw new Error('Team status lookup is incomplete.')
   }
+  async function start(input: Parameters<PlanningAgent['start']>[0]) {
+    const session = await client.sessions.create({
+      agent_id: agentId, message: input.message, budget_micro_usd: budgetMicroUsd,
+      output_schema: planningOutputSchema, structured_output_required: true,
+      metadata: { conversationId: input.conversationId, purpose: 'event-planning' },
+    }, { idempotencyKey: `planning:${input.conversationId}:${input.requestId}` })
+    return { sessionId: session.id, sequence: session.last_seq }
+  }
+  async function send(input: Parameters<PlanningAgent['send']>[0]) {
+    const accepted = await client.sessions.send(input.sessionId, {
+      message: JSON.stringify({ customerMessage: input.message, customerSelections: input.selections }),
+    }, { idempotencyKey: `planning:${input.sessionId}:${input.requestId}` })
+    return { sequence: accepted.accepted_seq }
+  }
   return {
     async confirm(input) {
       const sessions = await family(await client.sessions.get(input.sessionId))
@@ -44,20 +58,11 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
       if (!action || !client.sessions.confirmTool) throw new Error('This research request is no longer awaiting approval.')
       await client.sessions.confirmTool(action.sessionId, { tool_call_id: action.callId, decision: input.decision, scope: 'call' })
     },
-    async start(input) {
-      const session = await client.sessions.create({
-        agent_id: agentId, message: input.message, budget_micro_usd: budgetMicroUsd,
-        output_schema: planningOutputSchema, structured_output_required: true,
-        metadata: { conversationId: input.conversationId, purpose: 'event-planning' },
-      }, { idempotencyKey: `planning:${input.conversationId}:${input.requestId}` })
-      return { sessionId: session.id, sequence: session.last_seq }
-    },
-    async send(input) {
-      const accepted = await client.sessions.send(input.sessionId, {
-        message: JSON.stringify({ customerMessage: input.message, customerSelections: input.selections }),
-      }, { idempotencyKey: `planning:${input.sessionId}:${input.requestId}` })
-      return { sequence: accepted.accepted_seq }
-    },
+    start,
+    // Reusing the body and key retrieves the accepted create instead of starting another run.
+    recoverStart: start,
+    send,
+    recoverSend: send,
     async read(input) {
       const session = await client.sessions.get(input.sessionId)
       const finished = ['idle', 'completed'].includes(session.status)

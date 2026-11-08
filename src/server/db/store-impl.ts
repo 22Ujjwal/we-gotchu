@@ -1,6 +1,8 @@
+import { isCurrentPlanningOffer } from '../planning/offer'
+import { ApiError } from '../events/errors'
 import { createResearchCheckpointStore } from './research-checkpoints'
 import { randomUUID } from 'node:crypto'
-import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import {
   Approval,
@@ -16,7 +18,7 @@ import {
   type EventStatus,
 } from '../../contracts'
 import { ApprovalCanceledError, OpenApprovalExistsError, type Store } from '../store'
-import { approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
+import { planningConversations, approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
 
 // Store implementation over Drizzle. Works with any Postgres driver Drizzle
 // supports (Neon serverless Pool in production, PGlite in tests).
@@ -99,6 +101,7 @@ const toPayment = (r: PaymentRow): Payment =>
     approvalId: r.approvalId,
     checkoutSessionId: r.checkoutSessionId,
     paymentIntentId: r.paymentIntentId,
+    ...(r.paidAt ? { paidAt: r.paidAt.toISOString() } : {}),
     amount: r.amount,
     currency: r.currency,
     state: r.state,
@@ -486,6 +489,21 @@ export function createStore(db: Db): Store {
 
     getPlan,
 
+    async validatePlanOffer(plan, now) {
+      if (!plan.planningOffer) return true
+      const [event] = await db.select().from(events).where(eq(events.id, plan.eventId))
+      // Once paid handoff starts, later conversation edits cannot rewrite its approved plan.
+      if (event?.planRevision === plan.revision && ['executing', 'booked', 'partially_booked', 'failed'].includes(event.status)) {
+        const [funded] = await db.select({ id: approvals.id }).from(approvals).innerJoin(payments, eq(payments.approvalId, approvals.id))
+          .where(and(eq(approvals.eventId, plan.eventId), eq(approvals.planId, plan.planId),
+            eq(approvals.planRevision, plan.revision), eq(payments.state, 'paid'),
+            eq(payments.amount, plan.total), eq(payments.currency, plan.currency)))
+        if (funded) return true
+      }
+      const [row] = await db.select().from(planningConversations).where(eq(planningConversations.id, plan.planningOffer.conversationId))
+      return isCurrentPlanningOffer(row?.data ?? null, plan, now)
+    },
+
     async findOpenApproval(eventId, planRevision, now) {
       const [row] = await db
         .select({ approval: approvals, payment: payments })
@@ -496,7 +514,7 @@ export function createStore(db: Db): Store {
             eq(approvals.eventId, eventId),
             eq(approvals.planRevision, planRevision),
             isNull(approvals.revokedAt),
-            gt(approvals.expiresAt, now),
+            or(gt(approvals.expiresAt, now), and(eq(payments.state, 'paid'), lt(payments.paidAt, approvals.expiresAt))),
           ),
         )
         .orderBy(desc(approvals.approvedAt))
@@ -511,7 +529,7 @@ export function createStore(db: Db): Store {
         // Lock the event so a concurrent updateBrief cannot drop the plan
         // between this check and the insert (updateBrief locks the same row).
         const locked = await tx
-          .select({ cancelRequestedAt: events.cancelRequestedAt })
+          .select({ cancelRequestedAt: events.cancelRequestedAt, plan: plans.data })
           .from(events)
           .innerJoin(plans, eq(plans.eventId, events.id))
           .where(
@@ -525,6 +543,14 @@ export function createStore(db: Db): Store {
           .for('update', { of: events })
         if (locked.length === 0) throw new Error(`createApproval: plan ${approval.planId} revision ${approval.planRevision} is not current`)
         if (locked[0].cancelRequestedAt !== null) throw new ApprovalCanceledError()
+        const currentPlan = locked[0].plan
+        if (currentPlan.planningOffer) {
+          const [conversation] = await tx.select().from(planningConversations)
+            .where(eq(planningConversations.id, currentPlan.planningOffer.conversationId)).for('update')
+          if (!isCurrentPlanningOffer(conversation?.data ?? null, currentPlan, new Date(approval.approvedAt))) {
+            throw new ApiError(409, 'stale_offer', 'The selected offer changed or expired. Review it again.')
+          }
+        }
         // Re-check under the event lock: a concurrent approve may have inserted first.
         const [open] = await tx
           .select({ id: approvals.id })
@@ -603,11 +629,12 @@ export function createStore(db: Db): Store {
       return rows.map(row => row.id)
     },
 
-    async markPaymentPaid(checkoutSessionId, paymentIntentId) {
+    async markPaymentPaid(checkoutSessionId, paymentIntentId, paidAt) {
       const [row] = await db
         .update(payments)
-        .set({ state: 'paid', paymentIntentId })
-        .where(and(eq(payments.checkoutSessionId, checkoutSessionId), eq(payments.state, 'pending')))
+        .set({ state: 'paid', paymentIntentId, ...(paidAt ? { paidAt } : {}) })
+        .where(and(eq(payments.checkoutSessionId, checkoutSessionId), or(eq(payments.state, 'pending'),
+          paidAt ? and(eq(payments.state, 'paid'), eq(payments.paymentIntentId, paymentIntentId), isNull(payments.paidAt)) : undefined)))
         .returning()
       return row ? toPayment(row) : null
     },
@@ -681,11 +708,17 @@ export function createStore(db: Db): Store {
         if (prior) return { attempt: toAttempt(prior), replayed: true }
         if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status)) return null
         const [approval] = await tx.select().from(approvals).where(eq(approvals.id, input.approvalId)).for('update')
-        if (!approval || approval.eventId !== input.eventId || approval.revokedAt || approval.expiresAt <= now ||
+        if (!approval || approval.eventId !== input.eventId || approval.revokedAt ||
             approval.planRevision !== event.planRevision || !approval.actionIds.includes(input.actionId)) return null
         const [payment] = await tx.select().from(payments).where(eq(payments.approvalId, approval.id)).for('update')
-        if (!payment || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
+        if (!payment || approval.expiresAt <= (payment.paidAt ?? now) || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
             payment.currency !== approval.currency || (input.mode === 'live' && payment.mode !== 'live')) return null
+        const [currentPlan] = await tx.select().from(plans).where(eq(plans.id, approval.planId))
+        if (currentPlan?.data.planningOffer && !['executing', 'booked', 'partially_booked', 'failed'].includes(event.status)) {
+          const [conversation] = await tx.select().from(planningConversations)
+            .where(eq(planningConversations.id, currentPlan.data.planningOffer.conversationId)).for('update')
+          if (!isCurrentPlanningOffer(conversation?.data ?? null, currentPlan.data, now)) return null
+        }
         return createStore(tx as unknown as Db).insertAttempt(input)
       })
     },

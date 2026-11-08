@@ -69,6 +69,7 @@ export interface Store {
   /** Stores a plan; unique on (eventId, revision). Sets Event.planRevision. */
   savePlan(plan: Plan): Promise<void>
   getPlan(eventId: string): Promise<Plan | null>
+  validatePlanOffer?(plan: Plan, now: Date): Promise<boolean>
 
   // Approval and payment
   /** Returns an unexpired, unrevoked approval for this plan revision with its payment, if any. */
@@ -84,7 +85,7 @@ export interface Store {
   /** Paid approvals remain discoverable after revocation for cancellation retries. */
   listPaidApprovalIds(eventId: string): Promise<string[]>
   /** Conditional pending -> paid. Returns null if it was not pending. */
-  markPaymentPaid(checkoutSessionId: string, paymentIntentId: string): Promise<Payment | null>
+  markPaymentPaid(checkoutSessionId: string, paymentIntentId: string, paidAt?: Date): Promise<Payment | null>
   markPaymentExpired(checkoutSessionId: string): Promise<boolean>
   /** Atomically returns the current expired Checkout to plan_ready. Serializes with approval creation and cancellation. Returns the changed event id. */
   repairExpiredCheckout(checkoutSessionId: string): Promise<string | null>
