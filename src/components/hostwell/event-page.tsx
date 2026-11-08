@@ -94,6 +94,8 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid }: {
         order={settings.order(settings.planned)}
         place={event.brief.location}
         timezone={event.brief.timezone}
+        incomplete={event.status !== 'booked' ||
+          view.attempts.some((a) => a.kind === 'commit' && a.state !== 'succeeded')}
       />
     )
   }

@@ -175,7 +175,19 @@ test('a paid booking shows the party summary', async () => {
   render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
   expect(await screen.findByRole('heading', { name: "It's happening!" })).toBeVisible()
   expect(screen.getByText('Harbor Loft (simulated)')).toBeVisible()
+  expect(screen.getByText(/^Everything is booked for/)).toBeVisible()
   expect(screen.queryByRole('button', { name: 'Arrange' })).not.toBeInTheDocument()
+})
+
+test('a partial booking does not claim everything is booked', async () => {
+  const view = createEventViewFixture('booked')
+  view.event.status = 'partially_booked'
+  Object.assign(view.attempts[1], { state: 'unknown', providerReference: null, actualAmount: null,
+    evidence: null, errorReason: 'The supplier response was lost.' })
+  getOnly(view)
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  expect(await screen.findByText("Some of it couldn't be booked yet.")).toBeVisible()
+  expect(screen.queryByText(/Everything is booked/)).not.toBeInTheDocument()
 })
 
 test('canceled events do not offer the plan again', async () => {

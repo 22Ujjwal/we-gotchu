@@ -43,6 +43,7 @@ export function PartyView({
   extras = [],
   place,
   timezone,
+  incomplete = false,
 }: {
   brief: Brief
   venue: Venue
@@ -51,6 +52,8 @@ export function PartyView({
   /** Where it is, as shown under the venue name. */
   place: string
   timezone: string
+  /** Not every supplier confirmed (yet). */
+  incomplete?: boolean
 }) {
   const receipt = useRef<HTMLDialogElement>(null)
   const date = parseDate(brief.date)
@@ -119,7 +122,7 @@ export function PartyView({
             It's happening!
           </h1>
           <p className="m-0 font-body text-[16px] leading-5 text-receipt-muted lg:text-[18px] lg:leading-[22px]">
-            Everything is booked for {occasionShort}.
+            {incomplete ? "Some of it couldn't be booked yet." : `Everything is booked for ${occasionShort}.`}
           </p>
         </div>
 
