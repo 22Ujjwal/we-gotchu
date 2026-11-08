@@ -81,6 +81,7 @@ async function startRun(deps: Deps, event: Event, run: Run): Promise<void> {
 export async function createEvent(deps: Deps, body: unknown): Promise<EventView> {
   const customerId = await deps.requireCustomerId()
   const brief = parseBrief(body)
+  deps.research.validateConfiguration?.()
   const { event, run } = await deps.store.createEvent({ customerId, brief })
   await startRun(deps, event, run)
   return view(deps, event.eventId)
@@ -159,6 +160,7 @@ export async function updateBrief(
   if (!changes || typeof changes !== 'object') throw new ApiError(422, 'invalid_input', 'changes must be an object.')
   const known = Object.fromEntries(Object.entries(changes).filter(([k]) => (BRIEF_FIELDS as string[]).includes(k)))
   const brief = parseBrief({ ...event.brief, ...known })
+  deps.research.validateConfiguration?.()
 
   const res = await deps.store.updateBrief({ eventId, expectedBriefRevision, brief })
   if (!res.ok) {
@@ -172,6 +174,7 @@ export async function updateBrief(
       await deps.research.cancelResearch(prev)
     } catch (err) {
       console.warn('[research] cancel of previous session failed')
+      await deps.store.appendProgress(eventId, 'system', 'Previous research cleanup could not be confirmed; provider reconciliation is needed.')
     }
   }
   await deps.store.setEventStatus(eventId, ['needs_input', 'researched', 'plan_ready', 'failed'], 'researching')
@@ -299,14 +302,12 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
   }
 
   const run = await deps.store.getCurrentRun(eventId, 'research')
-  if (run && (run.state === 'running' || run.state === 'awaiting_input')) {
-    {
-      try {
-        await deps.research.cancelResearch(run)
-      } catch (err) {
-        console.warn('[cancel] research session cancel failed')
-        await deps.store.appendProgress(eventId, 'system', 'Research stop could not be confirmed. No new research will be scheduled; provider reconciliation is needed.')
-      }
+  if (run) {
+    try {
+      await deps.research.cancelResearch(run)
+    } catch {
+      console.warn('[cancel] research session cancel failed')
+      await deps.store.appendProgress(eventId, 'system', 'Research stop could not be confirmed. No new research will be scheduled; provider reconciliation is needed.')
     }
     await deps.store.setRunState(run.runId, ['running', 'awaiting_input'], 'canceled')
   }

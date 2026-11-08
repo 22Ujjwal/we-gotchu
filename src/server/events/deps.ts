@@ -13,6 +13,8 @@ export type { StripeLike }
 
 /** Boundary to Tony's research code (contract 0.4, Research). */
 export interface ResearchPort {
+  /** Fail before creating or replacing a run when local configuration is invalid. */
+  validateConfiguration?(): void
   startResearch(input: ResearchInput): Promise<{ naiveSessionId: string | null }>
   advanceResearch(input: {
     event: Event
