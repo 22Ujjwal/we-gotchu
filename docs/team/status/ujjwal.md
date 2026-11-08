@@ -166,3 +166,9 @@ Verified: 732 application tests, 31 tooling tests, 5 MCP client tests, typecheck
 Commits: `2051c67`, `44b1ae2`, `ee61df1`. [Verification and screenshot locations](../../testing/ui-integration-verification.md). Local screenshots/report are preserved in `.scratch/verification/ui-integration/`. Deferred minor: a transient image API failure needs reload to retry while the venue source is unchanged. Root/source CI and backend ownership/approval checks remain active.
 
 Next: user/team review of the local combined branch, then publication when authorized and a separate hosted signed-in research-only verification. Do not represent these fixtures as confirmed availability or booking. No outreach, real charges, hosted migration, push or deployment occurred.
+
+## Photo retry follow-up — 2026-11-08
+
+Branch `integrate/agent-connect-tony`, implementation `7cc8679`, local only; no PR/push/deployment. Transient venue image failures retry twice, then expose Retry photos. Successful photos are preserved; polling does not restart requests and scope cleanup cancels work. This resolves the earlier deferred reload-only recovery limitation.
+
+Verified: 741 application tests, 31 tooling tests, typecheck, build and independent review pass. The real local homepage and Clerk sign-in rendered in Chrome. Authenticated research/image verification is pending user sign-in, not a claimed pass. Local server remains available for that handoff at localhost:3000 with an isolated planning DB; no supplier/payment actions or hosted configuration changes. Next: complete signed-in browser verification before publication. [Evidence and limitations](../../testing/ui-integration-verification.md).

@@ -34,10 +34,14 @@ Final combined-main visual run at `ee61df14` produced **52 final PNGs**: 30 stat
 
 Selected local frames: `.scratch/verification/ui-integration/images-desktop-available.png`, `combined-main-mobile-uncertain.png`, `transition-mobile-no-preference-mid.png`, and `typography-desktop-options.png`. Screenshots are ignored local artifacts rather than deployed product evidence.
 
-## Deferred minor
+## Photo recovery follow-up
 
-A failed image API request is not retried while the same venue source remains mounted. Reloading the page retries it; ordinary research polling intentionally does not restart image reads, preventing slower image fetches from being continually aborted. An explicit photo retry is a future improvement. Repeated identical photo credits are also visually verbose, but attribution remains present.
+Transient image API failures now retry after 1 and 2 seconds, then expose Retry photos without requiring a reload. Successful venue images remain visible. Authentication errors, invalid payloads and genuine no-image results are not retried. Research polling does not restart reads; scope changes and unmount cancel pending work. Repeated identical photo credits remain visually verbose, but attribution is present.
+
+The real development app was opened in Chrome at localhost:3000. The homepage and Clerk development sign-in rendered, and planning correctly required sign-in. Authenticated research/image verification is pending user sign-in; this is not a live journey pass. This check uses an isolated local planning database and does not configure email or payment providers. No supplier, payment, hosted migration or deployment action was performed.
 
 ## Integration boundaries
 
 These checks prove controlled frontend/API compatibility and local rendering. They do not establish hosted Clerk sign-in, a real Naive research result, supplier availability, delivered supplier mail, completed bookings or a live external-agent connection. Customer approval and payment boundaries remain intact. Public external-agent enrollment, admission and route mounting remain separate work.
+
+Retry implementation: `7cc8679`. Fresh verification: 741 application tests and 31 tooling tests pass, typecheck and production build pass, diff check clean. Independent review found no blockers. Retry regression tests use controlled responses; live signed-in photo recovery remains unverified.
