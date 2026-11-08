@@ -24,24 +24,24 @@
 ## Task 1: Outbound adapter
 Files: `types.ts`, `transport.ts`, `agentmail.ts`, `transport.test.ts`, `agentmail.test.ts`.
 Interfaces: `createSupplierInquiryTransport({provider,operations})` exposes `sendInquiry(input)` and read-only `reconcileInquiry(operationId)`; `createAgentMailProvider({apiKey,inboxId})` implements provider port.
-- [ ] Write tests: exact payload/references; intent saved before send; same ID same payload no resend; changed payload conflict; concurrent calls; timeout uncertain; storage failure; clear rejection; read-only reconciliation.
-- [ ] Run focused tests red, implement, run focused tests plus typecheck and application suite green.
-- [ ] Commit `feat(email): add recoverable supplier inquiry sending`.
+- [x] Write tests: exact payload/references; intent saved before send; same ID same payload no resend; changed payload conflict; concurrent calls; timeout uncertain; storage failure; clear rejection; read-only reconciliation.
+- [x] Run focused tests red, implement, run focused tests plus typecheck and application suite green.
+- [x] Commit `feat(email): add recoverable supplier inquiry sending`.
 
 ## Task 2: Inbound webhook
 Files: `webhook.ts`, `incoming.ts`, `incoming.test.ts`, `webhook.test.ts`.
 Interfaces: signed raw HTTP handler factory, normalized reply, durable receipt repository and idempotent application callback. Correlation helper checks exact provider refs and approved sender; no subject matching.
-- [ ] Write tests: published Svix test vector; invalid/stale signature; malformed/oversized payload; duplicate event/message; callback/storage failure retries; wrong inbox; missing body fetched using SDK IDs; unrelated sender and ambiguous thread unmatched.
-- [ ] Run red, implement, run focused tests, full suite and typecheck green.
-- [ ] Commit `feat(email): receive signed supplier replies durably`.
+- [x] Write tests: published Svix test vector; invalid/stale signature; malformed/oversized payload; duplicate event/message; callback/storage failure retries; wrong inbox; missing body fetched using SDK IDs; unrelated sender and ambiguous thread unmatched.
+- [x] Run red, implement, run focused tests, full suite and typecheck green.
+- [x] Commit `feat(email): receive signed supplier replies durably`.
 
 ## Task 3: Handoff and final verification
 Files: `README.md`, `HANDOFF.md`, route integration template within this owned module if shared runtime is unavailable.
-- [ ] Document exact interfaces, atomic storage requirements, callback idempotency, route/configuration, provider limits and recovery.
-- [ ] Run a controlled live send/reply only when recipient approval is available; otherwise record precise blocker.
-- [ ] Independent final review; fix important findings with regression tests.
-- [ ] Full test, coordination checks, typecheck and Vercel build; verify no changes outside ownership.
-- [ ] Commit handoff. Report commits and evidence; do not push.
+- [x] Document exact interfaces, atomic storage requirements, callback idempotency, route/configuration, provider limits and recovery.
+- [x] Record live-test blockers: controlled recipient approval, webhook secret and durable runtime are still pending; no send performed.
+- [x] Independent final review; fix important findings with regression tests.
+- [x] Full test, coordination checks, typecheck and Vercel build; verify no changes outside ownership.
+- [x] Commit handoff. Report commits and evidence; do not push.
 
 ## Decisions
 - Keep route wiring as an integration template until Tony provides durable runtime and generates route types. Registering an unconfigured endpoint would misrepresent hosted readiness.
