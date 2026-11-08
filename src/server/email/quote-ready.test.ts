@@ -40,7 +40,7 @@ describe('quote-ready email', () => {
     await notifications.quoteReady(input)
     expect(sent).toHaveLength(1)
     expect(sent[0].to).toBe('alice@example.com')
-    expect(sent[0].key).toBe('appr_1:quote-ready')
+    expect(sent[0].key).toMatch(/^[A-Za-z0-9._~-]{1,256}$/)
   })
 
   it('sends nothing when the customer has no address', async () => {

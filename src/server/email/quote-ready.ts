@@ -145,7 +145,7 @@ export function createQuoteReadyNotifications(opts: {
         console.info('[email] no address for customer; skipping quote-ready email', input.customerId)
         return
       }
-      await opts.sender.send(to, buildQuoteReadyEmail(input, opts.appUrl), `${input.approvalId}:quote-ready`)
+      await opts.sender.send(to, buildQuoteReadyEmail(input, opts.appUrl), `${input.approvalId}-quote-ready`)
     },
   }
 }
