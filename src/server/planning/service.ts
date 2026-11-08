@@ -15,6 +15,7 @@ export type PlanningDeps = {
   agent: () => PlanningAgent
   requireCustomerId: () => Promise<string>
   arrange?: (record: PlanningRecord) => void
+  refreshArrangement?: (record: PlanningRecord) => Promise<PlanningRecord>
   testSupplierEmail?: string
   allowResearchReview?: boolean
   timeoutMs?: number
@@ -327,6 +328,10 @@ export async function getPlanning(deps: PlanningDeps, id: string, options: { sav
   const customerId = await deps.requireCustomerId()
   let record = await owned(deps, customerId, id)
   if (options.savedOnly) return record.view
+  if (record.view.arrangement?.status === 'preparing' && !record.pending && !record.view.inquiry?.delivery && deps.refreshArrangement) {
+    try { return (await deps.refreshArrangement(record)).view }
+    catch { throw new ApiError(503, 'company_unavailable', 'Could not check the supplier request. Your saved work is unchanged.') }
+  }
   const inquiry = record.view.inquiry
   if (inquiry?.delivery?.status === 'pending' && inquiry.delivery.expiresAt <= now(deps)) {
     const recovered = await deps.repository.compareAndSet(record, { ...record, view: changed(record, {

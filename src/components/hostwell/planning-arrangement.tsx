@@ -48,7 +48,7 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
     </div>
   const action = <div className="flex flex-col gap-4">
       {arrangement?.controlled && <p className="font-semibold">Controlled supplier rehearsal. No real venue will be contacted.</p>}
-      {active ? !view.paymentLink && <div role="status" aria-live="polite"><p className="font-semibold">Your arrangement request is saved</p><p className="mt-2">{arrangement.detail}</p></div>
+      {active ? !view.paymentLink && <div role={arrangement?.status === 'needs_attention' ? 'alert' : 'status'} aria-live="polite"><p className="font-semibold">{arrangement?.status === 'needs_attention' ? 'Your request needs attention' : 'Your arrangement request is saved'}</p><p className="mt-2">{arrangement.detail}</p></div>
         : <>
           {arrangement?.status === 'stale' && <p>{arrangement.detail}</p>}
           <p className="text-[15px]">{view.canArrange ? "We will request availability and a quote. You approve before paying." : "Quote requests are unavailable here. Your selections are saved."}</p>

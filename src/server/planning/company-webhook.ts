@@ -1,3 +1,4 @@
+import { refreshCompanyStatus } from './company-status'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createClient } from '@usenaive-sdk/managed-agents'
 import { z } from 'zod'
@@ -72,15 +73,7 @@ export function createCompanyWebhook(repository: PlanningRepository, env: NodeJS
         if (latest.pending_actions?.some(pending => pending.tool_call_id === action.tool_call_id)) throw error
       }
     }
-    if (['failed', 'cancelled'].includes(session.status) || session.status === 'idle' && session.stop_reason === 'error') {
-      const current = await repository.getById(record.id)
-      if (current?.view.arrangement?.status === 'preparing') {
-        const saved = await repository.compareAndSet(current, { ...current, view: { ...current.view,
-          version: current.view.version + 1, arrangement: { ...current.view.arrangement, status: 'needs_attention',
-            detail: 'Your request is saved, but the supplier session stopped before saving an inquiry. We will review it.' } } })
-        if (!saved) throw new ApiError(503, 'state_changed', 'Retry the completion update.')
-      }
-    }
+    await refreshCompanyStatus(repository, record, env, signal)
     return json({ received: true })
   }
 }

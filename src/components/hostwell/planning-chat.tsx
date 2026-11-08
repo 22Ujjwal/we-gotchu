@@ -99,7 +99,9 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   if (view?.arrangement && !notice && !view.offer && !view.paymentLink
     && ['requested', 'preparing', 'awaiting_reply'].includes(view.arrangement.status)) {
     return <ArrangingView embedded email={view.arrangement.customerEmail}
-      message={view.arrangement.controlled ? 'We are requesting your quote from the test supplier. We will email you when it is ready.' : 'We are checking availability and prices. We will email your quote.'}
+      message={view.arrangement.status === 'awaiting_reply'
+        ? 'Your inquiry was accepted for sending. We are waiting for the supplier reply.'
+        : 'Your request is saved. We are preparing the inquiry; no supplier email is confirmed sent yet.'}
       items={view.selections.map(option => ({ label: option.kind === 'venue' ? 'Venue' : 'Extras', title: option.name }))} />
   }
   if (id && view && !venueCards.length && !view.arrangement) {

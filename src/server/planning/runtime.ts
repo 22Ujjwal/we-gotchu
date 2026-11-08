@@ -1,3 +1,4 @@
+import { refreshCompanyStatus } from './company-status'
 import { notifyPlanningPayment } from './payment-notification'
 import { arrangementAcknowledgment, notifySupplierOffer, sendCustomerNotification } from './customer-notifications'
 import { waitUntil } from '@vercel/functions'
@@ -114,6 +115,7 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     async getDeps(): Promise<PlanningDeps> {
       return { repository: (await getStorage()).repository, offers: (await getStorage()).offers,
         mail: (await getMail())?.transport, requireCustomerId,
+        refreshArrangement: async record => refreshCompanyStatus((await getStorage()).repository, record, env),
         ...(env.PLANNING_TEST_SUPPLIER_EMAIL ? { testSupplierEmail: env.PLANNING_TEST_SUPPLIER_EMAIL } : {}),
         ...(env.NAIVE_COMPANY_AGENT_ID && env.PLANNING_TOOLS_SECRET && env.NAIVE_API_KEY
           && env.PLANNING_TOOLS_BEARER && env.NAIVE_WEBHOOK_SECRET
