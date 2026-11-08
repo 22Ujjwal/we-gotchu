@@ -25,6 +25,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
   let mutationVersion = 0
   let failures = 0
   let uncertain = false
+  let mutationError: EventApiError | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
   let read: { promise: Promise<void>; abort: AbortController } | undefined
   let writeAbort: AbortController | undefined
@@ -36,14 +37,14 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
   const current = (version: number) => active && generation === version
   const schedule = (delay: number) => {
     clearTimer()
-    if (active && !state.pending) timer = setTimeout(() => { void refresh() }, delay)
+    if (active && !state.pending) timer = setTimeout(() => { void load() }, delay)
   }
   const accept = (view: EventView) => {
     if (view.event.eventId !== key.eventId) throw new EventApiError(0, 'event_mismatch', 'The response belongs to a different event.')
     return mergeEventView(state.view, view)
   }
 
-  function refresh(): Promise<void> {
+  function load(): Promise<void> {
     if (!active || !enabled || state.pending) return Promise.resolve()
     if (read) return read.promise
     clearTimer()
@@ -61,7 +62,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
         const merged = accept(view)
         uncertain = false
         failures = 0
-        publish({ view: merged, error: null, loading: false })
+        publish({ view: merged, error: mutationError, loading: false })
         if (needsPolling(merged)) nextDelay = 1000
       } catch (error) {
         if (!current(version) || mutation !== mutationVersion || abort.signal.aborted) return
@@ -95,6 +96,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
     const view = state.view
     const abort = new AbortController()
     writeAbort = abort
+    mutationError = null
     publish({ pending: true, error: null })
     let reconcile = false
     try {
@@ -106,6 +108,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
     } catch (error) {
       if (!current(version)) throw inactiveError()
       const failure = asApiError(error)
+      mutationError = failure
       uncertain = failure.code === 'outcome_unknown' || failure.status >= 500
       publish({ error: failure, ...([401, 403, 404].includes(failure.status) ? { view: null } : {}) })
       reconcile = failure.status === 409
@@ -127,7 +130,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
       if (active || !enabled) return
       active = true
       generation++
-      void refresh()
+      void load()
     },
     stop() {
       active = false
@@ -138,10 +141,14 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
       writeAbort?.abort()
       writeAbort = undefined
       uncertain = false
+      mutationError = null
       failures = 0
       publish({ view: null, loading: false, error: null, pending: false })
     },
-    refresh,
+    refresh(): Promise<void> {
+      if (!state.pending) mutationError = null
+      return load()
+    },
     async update(changes: Partial<Brief>): Promise<void> {
       await mutate((view, signal) => api.update(key.eventId!, view.event.briefRevision, changes, signal),
         view => publish({ view: accept(view) }))
