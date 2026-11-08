@@ -27,7 +27,8 @@ Hacking stops at 11:00 AM on November 8, 2026, so 0.2 was too large to build and
 | POST /api/events validates the brief and returns 422 with the missing field names. | Covers "ask before searching" without an `awaiting_input` status. |
 | POST /api/events/:id/approve refuses a plan whose budget fit is not `within` or whose action cancellation terms are unknown. | Applies the research spec's rule that unknown required costs prevent a within-budget claim. |
 | Cancel while researching cancels the Naive session. | Matches the research spec; Tony's report shows session cancel working. |
-| briefRevision (always 1 for the demo) and contractVersion on Plan. | Keeps room for brief revisions after the hackathon. |
+| briefRevision (always 1 for the demo) and contractVersion on Plan, plus a conditional write so a Plan is stored only for the current briefRevision. | Keeps room for brief revisions after the hackathon, as Tony's ticket 04 requires at the storage boundary. |
+| New `needs_input` event status and `awaiting_input` Run state. | Carries Tony's awaiting-input outcome with the missing field names; Leo shows them as a form error. Additive. |
 
 ## Changes from 0.2
 
@@ -64,14 +65,14 @@ MCP calls carry no customer identity; the backend resolves the customer from the
 | Brief | eventType, location, startsAt, timezone, headcount, budget, currency, supplyNeeds, maximumCancellationLoss. |
 | Plan | planId, eventId, contractVersion, briefRevision, revision, candidates, actions, total, currency, serviceFee of zero, cancellationTerms, agentReasoning, mode, researchOutcome, budgetFit (`within`, `over`, or `unknown`), budgetBasis, missing, warnings. |
 | Candidate | name, kind (a specific supplier, not a category page), sourceUrl, observedAt, priceEstimate, priceProvenance (`estimate` or `quote`), quantityInfo, cancellationTerms, verification (per requirement: `known`, `unknown`, or `conflict`, each with a source), whyChosenOrRejected. |
-| Run | runId, eventId, phase (`research`, `execute`, or `cancel`), briefRevision, idempotencyKey (unique), naiveSessionId, lastSequence, state (`running`, `idle`, `succeeded`, `partial`, `failed`, `canceled`, or `unknown`), createdAt. |
+| Run | runId, eventId, phase (`research`, `execute`, or `cancel`), briefRevision, idempotencyKey (unique), naiveSessionId, lastSequence, state (`running`, `awaiting_input`, `succeeded`, `partial`, `failed`, `canceled`, or `unknown`), createdAt. |
 | PlannedAction | actionId, kind (`venue_booking` or `item_purchase`), supplierName, target, quantityOrSchedule, maximumAmount, cancellationTerms, sourceUrl, dependsOn, mode. |
 | Approval | approvalId, eventId, planId, planRevision, actionIds, approvedTotal, currency, approvedAt, expiresAt, revokedAt. |
 | Payment | paymentId, approvalId, checkoutSessionId, paymentIntentId, amount, currency, state, refundId, refundState, refundReason, mode. |
 | Attempt | attemptId, eventId, actionId, approvalId, kind (`commit` or `cancel`), executionKey (unique), state, providerReference, actualAmount, evidence, errorReason, mode, updatedAt. |
 | ProgressEntry | eventId, sequence, actor (`agent`, `customer`, or `system`), message, createdAt. |
 
-Event status values: `researching`, `plan_ready`, `awaiting_payment`, `executing`, `booked`, `partially_booked`, `canceling`, `canceled`, `failed`.
+Event status values: `researching`, `needs_input`, `plan_ready`, `awaiting_payment`, `executing`, `booked`, `partially_booked`, `canceling`, `canceled`, `failed`.
 Only the backend changes status.
 
 Payment states: `pending`, `paid`, `expired`.
@@ -121,7 +122,8 @@ The research session is created with `web_search` and a required `submit_output`
 The backend calls `advanceResearch(event)` after creating the Run and whenever the event page polls an event in `researching`.
 It reads the session by sequence, tolerates duplicate delivery, and treats an idle session with no valid structured output as not complete.
 Tony's validator rejects unsupported conclusions, such as a within-budget claim with unknown costs, and allows one corrective message.
-Outcomes map to event status as follows: success and partial store the Plan and set `plan_ready`; failed and canceled set `failed` or `canceled`.
+Outcomes map to event status as follows: success and partial store the Plan and set `plan_ready`; awaiting_input sets `needs_input` with the missing field names; failed and canceled set `failed` or `canceled`.
+A Plan is stored only if the Run's briefRevision equals Event.briefRevision, checked in the same database statement as the write, so an older run cannot replace a newer result.
 A partial plan whose budget fit is not `within` cannot be approved.
 Research makes no supplier contact or commitment.
 Whether the backend can read a finished session when polled, or needs a Naive webhook instead, is unverified and is decided with Tony.
@@ -194,6 +196,9 @@ The transaction owner publishes three simulated fixtures, each labeled simulated
 - A plan-ready event with three candidates, one venue action, and one item action, with the research fields filled and budgetFit `within`.
 - The same event booked, paid, with two succeeded attempts and progress entries.
 - The same event canceled, with two cancel attempts and a pending refund.
+
+Tony adds research fixtures for progress, missing fields, partial results, failure, and cancellation after the foundation PR, as his ticket 05 asks.
+Brief revision, interrupted-session recovery, and their tests (Tony's tickets 04 and 06) are deferred until after the hackathon.
 
 Tests cover a refused approve for budgetFit `unknown`, a refused execute_action for no approval, an expired approval, an unpaid approval, and a repeated execute_action that returns `replayed: true`.
 
