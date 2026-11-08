@@ -76,3 +76,10 @@ test('older replies remain separate and late interpretation cannot overwrite a n
   expect(replies.map(reply => reply.message.messageId)).toEqual(['older', 'reply-1'])
   expect(replies[1].interpretation?.summary).toBe('Recovered interpretation.')
 })
+
+test('finds durable interpretation work without a customer read and excludes completed replies', async () => {
+  const reply = await acceptIncomingReply(db.repository, target, incoming)
+  expect(await db.repository.pendingReplyJobs(10, Date.now())).toEqual([{ ...target, replyId: reply.id }])
+  await interpretReply(db.repository, target, reply.id, async () => question)
+  expect(await db.repository.pendingReplyJobs(10, Date.now())).toEqual([])
+})
