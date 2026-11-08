@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { supplierReplySchema } from './reply-contract'
 
 const text = z.string().trim().min(1)
 const publicUrl = z.url().refine(value => ['http:', 'https:'].includes(new URL(value).protocol), 'Use an HTTP source link.')
@@ -32,6 +33,7 @@ export const planningInquirySchema = inquiryFieldsSchema.extend({
   id: text, revision: z.number().int().positive(), status: z.enum(['draft', 'stale']),
   venue: planningOptionSchema, contactSourceUrl: publicUrl.nullable(),
   contextMessageIds: z.array(text), updatedAt: z.iso.datetime(), delivery: inquiryDeliverySchema.optional(),
+  replies: z.array(supplierReplySchema).optional(),
 }).strict()
 export type PlanningInquiry = z.infer<typeof planningInquirySchema>
 
