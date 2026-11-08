@@ -78,3 +78,14 @@ The saved research state remains uncertain and venue/supply selection remains di
 Further scrolling encountered `noWindowsAvailable`; subsequent Chrome screenshots were blank and the content accessibility tree disappeared. Requested that the user restore the visible local window. No additional live image-failure, mobile, selection or fresh research verification is claimed.
 
 Controlled checks at this revision: 94 tests passed across planning-chat, ui-photo, planning-images, venue-images and venue-images-http. These cover gallery navigation, failed assets, missing-image fallback, bounded retry, stale results and ownership. They are not live browser evidence. No supplier messages, bookings, payments, hosted configuration changes or push occurred.
+
+
+## Integrated local automation, 2026-11-08 19:27 UTC
+
+Code: a31d85a, documentation head 7e707e0. Process inspection found no old Playwright, Chromium automation, Vitest or proof runners; earlier helper agents were complete. Only the matching local Vite server remained active.
+
+Native Chrome restored the saved selected venue after reload. Change venue returned to the options screen. A successful screenshot in chat shows The Pearl rooftop photo, script Updated event label, enabled Choose this setting, and removed photo-source caption. A subsequent choose click did not establish a confirmed transition before the user switched tabs; do not count it as a second successful selection proof. Earlier selection proof remains separately recorded.
+
+The saved uncertain session still disables extras, new research messages and arrangement submission. No supplier or payment action was taken. Visible follow-up issues: the saved option card still has its old long title; manual Prepare venue inquiry remains below the main flow. Tony's newer unmerged flow cleanup was not adopted implicitly.
+
+Fresh controlled automation: 103 tests passed across planning-chat, ui-photo, planning-images and connected-journey. This includes navigation, image fallbacks/retry and event API response handling, not a new live provider journey. Automation finished; local server and user tabs were preserved. No push or deployment.
