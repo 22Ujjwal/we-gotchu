@@ -14,7 +14,7 @@ import { createEvent, getEventView, cancel, updateBrief } from '../server/events
 import { makeDeps } from '../server/events/testFakes'
 import { createResearchIntegration } from './integration'
 import { discoveryFixture, researchBriefFixture } from './integration.test-fixtures'
-import type { ResearchSession } from './session'
+import { createResearchSession, type ResearchSession } from './session'
 
 let directory: string
 let database: PGlite
@@ -265,5 +265,54 @@ for (const kind of ['agent', 'session', 'correction'] as const) {
     expect(session.createAgent).toHaveBeenCalledTimes(kind === 'agent' ? 0 : 1)
     expect(session.start).toHaveBeenCalledTimes(kind === 'correction' ? 1 : 0)
     expect(session.correct).not.toHaveBeenCalled()
+  })
+}
+
+for (const failure of ['read', 'create-response'] as const) {
+  test(`controlled HTTP ${failure} failure recovers conservatively across disk reopen`, async () => {
+    let failed = false
+    const calls: { path: string; method: string; key: string | null }[] = []
+    session = createResearchSession({ apiKey: 'controlled-secret', model: 'controlled-model',
+      fetch: vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        const path = new URL(String(url)).pathname
+        const method = init?.method ?? 'GET'
+        const key = new Headers(init?.headers).get('Idempotency-Key')
+        calls.push({ path, method, key })
+        let response: unknown
+        if (path === '/v1/agents') response = { id: 'http-agent' }
+        else if (path === '/v1/sessions') {
+          // The remote resource now exists even if the caller never receives its ID.
+          if (failure === 'create-response') throw new TypeError('lost create response')
+          response = { id: 'http-session' }
+        } else if (method === 'DELETE') response = { id: 'http-agent', deleted: true }
+        else if (path.endsWith('/cancel')) response = { id: 'http-session', status: 'cancelled' }
+        else if (path === '/v1/sessions/http-session') {
+          if (failure === 'read' && !failed) { failed = true; throw new TypeError('disconnected GET') }
+          response = { id: 'http-session', status: 'completed', stop_reason: 'end_turn', last_seq: 11,
+            structured_output: { candidateIds: discoveryFixture.candidates.map(c => c.candidateId) } }
+        } else throw new Error('Unexpected provider endpoint')
+        return new Response(JSON.stringify(response))
+      }) as typeof fetch,
+    })
+    deps.research = createResearchIntegration({ store, providers: { discover, session } })
+    const started = await createEvent(deps, researchBriefFixture)
+    for (let i = 0; i < 4; i++) await getEventView(deps, started.event.eventId)
+    await restart()
+    const completed = await finish(started.event.eventId)
+    expect(calls.filter(call => call.path === '/v1/sessions')).toEqual([
+      { path: '/v1/sessions', method: 'POST', key: `${started.run!.runId}:research` },
+    ])
+    expect(calls.filter(call => call.path === '/v1/agents')).toEqual([
+      { path: '/v1/agents', method: 'POST', key: `${started.run!.runId}:agent` },
+    ])
+    expect(JSON.stringify(completed)).not.toContain('controlled-secret')
+    if (failure === 'read') {
+      expect(completed.run!.lastSequence).toBe(11)
+      expect(completed.researchResult!.recommendations).toHaveLength(discoveryFixture.candidates.length)
+    } else {
+      expect(completed.researchResult!.warnings.join(' ')).toContain('uncertain outcome')
+      expect(completed.researchResult!.recommendations).toEqual([])
+      expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup!.confirmed).toBe(false)
+    }
   })
 }
