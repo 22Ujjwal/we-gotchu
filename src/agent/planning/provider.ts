@@ -1,7 +1,7 @@
 import { createClient, type SessionCreate } from '@usenaive-sdk/managed-agents'
 import { z } from 'zod'
 import { isBlocked, pendingResearch, type ApprovalSnapshot } from './approvals'
-import { researchActivity } from './activity'
+import { researchActivity, researchProgress } from './activity'
 import { createPlanningFetch } from './transport'
 import { ApiError } from '../../server/events/errors'
 import { planningProposalSchema, type PlanningAgent } from './contract'
@@ -80,8 +80,7 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
         cursor = next
       }
       const result = { status: 'working' as const, sequence: session.last_seq, proposal: null, error: null, activity: researchActivity([session], events.data),
-        progress: events.data.some(event => event.type === 'tool.started')
-          ? 'Checking sources for your event.' : 'Working on your event options.' }
+        progress: researchProgress(events.data) }
       if (['failed', 'cancelled'].includes(session.status) || ['error', 'budget_paused', 'max_iterations', 'context_exhausted'].includes(session.stop_reason ?? '')) {
         return { ...result, status: 'failed', progress: null, error: 'Research stopped before the next proposal was ready. Your saved options are still available.' }
       }

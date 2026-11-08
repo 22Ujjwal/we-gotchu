@@ -20,3 +20,24 @@ export function researchActivity(sessions: ApprovalSnapshot[], events: { type: s
     return { name, status: 'waiting', detail: 'Waiting for the next update.' }
   })
 }
+
+export function researchProgress(events: { type: string; data: unknown }[]): string {
+  const labels: Record<string, string> = {
+    'vetta.tools_search': 'Finding research tools', data_search: 'Finding research sources',
+    data_describe: 'Checking research sources', data_run: 'Researching venues and supplies',
+    'monid.monid_discover': 'Finding research sources', 'monid.monid_inspect': 'Checking research sources',
+    'monid.monid_run': 'Researching venues and supplies', 'monid.monid_get_run': 'Reading research results',
+    web_search: 'Searching venue and supplier websites', web_fetch: 'Reading venue and supplier pages',
+    submit_output: 'Preparing your shortlist',
+  }
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index]
+    if (event.type === 'message.delta' || event.type === 'message.completed') return 'Preparing your event options'
+    if (event.type === 'tool.completed') return 'Reviewing research results'
+    if (event.type !== 'tool.started' || !event.data || typeof event.data !== 'object') continue
+    const data = event.data as Record<string, unknown>
+    const name = data.tool_name ?? data.name
+    return typeof name === 'string' ? labels[name] ?? 'Researching your event' : 'Researching your event'
+  }
+  return 'Starting your research'
+}

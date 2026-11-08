@@ -33,9 +33,6 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         </span>
       </label>)}
       {!supplies.size && <p className="text-stone">Ask for any extras in the message below the settings.</p>}
-      <details><summary className="cursor-pointer underline">Venue evidence and details</summary>
-        {venue.facts.map((fact, index) => <p key={index} className="mt-3">{fact.value} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">Source</a></p>)}
-      </details>
     </div>
   const receipt = <div className="flex flex-col gap-5">
       <Receipt currency={offer?.currency} venue={{ freeCancellationUntil: '' }} brief={view.brief ?? defaultBrief}
@@ -47,14 +44,14 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
       {active ? !view.paymentLink && <div role="status" aria-live="polite"><p className="font-semibold">Your arrangement request is saved</p><p className="mt-2">{arrangement.detail}</p></div>
         : <>
           {arrangement?.status === 'stale' && <p>{arrangement.detail}</p>}
-          <p className="text-[15px]">We will request availability and a quote. You approve before paying.</p>
+          <p className="text-[15px]">{view.canArrange ? "We will request availability and a quote. You approve before paying." : "Quote requests are unavailable here. Your selections are saved."}</p>
           <label className="flex flex-col gap-2">Send my arrangement updates to
             <input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email"
               className="border border-sand bg-white p-3" required />
           </label>
-          <Button className="px-6 py-4" disabled={disabled || !validEmail || !view.canArrange || view.status !== 'ready' || !!view.paymentLink}
+          {!view.canArrange && <p id="arrangement-unavailable" role="status" className="text-[14px] text-stone">Supplier email setup is incomplete. You can continue reviewing options, but cannot request a quote yet.</p>}
+          <Button aria-describedby={!view.canArrange ? "arrangement-unavailable" : undefined} className="px-6 py-4" disabled={disabled || !validEmail || !view.canArrange || view.status !== 'ready' || !!view.paymentLink}
             onClick={() => void submit({ kind: 'arrange', customerEmail: email.trim(), requestId: crypto.randomUUID(), expectedVersion: view.version })}>Please arrange this</Button>
-          {!view.canArrange && <p className="text-[14px] text-stone">Arrangement requests are not connected in this environment yet.</p>}
         </>}
       {!view.paymentLink && <p className="text-[14px] text-stone">Choosing a setting or requesting an arrangement does not reserve it or authorize a charge.</p>}
     </div>

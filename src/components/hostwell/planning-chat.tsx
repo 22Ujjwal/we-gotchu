@@ -69,9 +69,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const venueCards = venueOptions.map(option => ({ id: option.id, name: option.name, photos: [] as string[],
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
       : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: fact.value.split(/(?<=[.!?])\s/)[0] })) }))
-  const needsAnswer = !!view?.proposal?.nextQuestion && !venueCards.length
+  const needsAnswer = !!view?.proposal?.nextQuestion
   const messageForm = <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
-      <label htmlFor="planning-message" className={id ? 'sr-only' : 'text-[18px] font-semibold'}>{needsAnswer ? 'Your answer' : id ? 'Ask for changes' : 'Tell us about your event'}</label>
+      {view?.proposal?.nextQuestion && venueCards.length > 0 && <p className="text-[18px] leading-7">{view.proposal.nextQuestion}</p>}
+      <label htmlFor="planning-message" className={id ? 'sr-only' : 'text-[18px] font-semibold'}>{id ? 'Ask for changes' : 'Tell us about your event'}</label>
       <div className="flex items-end gap-3 border border-line-strong bg-white p-3 shadow-sm focus-within:border-ink">
       <textarea id="planning-message" rows={id ? 2 : 4} maxLength={8000} value={draft} readOnly={session.pending || !!session.uncertain}
         onChange={event => setDraft(event.target.value)}
@@ -87,8 +88,8 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     {id && <Button className="px-5 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Check saved status</Button>}
   </div>
   if (id && (view?.status === 'working' || view?.status === 'uncertain') && !view.proposal && !notice) {
-    return <div className="w-full"><ReceiptLoader brief={view.brief} label={view.progress || 'Research in progress'} />
-      <p role="status" className="text-center text-stone">{view.status === 'uncertain' ? 'Reconnecting to your research. Your brief is saved; you do not need to submit it again.' : view.progress || 'Finding options for your event.'}</p></div>
+    return <div className="w-full"><ReceiptLoader brief={view.brief}
+      activity={view.status === 'uncertain' ? 'Reconnecting to your research' : view.progress || view.activity?.find(item => item.status === 'working')?.detail || 'Starting your research'} /></div>
   }
   if (view?.arrangement && !notice && !view.offer && !view.paymentLink
     && ['requested', 'preparing', 'awaiting_reply'].includes(view.arrangement.status)) {
@@ -123,7 +124,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         {view.proposal.nextQuestion && <p>{view.proposal.nextQuestion}</p>}
       </div>}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
-        disabled={!!blocked} editBrief={<a href="/" className="underline">Plan another event</a>}
+        disabled={!!blocked} editBrief={null}
         followup={messageForm} onChoose={optionId => {
           setBrowsingSettings(false)
           if (selected.has(optionId)) return
@@ -135,10 +136,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {!browsingSettings && <PlanningArrangement customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
       {!view.paymentLink && !browsingSettings && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
-      {view.inquiry && <details className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Supplier correspondence</summary>
-        <p className="mt-3 whitespace-pre-wrap">{view.inquiry.text}</p>
-        {view.inquiry.replies?.map(reply => <blockquote key={reply.id} className="mt-4 border-l border-sand pl-4 whitespace-pre-wrap">{reply.message.text}</blockquote>)}
-      </details>}
       {view.offer && (view.paymentLink ? <details><summary className="cursor-pointer underline">Quoted terms and sources</summary><PlanningOfferReview offer={view.offer} stale={offerStale} /></details>
         : <PlanningOfferReview offer={view.offer} stale={offerStale} />)}
       {view.offer && !view.paymentLink && !offerStale && !view.offer.missing.length && offerCosts?.ok && offerCosts.total > 0
@@ -147,7 +144,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
             offerId: view.offer!.id, offerRevision: view.offer!.revision })}>Review sandbox payment</Button>}
     </>}
     {(!id || !venueCards.length && view?.status === 'ready') && messageForm}
-    {id && <a href="/" className="self-start text-[16px] underline">Plan another event</a>}
   </div>
 }
 function PlanningOptionCard({ option, selected, disabled, onSelect }: { option: PlanningOption; selected: boolean; disabled: boolean; onSelect: () => void }) {
