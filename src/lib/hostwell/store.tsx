@@ -4,6 +4,7 @@ import {
   VAT_RATE,
   addOns as catalogue,
   baseLines,
+  cityOfVenue,
   defaultBrief,
   venues,
 } from './fixture'
@@ -106,6 +107,8 @@ export type Order = {
   subtotal: number
   /** Null when the amounts already include tax. */
   vat: number | null
+  /** What the tax line is called: VAT in Germany, sales tax in California. */
+  taxLabel?: string
   total: number
 }
 
@@ -119,6 +122,8 @@ export function buildOrder(
   addOns: Array<AddOn>,
   selected: Set<string>,
 ): Order {
+  const city = cityOfVenue(venue.id)
+  const taxRate = city?.taxRate ?? VAT_RATE
   const lines: Array<ReceiptLine> = [venue.venueLine]
   let vat = venue.vat
   if (selected.has('candles')) lines.push(...baseLines)
@@ -130,7 +135,7 @@ export function buildOrder(
       requests.push(a.label)
       continue
     }
-    const net = round(a.price / (1 + VAT_RATE))
+    const net = round(a.price / (1 + taxRate))
     vat = round(vat + a.price - net)
     lines.push({ qty: 1, item: a.label, amount: net })
   }
@@ -138,5 +143,5 @@ export function buildOrder(
   const subtotal = round(
     lines.reduce((s, l) => s + (typeof l.amount === 'number' ? l.amount : 0), 0),
   )
-  return { lines, requests, subtotal, vat, total: round(subtotal + vat) }
+  return { lines, requests, subtotal, vat, taxLabel: city?.taxLabel ?? 'VAT', total: round(subtotal + vat) }
 }

@@ -5,7 +5,6 @@ import { Button, FeatureRow, Guests, Header, MetaLine, Photo } from './ui'
 import { to24h } from '#/lib/hostwell/fixture'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
 
-const suggestions = ['Cheaper candles', 'Closer to U-Bahn', 'More venues']
 
 /** The picked-for-you venue in the middle, the others either side. */
 export function SettingsView({
@@ -14,6 +13,7 @@ export function SettingsView({
   others,
   onChoose: choose,
   editBrief,
+  transit = 'U-Bahn',
 }: {
   brief: Brief
   featured: Venue
@@ -21,7 +21,10 @@ export function SettingsView({
   onChoose: (venueId: string) => void
   /** The "Edit brief" link. */
   editBrief: ReactNode
+  /** Local public transport, for the "Closer to …" suggestion. */
+  transit?: string
 }) {
+  const suggestions = ['Cheaper candles', `Closer to ${transit}`, 'More venues']
   const [ask, setAsk] = useState('')
   const [prev, next] = others
 

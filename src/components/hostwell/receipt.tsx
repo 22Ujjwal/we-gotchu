@@ -1,5 +1,5 @@
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
-import { usd } from '#/lib/hostwell/fixture'
+import { cityOfVenue, usd } from '#/lib/hostwell/fixture'
 import type { Order } from '#/lib/hostwell/store'
 
 const bars: Array<[number, number]> = [
@@ -69,7 +69,9 @@ export function Receipt({
           <span className="text-[18px] font-bold tracking-[0.22em]">
             HOSTWELL
           </span>
-          <span className="text-receipt-muted">Event purchasing · Berlin</span>
+          <span className="text-receipt-muted">
+            Event purchasing · {cityOfVenue(venue.id)?.name ?? 'Berlin'}
+          </span>
         </div>
         <Rule />
         <Row left="QTY ITEM" right="USD" muted />
@@ -96,7 +98,7 @@ export function Receipt({
         <Rule />
         <div className="flex flex-col gap-1">
           <Row left="Subtotal" right={usd(order.subtotal)} />
-          {order.vat !== null && <Row left="VAT" right={usd(order.vat)} />}
+          {order.vat !== null && <Row left={order.taxLabel ?? 'VAT'} right={usd(order.vat)} />}
           <Row left="Service fee" right="0.00" />
         </div>
         <Rule solid />

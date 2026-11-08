@@ -4,7 +4,7 @@ import { ArrangingView } from '#/components/hostwell/arranging-view'
 import { PartyView } from '#/components/hostwell/party-view'
 import { Header } from '#/components/hostwell/ui'
 import { briefFromPreview } from '#/lib/hostwell/brief-adapter'
-import { to24h } from '#/lib/hostwell/fixture'
+import { cityOfVenue, to24h } from '#/lib/hostwell/fixture'
 import type { Brief } from '#/lib/hostwell/fixture'
 import { buildOrder, findVenue, useHostwell } from '#/lib/hostwell/store'
 import { localPreview } from '#/lib/local-preview'
@@ -113,6 +113,7 @@ function PreviewPartyPage() {
     )
   }
 
+  const city = cityOfVenue(venue.id)
   const extras = [
     selected.has('candles') && 'Candles on the table',
     ...addOns
@@ -125,8 +126,8 @@ function PreviewPartyPage() {
       venue={venue}
       order={buildOrder(venue, addOns, selected)}
       extras={extras}
-      place={`${venue.neighbourhood}, Berlin`}
-      timezone="Europe/Berlin"
+      place={`${venue.neighbourhood}, ${city?.name ?? 'Berlin'}`}
+      timezone={city?.timezone ?? 'Europe/Berlin'}
       receiptsHref="/receipts"
     />
   )
