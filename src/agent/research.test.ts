@@ -280,3 +280,13 @@ test('actual detail adapter HTTP output yields a listing estimate through the wo
   expect(result.candidates[0].affiliateDisclosure).toContain('Controlled affiliate disclosure.')
   expect(result.candidates[0].affiliateDisclosure).toContain(item.affiliateDisclosure)
 })
+
+test('expired saved listing calculations return to unknown without discarding their source notes', async () => {
+  const item = { ...listing(), quantityInfo: { needed: 20, packSize: 8, packs: 3 }, priceEstimate: 1500 }
+  item.sources[0].retrievedAt = '2020-01-01T00:00:00.000Z'
+  const result = await runListings([item])
+  expect(result.candidates[0].priceEstimate).toBeNull()
+  expect(result.candidates[0].quantityInfo).toBeUndefined()
+  expect(result.candidates[0].verification).toEqual(item.verification)
+  expect(result.budgetFit).toBe('unknown')
+})
