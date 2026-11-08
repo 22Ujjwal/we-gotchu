@@ -4,6 +4,7 @@ import { replyInterpretationSchema, supplierMessageSchema, type SupplierMessage,
 import type { PlanningInquiry } from '../../agent/planning/contract'
 import { ApiError } from '../events/errors'
 import type { PlanningRecord, PlanningRepository } from './repository'
+import type { InquiryReference } from '../email/supplier-inquiries/incoming-types'
 
 export type ReplyTarget = { customerId: string; conversationId: string; inquiryId: string }
 export type ReplyInterpreter = (input: { message: SupplierMessage; inquiry: PlanningInquiry }) => Promise<unknown>
@@ -26,11 +27,17 @@ function updated(record: PlanningRecord, inquiry: PlanningInquiry): PlanningReco
 }
 
 // The transport authenticates the webhook and resolves the target from its saved send operation.
-export async function acceptIncomingReply(repository: PlanningRepository, target: ReplyTarget, input: unknown, receiptId?: string): Promise<SupplierReply> {
+export async function acceptIncomingReply(repository: PlanningRepository, target: ReplyTarget, input: unknown, receiptId?: string,
+  verifiedReference?: InquiryReference): Promise<SupplierReply> {
   const message = supplierMessageSchema.parse(input)
   for (let attempt = 0; attempt < 5; attempt++) {
     const { record, inquiry } = await load(repository, target)
-    const delivery = inquiry.delivery
+    // Follow-ups can have their own provider thread. The receiver resolves this from durable send operations.
+    if (verifiedReference && (verifiedReference.conversationId !== target.conversationId
+      || verifiedReference.inquiryId !== inquiry.id || verifiedReference.recipient.toLowerCase() !== inquiry.recipient.toLowerCase())) {
+      throw new ApiError(422, 'unmatched_reply', 'Reply does not match this inquiry and recipient.')
+    }
+    const delivery = verifiedReference ?? inquiry.delivery
     const correlated = (message.inReplyTo && message.inReplyTo === delivery?.messageId)
       || (delivery?.messageId && message.references?.includes(delivery.messageId))
       || (message.threadId && message.threadId === delivery?.threadId)

@@ -46,7 +46,7 @@ export function createPlanningMail({ repository, storage, provider, secret, evid
         to: reply.to.map(value => value.match(/<([^<>]+)>$/)?.[1] ?? value), subject: reply.subject ?? '', text: reply.text ?? '',
         receivedAt: reply.timestamp, originalRef: `${reply.originalMessage.inboxId}/${reply.originalMessage.messageId}`,
         mode: reply.evidenceMode === 'fixture' ? 'simulated' : 'live',
-      }, reply.receiptId)
+      }, reply.receiptId, match)
       return { status: 'matched', conversationId: record.id, inquiryId: match.inquiryId }
     },
   })
