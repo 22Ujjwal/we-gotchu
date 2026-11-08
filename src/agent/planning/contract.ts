@@ -1,3 +1,4 @@
+import type { SelectedOffer, PlanningPaymentLink } from './offer-contract'
 import { z } from 'zod'
 import { supplierReplySchema } from './reply-contract'
 
@@ -67,6 +68,8 @@ export type PlanningView = {
   proposal: PlanningProposal | null
   selections: PlanningOption[]
   inquiry?: PlanningInquiry
+  offer?: SelectedOffer
+  paymentLink?: PlanningPaymentLink
   progress: string | null
   error: string | null
   canSendInquiry?: boolean
