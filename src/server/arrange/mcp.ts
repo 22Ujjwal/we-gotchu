@@ -1,3 +1,4 @@
+import { offerLineSchema, optionSchema } from './commerce-types'
 import { z } from 'zod'
 import { isAuthorized, unauthorizedResponse } from '../mcp/auth'
 import { handleJsonRpc, toolResult, type ServerDescription, type ToolDefinition } from '../mcp/protocol'
@@ -24,7 +25,7 @@ async function guarded(run: () => Promise<unknown>) {
   }
 }
 
-export function createArrangeTools(app: Pick<ArrangeApp, 'ledger' | 'sendSupplierEmail'>): ToolDefinition<any>[] {
+export function createArrangeTools(app: Pick<ArrangeApp, 'ledger' | 'sendSupplierEmail' | 'proposeOffer' | 'recordConfirmation'>): ToolDefinition<any>[] {
   const getEvent: ToolDefinition<{ eventId: string }> = {
     name: 'get_event',
     description: 'Read everything known about an event: the brief, supplier contacts, emails sent and received (with message ids), recorded terms, updates and the current stage.',
@@ -67,7 +68,25 @@ export function createArrangeTools(app: Pick<ArrangeApp, 'ledger' | 'sendSupplie
     input: z.object({ eventId: id, text: z.string().min(1).max(1000), kind: z.enum(['progress', 'question_for_customer']) }).strict(),
     handler: ({ eventId, text, kind }) => guarded(() => app.ledger.postUpdate(eventId, text, kind)),
   }
-  return [getEvent, sendSupplierEmail, recordSupplierTerms, postUpdate]
+  const publishOptions: ToolDefinition<any> = {
+    name: 'publish_options',
+    description: 'Publish one to three researched venue and supply options. Include source links and separate known terms from facts still awaiting supplier confirmation. Use supplier contact IDs from get_event. The customer chooses before outreach begins.',
+    input: z.object({ eventId: id, operationKey: id, options: z.array(optionSchema).min(1).max(3) }).strict(),
+    handler: ({ eventId, operationKey, options }) => guarded(() => app.ledger.publishOptions(eventId, operationKey, options)),
+  }
+  const proposeOffer: ToolDefinition<any> = {
+    name: 'propose_offer',
+    description: 'Propose a complete versioned offer for the chosen option. Each line references recorded price, deposit and cancellation term IDs from the same supplier. The server computes the total. A revised offer needs fresh customer approval; offers cannot change once checkout begins.',
+    input: z.object({ eventId: id, operationKey: id, lines: z.array(offerLineSchema).min(1).max(20) }).strict(),
+    handler: ({ eventId, operationKey, lines }) => guarded(() => app.proposeOffer(eventId, operationKey, lines)),
+  }
+  const recordConfirmation: ToolDefinition<any> = {
+    name: 'record_supplier_confirmation',
+    description: 'Record a supplier confirmation after payment. Cite a new reply to a request sent after payment, using the exact confirmation excerpt. Payment alone is never confirmation, and email confirmation is not a booking in an external system.',
+    input: z.object({ eventId: id, contactId: id, messageId: id, excerpt: z.string().min(1).max(2000) }).strict(),
+    handler: ({ eventId, contactId, messageId, excerpt }) => guarded(() => app.recordConfirmation(eventId, contactId, messageId, excerpt)),
+  }
+  return [getEvent, publishOptions, sendSupplierEmail, recordSupplierTerms, proposeOffer, recordConfirmation, postUpdate]
 }
 
 const MAX_BODY_BYTES = 1_000_000

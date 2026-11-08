@@ -33,6 +33,7 @@ import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhoo
 import { Route as ArrangeEventsEventIdRouteImport } from './routes/arrange.events.$eventId'
 import { Route as ApiArrangeAgentmailWebhookRouteImport } from './routes/api/arrange.agentmail.webhook'
 import { Route as ApiArrangeEventsEventIdRouteImport } from './routes/api/arrange.events.$eventId'
+import { Route as ApiArrangeStripeWebhookRouteImport } from './routes/api/arrange.stripe.webhook'
 import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
 import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.brief'
 import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
@@ -161,6 +162,11 @@ const ApiArrangeEventsEventIdRoute = ApiArrangeEventsEventIdRouteImport.update({
   path: '/$eventId',
   getParentRoute: () => ApiArrangeEventsRoute,
 } as any)
+const ApiArrangeStripeWebhookRoute = ApiArrangeStripeWebhookRouteImport.update({
+  id: '/api/arrange/stripe/webhook',
+  path: '/api/arrange/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEventsIdApproveRoute = ApiEventsIdApproveRouteImport.update({
   id: '/approve',
   path: '/approve',
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/arrange/events/$eventId': typeof ArrangeEventsEventIdRoute
   '/api/arrange/agentmail/webhook': typeof ApiArrangeAgentmailWebhookRoute
   '/api/arrange/events/$eventId': typeof ApiArrangeEventsEventIdRoute
+  '/api/arrange/stripe/webhook': typeof ApiArrangeStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -252,6 +259,7 @@ export interface FileRoutesByTo {
   '/arrange/events/$eventId': typeof ArrangeEventsEventIdRoute
   '/api/arrange/agentmail/webhook': typeof ApiArrangeAgentmailWebhookRoute
   '/api/arrange/events/$eventId': typeof ApiArrangeEventsEventIdRoute
+  '/api/arrange/stripe/webhook': typeof ApiArrangeStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -285,6 +293,7 @@ export interface FileRoutesById {
   '/arrange/events/$eventId': typeof ArrangeEventsEventIdRoute
   '/api/arrange/agentmail/webhook': typeof ApiArrangeAgentmailWebhookRoute
   '/api/arrange/events/$eventId': typeof ApiArrangeEventsEventIdRoute
+  '/api/arrange/stripe/webhook': typeof ApiArrangeStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/arrange/events/$eventId'
     | '/api/arrange/agentmail/webhook'
     | '/api/arrange/events/$eventId'
+    | '/api/arrange/stripe/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/arrange/events/$eventId'
     | '/api/arrange/agentmail/webhook'
     | '/api/arrange/events/$eventId'
+    | '/api/arrange/stripe/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -383,6 +394,7 @@ export interface FileRouteTypes {
     | '/arrange/events/$eventId'
     | '/api/arrange/agentmail/webhook'
     | '/api/arrange/events/$eventId'
+    | '/api/arrange/stripe/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -413,6 +425,7 @@ export interface RootRouteChildren {
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ArrangeEventsEventIdRoute: typeof ArrangeEventsEventIdRoute
   ApiArrangeAgentmailWebhookRoute: typeof ApiArrangeAgentmailWebhookRoute
+  ApiArrangeStripeWebhookRoute: typeof ApiArrangeStripeWebhookRoute
   EventsEventIdReceiptsReceiptIdRoute: typeof EventsEventIdReceiptsReceiptIdRoute
   EventsEventIdReceiptsIndexRoute: typeof EventsEventIdReceiptsIndexRoute
 }
@@ -587,6 +600,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArrangeEventsEventIdRouteImport
       parentRoute: typeof ApiArrangeEventsRoute
     }
+    '/api/arrange/stripe/webhook': {
+      id: '/api/arrange/stripe/webhook'
+      path: '/api/arrange/stripe/webhook'
+      fullPath: '/api/arrange/stripe/webhook'
+      preLoaderRoute: typeof ApiArrangeStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/events/$id/approve': {
       id: '/api/events/$id/approve'
       path: '/approve'
@@ -718,6 +738,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ArrangeEventsEventIdRoute: ArrangeEventsEventIdRoute,
   ApiArrangeAgentmailWebhookRoute: ApiArrangeAgentmailWebhookRoute,
+  ApiArrangeStripeWebhookRoute: ApiArrangeStripeWebhookRoute,
   EventsEventIdReceiptsReceiptIdRoute: EventsEventIdReceiptsReceiptIdRoute,
   EventsEventIdReceiptsIndexRoute: EventsEventIdReceiptsIndexRoute,
 }

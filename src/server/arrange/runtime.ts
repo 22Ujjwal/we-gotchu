@@ -1,3 +1,7 @@
+import { localCustomerId } from './local-access'
+import { createLocalStripe } from './payments'
+import { createStripeAdapter } from '../payments/stripe'
+import { createEventNotifications } from './notifications'
 import { requireCustomerId } from '../auth'
 import { createNeonDb, openPgliteDb } from '../db/client'
 import { createAgentMailProvider } from '../email/supplier-inquiries/agentmail'
@@ -14,8 +18,8 @@ import { createNaiveSessions } from './naive'
 
 const useFakes = (env: NodeJS.ProcessEnv) => env.NODE_ENV === 'development' && env.ARRANGE_FAKE_PROVIDERS === 'true'
 
-export async function getArrangeCustomerId(): Promise<string> {
-  const local = useFakes(process.env) ? process.env.ARRANGE_LOCAL_CUSTOMER_ID : undefined
+export async function getArrangeCustomerId(request: Request): Promise<string> {
+  const local = localCustomerId(process.env, request)
   if (local) return local
   return requireCustomerId()
 }
@@ -34,13 +38,23 @@ export function createArrangeRuntime(env: NodeJS.ProcessEnv = process.env) {
     }
     const venueEmail = env.ARRANGE_VENUE_EMAIL ?? (fakes ? 'venue@botanico.test' : undefined)
     if (!venueEmail) throw new ApiError(503, 'arrange_unavailable', 'We are not quite ready yet. Please try again shortly.')
-    const db = env.DATABASE_URL ? createNeonDb(env.DATABASE_URL) : (await openPgliteDb(localDir)).db
+    if (fakes && !localDir) throw new ApiError(503, 'local_database_required', 'Local testing requires its own database directory.')
+    const db = !fakes && env.DATABASE_URL ? createNeonDb(env.DATABASE_URL) : (await openPgliteDb(localDir)).db
     return createApp({
       db,
       mail: fakes ? createFakeMail().provider : createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY!, inboxId: env.ARRANGE_AGENTMAIL_INBOX_ID! }),
       naive: fakes ? createFakeNaive().naive : createNaiveSessions({ apiKey: env.NAIVE_API_KEY!, agentId: env.NAIVE_ARRANGE_AGENT_ID! }),
+      stripe: fakes ? createLocalStripe() : createStripeAdapter(env.STRIPE_SECRET_KEY),
+      notify: fakes
+        ? async input => ({ messageId: `local-notice:${input.id}` })
+        : env.APP_URL ? createEventNotifications({ apiKey: env.AGENTMAIL_API_KEY!, inboxId: env.ARRANGE_AGENTMAIL_INBOX_ID!, appUrl: env.APP_URL }) : undefined,
       config: {
-        seedContacts: [{ name: env.ARRANGE_VENUE_NAME || 'Café Botanico', email: venueEmail, kind: 'venue' }],
+        stripeWebhookSecret: env.ARRANGE_STRIPE_WEBHOOK_SECRET ?? env.STRIPE_WEBHOOK_SECRET,
+        appUrl: env.APP_URL,
+        seedContacts: [
+          { name: env.ARRANGE_VENUE_NAME || 'Cafe Botanico', email: venueEmail, kind: 'venue' },
+          ...(env.ARRANGE_SUPPLIER_EMAIL ? [{ name: env.ARRANGE_SUPPLIER_NAME || 'Event supplies', email: env.ARRANGE_SUPPLIER_EMAIL, kind: 'supplier' }] : []),
+        ],
         mcpBearer: env.ARRANGE_MCP_BEARER,
         agentMailWebhookSecret: env.ARRANGE_AGENTMAIL_WEBHOOK_SECRET ?? '',
         evidenceMode: fakes ? 'fixture' : 'live',
