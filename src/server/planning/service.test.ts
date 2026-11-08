@@ -199,3 +199,35 @@ describe('planning service', () => {
     await expect(commandPlanning(deps, view.id, { ...command, requestId: 'another', expectedVersion: result.version })).rejects.toMatchObject({ errorCode: 'busy' })
   })
 })
+
+it('persists blocked research and confirms only the displayed call after an explicit command', async () => {
+  let view = await create()
+  const approvals = [{ id: 'approval-1', tool: 'monid.monid_inspect', arguments: { provider: 'channel3', endpoint: '/v1/search' } }]
+  vi.mocked(agent.read).mockResolvedValue({ status: 'blocked', sequence: 9, proposal: null, progress: null, error: 'Research paused.', approvals })
+  view = await getPlanning(deps, view.id)
+  expect(view.status).toBe('blocked')
+  expect(view.approvals).toEqual(approvals)
+  agent.confirm = vi.fn(async () => {})
+  await expect(commandPlanning(deps, view.id, { kind: 'message', requestId: 'new-message', expectedVersion: view.version, message: 'Try again' })).rejects.toMatchObject({ status: 409 })
+  const command = { kind: 'confirm', requestId: 'confirm-1', expectedVersion: view.version, approvalId: 'approval-1', decision: 'allow' }
+  const sent = await commandPlanning(deps, view.id, command)
+  expect(sent.status).toBe('working')
+  await commandPlanning(deps, view.id, command)
+  expect(agent.confirm).toHaveBeenCalledExactlyOnceWith({ sessionId: 'session-1', approvalId: 'approval-1', decision: 'allow' })
+  expect(agent.send).not.toHaveBeenCalled()
+  // A child's approval does not increment the parent's event sequence.
+  vi.mocked(agent.read).mockResolvedValue({ status: 'working', sequence: 9, proposal: null, progress: 'Research resumed.', error: null })
+  expect((await getPlanning(deps, view.id)).status).toBe('working')
+})
+
+it('does not resend an uncertain confirmation or allow a forged approval ID', async () => {
+  let view = await create()
+  vi.mocked(agent.read).mockResolvedValue({ status: 'blocked', sequence: 9, proposal: null, progress: null, error: null, approvals: [{ id: 'a1', tool: 'monid.monid_discover', arguments: {} }] })
+  view = await getPlanning(deps, view.id)
+  agent.confirm = vi.fn(async () => { throw new Error('Lost acknowledgement') })
+  await expect(commandPlanning(deps, view.id, { kind: 'confirm', requestId: 'forged', expectedVersion: view.version, approvalId: 'other', decision: 'allow' })).rejects.toMatchObject({ status: 409 })
+  const command = { kind: 'confirm', requestId: 'once', expectedVersion: view.version, approvalId: 'a1', decision: 'deny' }
+  expect((await commandPlanning(deps, view.id, command)).status).toBe('uncertain')
+  expect((await commandPlanning(deps, view.id, command)).status).toBe('uncertain')
+  expect(agent.confirm).toHaveBeenCalledTimes(1)
+})
