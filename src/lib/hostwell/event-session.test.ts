@@ -180,3 +180,56 @@ test('GET advances a slow research run through its deadline then stops on the te
   expect(fetcher).toHaveBeenCalledTimes(count)
   expect(fetcher.mock.calls.every(([, init]) => init?.method === 'GET')).toBe(true)
 })
+
+test('an aborted old read cannot restart polling after a mutation loses access', async () => {
+  const pending = deferred<Response>()
+  const fetcher = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'POST'
+    ? json({ errorCode: 'forbidden' }, 403)
+    : fetcher.mock.calls.length === 1 ? json(running()) : pending.promise)
+  const session = setup(fetcher)
+  await tick()
+  const refresh = session.refresh()
+  await expect(session.cancel()).rejects.toMatchObject({ status: 403 })
+  pending.resolve(json(running()))
+  await refresh
+  await tick(10000)
+  expect(fetcher).toHaveBeenCalledTimes(3)
+  expect(session.getSnapshot().view).toBeNull()
+})
+
+test('stopping during approval aborts the write and never returns a checkout URL to the old account', async () => {
+  const approval = deferred<Response>()
+  const fetcher = vi.fn().mockResolvedValueOnce(json(planReadyEvent)).mockReturnValue(approval.promise)
+  const session = setup(fetcher)
+  await tick()
+  const pending = session.approve()
+  const rejected = expect(pending).rejects.toMatchObject({ code: 'session_inactive' })
+  session.stop()
+  expect(fetcher.mock.calls[1][1].signal.aborted).toBe(true)
+  approval.resolve(json({ approval: bookedEvent.approval, payment: bookedEvent.payment, checkoutUrl: 'https://checkout.example.com/session' }))
+  await rejected
+  expect(session.getSnapshot().view).toBeNull()
+})
+
+test('no plan and mismatched brief revision cannot submit approval', async () => {
+  const view = { ...planReadyEvent, event: { ...planReadyEvent.event, briefRevision: 2 } }
+  const fetcher = vi.fn(async () => json(view))
+  const session = setup(fetcher)
+  await tick()
+  await expect(session.approve()).rejects.toMatchObject({ code: 'plan_unavailable' })
+  expect(fetcher).toHaveBeenCalledTimes(1)
+})
+
+test('reload after the research deadline reads full authoritative terminal state without restarting', async () => {
+  const expired = { ...running(), run: { ...running().run!, state: 'partial' as const } }
+  const fetcher = vi.fn(async () => json(expired))
+  const session = setup(fetcher)
+  await tick(121000)
+  expect(fetcher).toHaveBeenCalledTimes(1)
+  session.stop()
+  const restored = setup(fetcher)
+  await tick(10000)
+  expect(fetcher).toHaveBeenCalledTimes(2)
+  expect(fetcher.mock.calls.map(call => call[0])).toEqual([`/api/events/${expired.event.eventId}`, `/api/events/${expired.event.eventId}`])
+  expect(restored.getSnapshot().view?.run?.state).toBe('partial')
+})
