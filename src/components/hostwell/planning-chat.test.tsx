@@ -322,3 +322,21 @@ test.each(['blocked', 'uncertain'] as const)('shows team activity in %s state wi
   expect(screen.queryByRole('button', { name: 'Approve this research call' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
 })
+
+test('paused customer research checks for progress and resumes without sending a command', async () => {
+  vi.useFakeTimers()
+  let reads = 0
+  http(request => {
+    expect(request.method).toBe('GET')
+    return Response.json(++reads === 1 ? view({ status: 'blocked', proposal: null }) : view({ version: 2 }))
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await act(async () => {})
+  await act(async () => { await vi.advanceTimersByTimeAsync(4999) })
+  expect(reads).toBe(1)
+  await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+  expect(reads).toBe(2)
+  expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
+  await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
+  expect(reads).toBe(2)
+})
