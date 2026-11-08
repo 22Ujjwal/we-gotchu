@@ -34,5 +34,22 @@ PR 52 remains a separate draft and is not included in this stage.
 The merged baseline passed 479 application tests, 25 coordination tests, typecheck and build.
 The receipt date now explicitly joins the day and time with 'at', matching the existing test across runtime locale-format differences.
 The repo-local verify-we-gotchu skill documents the actual browser entry, provider evidence, timing and reload requirements.
-Its first execution on this merged version must be recorded before calling browser integration verified.
+Its first execution passed on code revision 1611a5eaebbf64ace448825bc47ed81e2a60f95b.
 Passing research means a useful sourced next decision; it does not establish current stock, total cost, payment or supplier commitments.
+
+## Merged-code browser proof
+
+On November 8, 2026, the structured homepage and date/time calendar rendered without submitting a legacy event.
+The research link opened /planning.
+One picnic brief was submitted at 09:05:59.859 UTC, working state was observed at 09:06:06, and completion was observed by 09:07:09.
+The upper observation bound was 69.141 seconds; provider completion timing was not captured.
+Conversation planning_adf1aada-e8e6-4046-a644-cb7f595758d3 returned Picnic at Transit at Presidio Tunnel Tops and a Factory Direct Party 20-count pack of white dinner plates listed at USD 5.49 before shipping and tax.
+One pack covers 12 adults with eight spares.
+The venue evidence came from official search excerpts; current stock, San Francisco delivery, complete total and event-date seating remain unverified.
+Command-R retained the proposal.
+The bounded network capture contained no planning entries, so GET-only behavior and absence of duplicate server creates are not proven by this browser run.
+The operator submitted once.
+Screenshots and sanitized proposal/text are retained locally under .scratch/verification/1611a5ea-picnic/.
+The preview reported an invisible tab and server console aborted errors; these did not prevent the observed journey, but remain verification-environment limitations.
+The verification-owned server was stopped and evidence retained.
+No selections, follow-up, payment, mail or deployment were tested.

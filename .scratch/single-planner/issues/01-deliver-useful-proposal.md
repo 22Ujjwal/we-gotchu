@@ -8,9 +8,13 @@ Do not introduce another orchestration framework or retire the older event flow 
 
 **Blocked by:** None (can start immediately).
 
-**Status:** in-progress
+**Status:** implemented, ready for PR
 
 Owner: Tony.
+
+Local SDK and actual browser first-proposal checks passed; see docs/research/stage-one-integration.md and docs/research/single-planner-model-comparison.md for exact versions and limits.
+Production activation is separate and defaults off in the homepage.
+The checklist below remains the acceptance specification; evidence reports distinguish proven behavior from incomplete network capture and live supplier facts.
 
 - [ ] One configured planner researches and returns proposals without required specialist delegation or repeated customer approval for routine public research.
 - [ ] Two materially different complete briefs run through the same implementation without hardcoded answers.
