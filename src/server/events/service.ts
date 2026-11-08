@@ -239,6 +239,10 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
     if (session.url) return { ...open, checkoutUrl: session.url }
   }
 
+  if (plan.planningOffer?.expiresAt && Date.parse(plan.planningOffer.expiresAt) < now.getTime() + APPROVAL_TTL_MS) {
+    throw new ApiError(422, 'offer_expires_soon', 'This quote expires before the payment window ends. Request an extended quote before paying.')
+  }
+
   // Approval and Checkout share one expiry, whole seconds because Stripe uses unix seconds.
   const expiresAtSec = Math.floor((now.getTime() + APPROVAL_TTL_MS) / 1000)
   const approval: Approval = {
