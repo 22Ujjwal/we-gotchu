@@ -64,3 +64,10 @@ test.each([
   if (supported) await expect(result).resolves.toMatchObject({ lines: [{ unitAmount }] })
   else await expect(result).rejects.toThrow('Offer amount is not in the quoted evidence.')
 })
+
+test('rejects a fabricated customer budget or cancellation allowance', async () => {
+  for (const change of [{ budget: 100000 }, { maximumCancellationLoss: 10000 }]) {
+    await expect(createOfferGenerator(client({ ...extracted, brief: { ...extracted.brief, ...change } }), 'model')(record))
+      .rejects.toThrow('Customer spending limit is not in the saved request.')
+  }
+})
