@@ -35,6 +35,7 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     return mail
   }
   return {
+    async getTransactionStore() { return (await getStorage()).store },
     async getDeps(): Promise<PlanningDeps> {
       return { repository: (await getStorage()).repository, offers: (await getStorage()).offers,
         generateOffer: record => createConfiguredOfferGenerator(env)(record), mail: (await getMail())?.transport, requireCustomerId,
@@ -67,3 +68,5 @@ const runtime = process.env.NODE_ENV === 'development'
 export const getPlanningDeps = () => runtime.getDeps()
 export const getSupplierMailWebhook = () => runtime.getWebhook()
 export const processPlanningReplies = () => runtime.processReplies()
+
+export const getPlanningTransactionStore = () => runtime.getTransactionStore()
