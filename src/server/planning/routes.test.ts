@@ -10,8 +10,8 @@ import { Route as collectionRoute } from '../../routes/api/planning'
 import { Route as itemRoute } from '../../routes/api/planning.$id'
 
 type Handler = (context: { request: Request; params: { id: string } }) => Promise<Response>
-const collection = collectionRoute.options.server!.handlers as { POST: Handler }
-const item = itemRoute.options.server!.handlers as { GET: Handler; POST: Handler }
+const collection = collectionRoute.options.server!.handlers as unknown as { POST: Handler }
+const item = itemRoute.options.server!.handlers as unknown as { GET: Handler; POST: Handler }
 const context = (body?: unknown, id = '') => ({
   params: { id }, request: new Request(`http://localhost/api/planning/${id}`, body === undefined ? undefined : { method: 'POST', body: JSON.stringify(body) }),
 })
