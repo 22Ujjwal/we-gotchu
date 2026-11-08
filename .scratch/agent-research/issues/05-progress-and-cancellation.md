@@ -14,3 +14,12 @@
 - [ ] Provide Leo with reviewed consumer fixtures for progress, missing fields, partial results, failure, and cancellation without implementing his interface.
 - [ ] Controlled workflow tests verify ordered and duplicate progress, idle errors, partial results, and cancellation during an in-flight call.
 - [ ] Verify the workflow through the real application integration boundary and record what is tested separately from simulated fixtures.
+
+## Implementation handoff
+
+The implementation is on branch t3/durable-research-sessions and requires Ujjwal's review before merge.
+See src/agent/INTEGRATION.md for the bounded stages, private storage change, cancellation limits, setup, and affected consumers.
+Consumer examples for Leo are in src/agent/integration.fixtures.ts.
+Application-handler tests use migrated database storage and controlled providers, including controlled HTTP responses for the real REST adapters.
+This is not a live deployment check or ticket06 crash-recovery completion.
+The current evidence validator intentionally returns partial research rather than inventing bookable plans.
