@@ -69,13 +69,20 @@ async function dispatchStripeEvent(deps: Deps, event: { type: string; created: n
   }
   if (event.type === 'checkout.session.expired') {
     const session = event.data.object as CheckoutSessionLike
-    const changed = await deps.store.markPaymentExpired(session.id)
+    await deps.store.markPaymentExpired(session.id)
     const payment = await deps.store.getPaymentByCheckoutSession(session.id)
     const approval = payment && (await deps.store.getApproval(payment.approvalId))
-    if (changed && approval) {
-      // The customer can approve again from the same plan.
-      await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'plan_ready')
-      await deps.store.appendProgress(approval.eventId, 'system', 'Checkout expired without payment.')
+    if (payment?.state === 'expired' && approval && !approval.revokedAt) {
+      // A prior delivery may have persisted expiration before its status update
+      // failed. Repair only this event's current, uncanceled approval.
+      const current = await deps.store.getEventView(approval.eventId)
+      if (current && !current.event.cancelRequestedAt &&
+          current.event.planRevision === approval.planRevision &&
+          current.approval?.approvalId === approval.approvalId &&
+          current.payment?.paymentId === payment.paymentId && current.payment.state === 'expired' &&
+          await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'plan_ready')) {
+        await deps.store.appendProgress(approval.eventId, 'system', 'Checkout expired without payment.')
+      }
     }
     return 'expired'
   }

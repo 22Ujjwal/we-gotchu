@@ -87,6 +87,40 @@ export async function createEvent(deps: Deps, body: unknown): Promise<EventView>
   return view(deps, event.eventId)
 }
 
+/** Recover the writes after result publication without calling the provider again. */
+async function finalizeResearch(deps: Deps, run: Run): Promise<void> {
+  const result = await deps.store.getResearchResult(run.runId)
+  if (!result || result.superseded || result.runId !== run.runId || result.eventId !== run.eventId ||
+      result.briefRevision !== run.briefRevision || (result.outcome !== 'success' && result.outcome !== 'partial')) return
+  // Re-read after loading the result: a brief edit or cancellation may have won.
+  const event = await deps.store.getEvent(run.eventId)
+  if (!event || event.status !== 'researching' || event.cancelRequestedAt || event.briefRevision !== result.briefRevision) return
+  let plan = await deps.store.getPlan(event.eventId)
+  if (plan && (plan.runId !== result.runId || plan.briefRevision !== result.briefRevision)) return
+  if (!plan) {
+    const actionIds = Object.fromEntries(result.candidates.map((c) => [c.candidateId, id('act')]))
+    const built = buildPlanFromResult({
+      result,
+      brief: event.brief,
+      planId: id('plan'),
+      revision: event.planRevision + 1,
+      actionIds,
+      executionMode: deps.config.executionMode,
+    })
+    if (!built.ok) {
+      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'researched', result.briefRevision)
+      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
+      return
+    }
+    // Concurrent finalizers use the same next revision; store uniqueness picks a
+    // winner. A failed/uncertain save is retried on the next poll by reading it.
+    await deps.store.savePlan(built.plan)
+    plan = built.plan
+  }
+  const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'plan_ready', result.briefRevision)
+  if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Plan ready: total ${plan.total} ${plan.currency}.`)
+}
+
 /** Advances a running research run under a single-flight lease. Errors are logged, not thrown. */
 async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
   const claimed = await deps.store.claimRunAdvance(run.runId, deps.now(), deps.config.advanceLeaseMs)
@@ -110,23 +144,7 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
       await deps.store.appendProgress(event.eventId, 'agent', `Research ended: ${result.outcome}.`)
       return
     }
-    const actionIds = Object.fromEntries(result.candidates.map((c) => [c.candidateId, id('act')]))
-    const built = buildPlanFromResult({
-      result,
-      brief: event.brief,
-      planId: id('plan'),
-      revision: event.planRevision + 1,
-      actionIds,
-      executionMode: deps.config.executionMode,
-    })
-    if (built.ok) {
-      await deps.store.savePlan(built.plan)
-      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'plan_ready', result.briefRevision)
-      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Plan ready: total ${built.plan.total} ${built.plan.currency}.`)
-    } else {
-      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'researched', result.briefRevision)
-      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
-    }
+    await finalizeResearch(deps, run)
   } catch (err) {
     console.error('[research] advance failed')
   } finally {
@@ -141,6 +159,12 @@ export async function getEventView(deps: Deps, eventId: string, afterSequence?: 
     const run = await deps.store.getCurrentRun(eventId, 'research')
     if (run && run.state === 'running' && run.briefRevision === event.briefRevision) {
       await advanceRun(deps, event, run)
+    } else if (run && (run.state === 'succeeded' || run.state === 'partial') && run.briefRevision === event.briefRevision) {
+      try {
+        await finalizeResearch(deps, run)
+      } catch {
+        console.error('[research] finalization failed')
+      }
     }
   }
   return view(deps, eventId, afterSequence)

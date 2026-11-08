@@ -128,6 +128,45 @@ describe('stripe webhook', () => {
     expect(stripe.refundCalls).toHaveLength(1)
   })
 
+  it('repairs an interrupted expiration when the same webhook is retried', async () => {
+    const { deps, store, session, payment, eventId, confirmed, stripe } = await awaitingPayment()
+    const { payload, header } = signed('checkout.session.expired', { ...session, payment_status: 'unpaid' })
+    vi.spyOn(store, 'setEventStatus').mockRejectedValueOnce(new Error('status unavailable'))
+
+    await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('status unavailable')
+    expect(store.payments.get(payment.paymentId)?.state).toBe('expired')
+    expect(store.events.get(eventId)?.status).toBe('awaiting_payment')
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('expired')
+    expect(store.events.get(eventId)?.status).toBe('plan_ready')
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect(store.progress.filter(p => p.message === 'Checkout expired without payment.')).toHaveLength(1)
+    expect(confirmed).toHaveLength(0)
+    expect(stripe.refundCalls).toHaveLength(0)
+  })
+
+  it.each(['canceled', 'cancel_requested', 'revoked', 'stale_plan', 'new_approval', 'paid'] as const)(
+    'does not reopen an event on expiration with %s state', async (state) => {
+      const { deps, store, session, payment, eventId, approval } = await awaitingPayment()
+      const event = store.events.get(eventId)!
+      if (state === 'canceled') await cancel(deps, eventId)
+      if (state === 'cancel_requested') event.cancelRequestedAt = deps.now().toISOString()
+      if (state === 'revoked') await store.revokeApprovals(eventId, deps.now())
+      if (state === 'stale_plan') event.planRevision += 1
+      if (state === 'new_approval') {
+        await store.createApproval(
+          { ...approval, approvalId: 'approval_new', approvedAt: new Date(deps.now().getTime() + 1000).toISOString() },
+          { ...payment, paymentId: 'payment_new', approvalId: 'approval_new', checkoutSessionId: 'cs_new' },
+        )
+      }
+      if (state === 'paid') await store.markPaymentPaid(session.id, 'pi_test_1')
+      const previousStatus = event.status
+      const { payload, header } = signed('checkout.session.expired', { ...session, payment_status: 'unpaid' })
+      expect(await handleStripeWebhook(deps, payload, header)).toBe('expired')
+      expect(store.events.get(eventId)?.status).toBe(previousStatus)
+      expect(store.progress.filter(p => p.message === 'Checkout expired without payment.')).toHaveLength(0)
+    },
+  )
+
   it('marks an expired session and returns the event to plan_ready', async () => {
     const { deps, store, session, payment, eventId } = await awaitingPayment()
     const { payload, header } = signed('checkout.session.expired', { ...session, payment_status: 'unpaid' })
