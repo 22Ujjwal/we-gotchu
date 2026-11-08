@@ -43,3 +43,12 @@ test('long unbroken summaries have one bounded preview without details', () => {
   expect(screen.getByText('Please confirm the end time')).toBeVisible()
   expect(screen.queryByText('Details')).not.toBeInTheDocument()
 })
+
+
+test('revised proposals replace the recap with a script update label', () => {
+  const summary = 'Replaced the earlier venue for comparison only.'
+  render(<ProposalSummary updated summary={summary} nextQuestion="What time should the party end?" />)
+  expect(screen.getByText('Updated event')).toHaveClass('font-script')
+  expect(screen.queryByText(summary)).not.toBeInTheDocument()
+  expect(screen.getByText('What time should the party end?')).toBeVisible()
+})

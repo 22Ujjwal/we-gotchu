@@ -135,10 +135,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry?.delivery && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
         onClick={() => void session.refreshSaved()}>Check for venue replies</Button>}
-      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
+      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
         disabled={!!blocked} editBrief={null}
-        summary={view.proposal && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
+        summary={view.proposal && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
         followup={messageForm} onChoose={optionId => {
           setBrowsingSettings(false)
           if (selected.has(optionId)) return
