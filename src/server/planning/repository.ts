@@ -43,7 +43,19 @@ export function createPlanningRepository(db: PgDatabase<PgQueryResultHKT, typeof
   const table = planningConversations
   return {
     async pendingArrangements(limit) {
-      const rows = await db.select().from(table).where(sql`${table.data}->'view'->'arrangement'->>'status' IN ('requested', 'preparing', 'awaiting_reply')`)
+      // Apply eligibility before LIMIT: an idle conversation must not consume the
+      // recovery slot forever while a later conversation has a ready reply.
+      // A reserved follow-up (including uncertain sends) must never be retried here.
+      const rows = await db.select().from(table).where(sql`
+        ${table.data}->'view'->'arrangement'->>'status' IN ('requested', 'preparing')
+        OR (
+          ${table.data}->'view'->'arrangement'->>'status' = 'awaiting_reply'
+          AND (${table.data}->>'pending') IS NULL
+          AND (${table.data}->'view'->>'paymentLink') IS NULL
+          AND ${table.data}->'view'->'inquiry'->'replies'->-1->>'status' = 'ready'
+          AND NOT COALESCE(${table.data}->'companyFollowups' ?
+            (${table.data}->'view'->'inquiry'->'replies'->-1->>'id'), false)
+        )`)
         .limit(Math.max(1, Math.min(5, limit)))
       return rows.map(row => ({ ...row.data, revision: row.revision }))
     },
