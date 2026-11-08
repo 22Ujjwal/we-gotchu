@@ -401,3 +401,14 @@ describe('linked offer expiry', () => {
     expect(store.approvals.size).toBe(0)
   })
 })
+
+it('linked offer Checkout returns to the same planning conversation', async () => {
+  const { deps, store, stripe, eventId, view } = await planReady()
+  const plan = view.plan!
+  plan.planningOffer = { conversationId: 'planning_saved', offerId: 'offer', revision: 1, expiresAt: null }
+  store.plans.set(plan.planId, plan)
+  deps.store.validatePlanOffer = async () => true
+  await approve(deps, eventId, plan.planId, plan.revision)
+  expect(stripe.createCalls[0].params.success_url).toBe('http://localhost:3000/planning/planning_saved?checkout=success')
+  expect(stripe.createCalls[0].params.cancel_url).toBe('http://localhost:3000/planning/planning_saved?checkout=canceled')
+})
