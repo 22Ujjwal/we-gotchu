@@ -42,10 +42,10 @@ Interfaces: shared HTTP auth/body/origin guard; JSON tool handler; SDK factory b
 
 ### Task 4: Handoff and final review
 Files: package README, `docs/team/agent-connect.md`, Ujjwal-owned status file.
-- [ ] Document tool schemas, config names, pilot-token issuance responsibilities, mandatory durable admission, customer handoff and compatibility limits; include reproducible client recipe without secrets.
-- [ ] Independent fresh review, necessary regression/fix commit if warranted.
-- [ ] Verify full app/coordination suites, typecheck, Vercel build, isolated SDK tests/typecheck and clean ownership diff.
-- [ ] Commit documentation and report exact commits, implemented vs unverified boundaries. Keep branch local.
+- [x] Document tool schemas, config names, pilot-token issuance responsibilities, mandatory durable admission, customer handoff and compatibility limits; include reproducible client recipe without secrets.
+- [x] Independent fresh review, necessary regression/fix commit if warranted.
+- [x] Verify full app/coordination suites, typecheck, Vercel build, isolated SDK tests/typecheck and clean ownership diff.
+- [x] Commit documentation and report exact commits, implemented vs unverified boundaries. Keep branch local.
 
 ## Builder decisions
 - SDK wrapper uses `.mjs` and separate `checkJs` configuration so root `**/*.ts` inclusion does not require installing its packages to run normal app CI.

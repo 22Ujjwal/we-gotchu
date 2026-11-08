@@ -1,9 +1,9 @@
 # External agent planning connection handoff
 
-Owner: Ujjwal. Updated: 2026-11-08T08:34:47-08:00.
+Owner: Ujjwal. Updated: 2026-11-08T08:42:40-08:00.
 Baseline: `b986ab636725029fc6c1b694a1c34494a42a7bca` (cached main; no fetch during implementation).
 Branch: `feat/agent-connect`, local only. PR: not published. Availability: on branch, not merged/deployed.
-Tested implementation: `b7edf706d4da3f60492a5905fffff434dcbf38e1`.
+Tested implementation: `4b5f95c4ff115ec59e18c1c061cf57d83dd80d6a`.
 
 ## Current result
 
@@ -21,17 +21,22 @@ See [integration README](../../integrations/arrange-agent-connect/README.md) for
 - `0426c74`: guarded JSON/HTTP requests with authentication, body bounds and origin checks.
 - `b7edf70`: official MCP SDK adapter, concurrent client tests and isolated package checks.
 
-All are local. No coauthor attribution. Subsequent review fixes and handoff commits must be reported separately.
+- `a6742ed`: integration README, initial handoff and status evidence.
+- `4b5f95c`: independent-review fix for stalled cancellation after timeout/oversize rejection.
+
+All are local. No coauthor attribution. The final documentation-only commit follows these implementation commits; use the branch log for its SHA.
 
 ## Verification evidence
 
 At the tested implementation SHA:
 
-- 555 application tests pass, including 32 agent-connect tests. Command: `bun run test --maxWorkers=2`.
+- 557 application tests pass, including 34 agent-connect tests. Command: `bun run test --maxWorkers=1`.
 - 25 coordination tests pass: `node --test tools/team-coordination/*.test.mjs`.
 - Root `bun run typecheck` and `NITRO_PRESET=vercel bun run build` pass.
 - Isolated package: frozen dependency install, 4 official-client MCP tests, checked-JavaScript typecheck and Node-target bundle pass.
 - No tracked generated-route changes; ownership diff restricted to new gateway/package and Ujjwal documentation.
+
+An initial final-suite run with two workers alongside a build hit the unchanged five-second timeout in two existing database tests; 555 other tests passed. Both database tests then passed in isolation, and all 557 passed with one worker, with no timeout or existing test edits.
 
 Tests establish local scope enforcement, cross-customer rejection, request identity isolation, durable replay, version conflicts, output redaction and transport behavior. Planning-provider results are simulated. No provider research, email, payment, deployment, or client enrollment was performed. No hosted/client-specific end-to-end claim follows from these results.
 
@@ -53,3 +58,27 @@ Ujjwal's next milestone is to review this local integration candidate, then auth
 - Kept hosted routes and root dependencies untouched to preserve parallel team work. Cost: deploy/enrollment/admission/CI integration remains required.
 - Used an isolated checked-JavaScript SDK package because root TypeScript includes every `.ts` file. Cost: its own install and checks must be run explicitly.
 - No claims about universal agent compatibility, OAuth interoperability, completed real research or supplier commitments. The branch is an integration candidate, not a public booking product.
+
+## Independent review and disposition
+
+The fresh reviewer found no Critical issue and one Important issue: waiting for a stream's cancellation promise could prevent timed-out/oversized HTTP requests from returning. Regressions reproduced both cases, then passed after cleanup became nonblocking. Both JSON and MCP share that corrected boundary.
+
+Deferred minor: `authority.plan` describes the gateway-wide capability even for read-only grants. Scope-filtered tool discovery and execution correctly deny planning writes, but a client relying only on that flag could offer an unavailable action. Use the discovered tool list as the permission-specific capability contract until the metadata is refined.
+
+The following review exclusions remain deliberate integration boundaries, not evidence of verified behavior:
+
+| Decision | Reason and consequence |
+| --- | --- |
+| Leave public routing, deployment and proxy behavior for integration | Factories only; no usable public endpoint yet |
+| Defer OAuth consent/enrollment/client registration | Controlled pilot seam only; no general OAuth connection claim |
+| Delegate token issuance, entropy, revocation and unique grant IDs to trusted storage | No hosted issuer supplied; public exposure requires this integration |
+| Require durable quota, budget and retry accounting through admission | No permissive production default; implement and test before hosting |
+| Leave token-lookup/discovery abuse limits to infrastructure | Planning admission does not cover those operations |
+| Do not certify provider truth, prices or availability from fixtures | No successful real research evidence from this branch |
+| Exclude inquiry sends, payments, supplier commitments and booking | Customer approval remains in Arrange; autonomous booking is not delivered yet |
+| Defer named-client validation | Official-client tests do not prove Grok/Muse/Dot support |
+| Review Tony's unpublished/future contract after it is available | Avoid parallel edits; reconcile the bridge before integration |
+| Leave unchanged service recovery/concurrency outside this adapter's review | Ownership/replay/version tests do not establish blanket reliability |
+| Return marked untrusted source data without fetching it | Consuming agents must enforce browsing and prompt-injection boundaries |
+| Coordinate root CI wiring separately | Run isolated package checks explicitly until shared CI includes them |
+| Defer exhaustive upstream SDK audit and production load testing | Local functional review does not certify production security/performance |
