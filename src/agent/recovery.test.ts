@@ -96,3 +96,23 @@ test('an interrupted outcome write cannot advance the processed sequence or lose
   expect(completed.progress.filter(p => p.message === 'Research evidence validated; final costs remain unconfirmed.')).toHaveLength(1)
   expect(session.start).toHaveBeenCalledTimes(1)
 })
+
+test('uncertain creation retains its operation identity and cannot claim confirmed cleanup', async () => {
+  const started = await createEvent(deps, researchBriefFixture)
+  const { eventId } = started.event
+  const { runId } = started.run!
+  await getEventView(deps, eventId)
+  await getEventView(deps, eventId)
+  vi.mocked(session.start).mockRejectedValueOnce(new TypeError('response lost after remote creation'))
+  await getEventView(deps, eventId)
+  await restart()
+  const completed = await finish(eventId)
+  expect(completed.researchResult!.outcome).toBe('partial')
+  expect(completed.researchResult!.warnings.join(' ')).toContain('uncertain outcome')
+  expect(await store.researchCheckpoints!.read(runId)).toMatchObject({
+    pendingOperation: { kind: 'session', idempotencyKey: `${runId}:research` },
+    cleanup: { confirmed: false, unresolvedOperation: true },
+  })
+  expect(session.start).toHaveBeenCalledTimes(1)
+  expect(session.poll).not.toHaveBeenCalled()
+})
