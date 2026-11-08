@@ -31,7 +31,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   useEffect(() => { if (notice) alert.current?.focus() }, [notice])
   const { view } = session
   const blocked = session.pending || session.loading || !!session.uncertain || !!id && !view
-    || view?.status === 'working' || view?.status === 'uncertain' || view?.status === 'blocked'
+    || view?.inquiry?.delivery?.status === 'pending' || view?.status === 'working' || view?.status === 'uncertain' || view?.status === 'blocked'
     || !!session.error && session.error.status !== 409 && session.error.status !== 400 && session.error.status !== 422
   const complete = (next: typeof view, message: boolean) => {
     if (!next) return
@@ -106,7 +106,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
       {view.inquiry && <PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
-        disabled={!!blocked || view.status !== 'ready'} submit={session.submit} />}
+        disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} />}
       {view.selections.some(option => option.kind === 'venue') && (!view.inquiry || view.inquiry.status === 'stale')
         && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
           onClick={() => void session.submit({ kind: 'prepare_inquiry', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
