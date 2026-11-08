@@ -44,3 +44,10 @@ describe('hosted planning adapter', () => {
     expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'failed', proposal: null })
   })
 })
+
+it('keeps a coordinator working while its teammates research', async () => {
+  const { agent, snapshot } = setup()
+  snapshot.status = 'idle'
+  snapshot.stop_reason = 'awaiting_delegation'
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', proposal: null, progress: 'Your research team is checking options.' })
+})
