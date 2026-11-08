@@ -23,7 +23,11 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const session = usePlanningSession(id)
   const [draft, setDraft] = useState('')
   const alert = useRef<HTMLParagraphElement>(null)
-  useEffect(() => { if (session.error) alert.current?.focus() }, [session.error])
+  const notice = session.uncertain
+    ? id ? 'We could not confirm whether your request was saved. Your draft is kept. Check the saved status before taking any further action.'
+      : 'We could not confirm whether your plan was created. Your draft is kept. Do not submit again or reload to retry. Please contact support to locate your plan.'
+    : session.error?.message
+  useEffect(() => { if (notice) alert.current?.focus() }, [notice])
   const { view } = session
   const blocked = session.pending || session.loading || !!session.uncertain || !!id && !view
     || view?.status === 'working' || view?.status === 'uncertain'
@@ -47,10 +51,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     <h1 className="text-[34px] leading-tight font-light tracking-[-0.02em] lg:text-[56px]">{id ? 'Your event, coming together.' : "What are you planning?"}</h1>
     {!id && <p className="text-[18px] leading-7 text-stone">Tell us about the occasion, place, budget, and anything you need. Rough dates are fine. We can work out the details together.</p>}
     {session.loading && <p role="status">Loading your plan...</p>}
-    {session.error && <div className="flex flex-col gap-3">
-      <p role="alert" tabIndex={-1} ref={alert}>{session.error.message}</p>
+    {notice && <div className="flex flex-col gap-3">
+      <p role="alert" tabIndex={-1} ref={alert}>{notice}</p>
       {id && <Button className="self-start px-6 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>{session.uncertain ? 'Check saved status' : 'Refresh plan'}</Button>}
-      {session.error.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/')}`}>Sign in again</a>}
+      {session.error?.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/')}`}>Sign in again</a>}
     </div>}
     {view && <>
       <section aria-label="Conversation" className="flex flex-col gap-4">
