@@ -211,7 +211,17 @@ test.each([
   setDepsForTests(deps)
   try {
     expect(getExecutionDeps().now?.()).toEqual(now)
+    const { notifyPlanningPayment } = await import('./payment-notification')
+    const customerRecord = (await db.repository.getById('conversation'))!
+    await db.repository.compareAndSet(customerRecord, { ...customerRecord, view: { ...customerRecord.view,
+      arrangement: { id: 'arrangement', inquiryId: 'inquiry', requestedAt: now.toISOString(), status: 'offer_ready',
+        selections: customerRecord.view.selections, detail: 'Ready', customerEmail: 'customer@example.com', controlled: true } } })
+    const sent: Array<{ to: string; subject: string; text: string }> = []
+    const provider = { inboxId: 'arrange', send: async (mail: typeof sent[number]) => { sent.push(mail); return { messageId: 'receipt-mail' } },
+      getMessage: async () => { throw Error('Not used') } }
     const first = await approve(deps, link.eventId, link.planId, 1)
+    await notifyPlanningPayment(db.store, db.repository, provider, first.payment.checkoutSessionId, 'http://localhost:3000')
+    expect(sent).toHaveLength(0)
     const repeated = await approve(deps, link.eventId, link.planId, 1)
     expect(repeated.payment.paymentId).toBe(first.payment.paymentId)
     expect(stripe.createCalls).toHaveLength(1)
@@ -230,6 +240,14 @@ test.each([
     expect(await handleStripeWebhook(deps, payload, signature)).toBe('duplicate')
     const restored = await db.store.getEventView(link.eventId)
     expect(restored?.payment).toMatchObject({ state: 'paid', amount: total, mode: 'test', paidAt: now.toISOString() })
+    await notifyPlanningPayment(db.store, db.repository, provider, first.payment.checkoutSessionId, 'http://localhost:3000')
+    await notifyPlanningPayment(db.store, db.repository, provider, first.payment.checkoutSessionId, 'http://localhost:3000')
+    expect(sent).toHaveLength(changed ? 0 : 1)
+    if (!changed) {
+      expect(sent[0].text).toContain('Stripe sandbox payment received')
+      expect(sent[0].text).toContain(first.payment.paymentId)
+      expect(sent[0].text).toContain('Controlled room')
+    }
     expect(restored?.attempts).toHaveLength(changed ? 0 : supplyFirst ? 2 : 1)
     if (changed) {
       expect(stripe.refundCalls).toHaveLength(1)
