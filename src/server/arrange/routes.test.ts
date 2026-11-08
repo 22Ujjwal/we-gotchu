@@ -184,3 +184,17 @@ describe('local integration gate: one supplier exchange, same session', () => {
     expect(denied.status).toBe(404)
   })
 })
+
+it('publishes sourced options through MCP and accepts only the owning customer choice', async () => {
+  const eventId = await createEvent()
+  const event = await app.ledger.readEvent(eventId)
+  const result = await callTool('publish_options', { eventId, operationKey: 'options', options: [{ id: 'garden', name: 'Garden dinner', reason: 'A quiet space for the team', sourceUrl: 'https://example.test/garden', knownTerms: [], unknownTerms: ['Availability'], contactIds: [event.contacts[0].id] }] })
+  expect(result.isError).toBe(false)
+  const choose = () => handlers(eventRoute).POST({ params: { eventId }, request: new Request(`http://localhost/api/arrange/events/${eventId}`, { method: 'POST', body: JSON.stringify({ action: 'choose', optionId: 'garden' }) }) })
+  customerId = 'tom'
+  expect((await choose()).status).toBe(404)
+  customerId = 'maya'
+  expect((await choose()).status).toBe(200)
+  expect((await choose()).status).toBe(200)
+  expect(naive.deliveries.filter(d => d.idempotencyKey.startsWith('choice:'))).toHaveLength(1)
+})
