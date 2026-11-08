@@ -1,3 +1,4 @@
+import { notifyPlanningPayment } from './payment-notification'
 import { continueArrangement } from './arrangement-followup'
 import { arrangementAcknowledgment, sendCustomerNotification } from './customer-notifications'
 import { waitUntil } from '@vercel/functions'
@@ -100,6 +101,13 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
       }, env.NODE_ENV === 'development' && followupTransport && env.PLANNING_TEST_SUPPLIER_EMAIL
         ? { transport: followupTransport, recipient: env.PLANNING_TEST_SUPPLIER_EMAIL } : undefined)
     },
+    async notifyPayment(checkoutSessionId: string) {
+      if (!env.AGENTMAIL_API_KEY || !env.AGENTMAIL_INBOX_ID) return
+      const saved = await getStorage()
+      await notifyPlanningPayment(saved.store, saved.repository,
+        createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY, inboxId: env.AGENTMAIL_INBOX_ID }),
+        checkoutSessionId, env.APP_URL ?? 'http://localhost:3000')
+    },
     async getTransactionStore() { return (await getStorage()).store },
     async getDeps(): Promise<PlanningDeps> {
       return { repository: (await getStorage()).repository, offers: (await getStorage()).offers,
@@ -154,3 +162,5 @@ export const dispatchPlanningReplies = () => runtime.dispatchReplies()
 export const getPlanningTransactionStore = () => runtime.getTransactionStore()
 
 export const getPlanningCompanyTools = () => runtime.getCompanyTools()
+
+export const notifyPlanningPaymentConfirmed = (checkoutSessionId: string) => runtime.notifyPayment(checkoutSessionId)
