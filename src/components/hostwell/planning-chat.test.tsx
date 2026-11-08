@@ -258,3 +258,25 @@ test('sign-in links keep the conversation URL and no reads happen when signed ou
   expect(screen.getByRole('link', { name: 'Sign in to view your plan' })).toHaveAttribute('href', '/sign-in?redirect_url=%2Fplanning%2Fplan-a')
   expect(fetch).not.toHaveBeenCalled()
 })
+
+test('uncertain write status remains checkable after a temporary read failure', async () => {
+  vi.useFakeTimers()
+  let reads = 0
+  http(request => {
+    if (request.method === 'POST') throw new TypeError('lost write')
+    if (++reads === 2) throw new TypeError('offline')
+    return Response.json(view())
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await act(async () => {})
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Keep the room' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+  await act(async () => {})
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved status' }))
+  await act(async () => {})
+  await act(async () => { await vi.advanceTimersByTimeAsync(4000) })
+  expect(screen.getByRole('button', { name: 'Check saved status' })).toBeEnabled()
+  expect(screen.getByRole('alert')).toHaveTextContent('could not confirm')
+  expect(screen.getByRole('textbox')).toHaveValue('Keep the room')
+  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
+})
