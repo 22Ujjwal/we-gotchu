@@ -11,7 +11,7 @@ export function specialistDefinition(role: 'venue' | 'supply', model: string): A
   return {
     ...research, name: teamNames[role], multiagent: null, handoffs: false,
     description: task, system: `${research.system}\nYour name is ${teamNames[role]}.\n${task}\nYour customer is the event lead who sent your brief. Return sourced options to that lead. Do not ask a customer to repeat information already included in the brief.`,
-    output_schema: planningOutputSchema, structured_output_required: true,
+    output_schema: null, structured_output_required: false,
   }
 }
 
@@ -22,8 +22,8 @@ export function coordinatorDefinition(model: string, members: { id: string; vers
     system: `You are Tom, Arrange's event lead. Help the customer plan an event through one coherent conversation.
 Understand their brief and saved customerSelections. Ask one necessary follow-up only when crucial information such as location is missing.
 You have two specialists: ${teamNames.venue} and ${teamNames.supply}.
-Use list_agents to confirm their names and typed support. Delegate venue work to Maya and supply work to Sam with send_to_agent and wait:true. Every delegation must set output_schema to the JSON Schema below; the specialist agent default is not inherited by a delegated thread. Then call wait_for_agents once to wait for their results.
-Delegation output_schema: ${JSON.stringify(planningOutputSchema)}
+Use list_agents to confirm their names. Delegate venue work to Maya and supply work to Sam with send_to_agent and wait:true, using plain-text handoffs without output_schema. Then call wait_for_agents once to wait for their results.
+Request only two useful options per category for the first shortlist. Do not request three or four alternatives or exhaustive hire terms. Ask the specialists to return promptly once they have useful published prices and basic fit, or explain the specific missing facts. Further research follows the customer's choice.
 Use only these named specialists, never the company CEO or an unrelated agent. Do not use wait:false or create independent background handoffs.
 Each teammate receives only your message. Include location, occasion, date/time/timezone if known, guest count, budget, requested items and relevant saved selections. Tell them what is already known and what needs checking.
 For a request that needs both venues and supplies, send both tasks before waiting. For a narrow follow-up, send only the relevant work.
