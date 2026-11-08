@@ -35,9 +35,12 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
           onClick={() => { void session.approve().then(onCheckout).catch(() => undefined) }}>Approve and open sandbox Checkout</Button>
       </>}
       {stale && <p role="alert">The offer changed. This payment plan cannot be approved.</p>}
-      {view.event.cancelRequestedAt && <p>This payment plan was canceled.</p>}
-      {!view.event.cancelRequestedAt && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading}
-        onClick={() => { void session.cancel().catch(() => undefined) }}>Cancel sandbox payment plan</Button>}
+      {view.event.cancelRequestedAt && <p>{view.event.status === 'canceled' ? 'This payment plan was canceled.'
+        : 'Cancellation is in progress. Supplier settlement and any refund may still be pending.'}</p>}
+      {(!view.event.cancelRequestedAt || view.event.status === 'canceling') && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading}
+        onClick={() => { void session.cancel().catch(() => undefined) }}>
+        {view.event.cancelRequestedAt ? 'Continue cancellation' : 'Cancel sandbox payment plan'}
+      </Button>}
       {view.event.status === 'canceled' && onRelease && (!view.payment || view.payment.state === 'expired'
         || view.payment.state === 'paid' && view.payment.refundState === 'succeeded')
         && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={onRelease}>
