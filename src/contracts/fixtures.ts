@@ -1,4 +1,5 @@
-import { CONTRACT_VERSION, type Approval, type Attempt, type EventView, type Payment, type Plan } from './records'
+import { CONTRACT_VERSION, type Approval, type Attempt, type EventView, type Payment, type Plan, type ResearchResult } from './records'
+import { buildPlanFromResult } from './rules'
 
 // Simulated fixtures for the frontend and agent. Every record is labeled
 // mode "simulated" and is not evidence of a real booking or payment.
@@ -37,20 +38,32 @@ const terms = (known: boolean) => ({
   sourceUrl: known ? 'https://example.com/venue-a/terms' : undefined,
 })
 
-const plan: Plan = {
-  planId: 'plan_sim_1',
-  eventId: 'evt_sim_1',
+const src = (url: string, stage: 'discovery' | 'detail' | 'quote') => ({
+  url,
+  tool: 'simulated-research',
+  stage,
+  retrievedAt: T0,
+})
+
+export const researchResult: ResearchResult = {
   contractVersion: CONTRACT_VERSION,
+  eventId: 'evt_sim_1',
   briefRevision: 1,
-  revision: 1,
+  runId: 'run_sim_research',
+  outcome: 'success',
+  missing: [],
   candidates: [
     {
+      candidateId: 'cand_venue_a',
       name: 'Harbor Loft (simulated)',
       kind: 'venue',
-      sourceUrl: 'https://example.com/venue-a',
+      supplierId: 'sup_harbor_loft',
+      sources: [src('https://example.com/venue-a', 'discovery'), src('https://example.com/venue-a/terms', 'detail')],
       observedAt: T0,
+      evidenceMode: 'simulated',
       priceEstimate: 30000,
       priceProvenance: 'quote',
+      taxesAndDelivery: 'unknown',
       cancellationTerms: terms(true),
       verification: {
         capacity: { status: 'known', sourceUrl: 'https://example.com/venue-a' },
@@ -59,67 +72,63 @@ const plan: Plan = {
       whyChosenOrRejected: 'Fits 20 guests and the budget; cancellation terms are stated.',
     },
     {
+      candidateId: 'cand_venue_b',
       name: 'Garden Room (simulated)',
       kind: 'venue',
-      sourceUrl: 'https://example.com/venue-b',
+      sources: [src('https://example.com/venue-b', 'discovery')],
       observedAt: T0,
+      evidenceMode: 'simulated',
       priceEstimate: null,
       priceProvenance: 'estimate',
+      taxesAndDelivery: 'unknown',
       cancellationTerms: terms(false),
       verification: { price: { status: 'unknown' } },
       whyChosenOrRejected: 'Price and cancellation terms could not be verified.',
     },
     {
+      candidateId: 'cand_item_plates',
       name: 'Paper plates, 8-pack (simulated)',
       kind: 'supply',
-      sourceUrl: 'https://example.com/plates',
+      sources: [src('https://example.com/plates', 'detail')],
       observedAt: T0,
+      evidenceMode: 'simulated',
       priceEstimate: 1500,
-      priceProvenance: 'quote',
+      priceProvenance: 'supplier_listing',
+      taxesAndDelivery: 'unknown',
       quantityInfo: { needed: 20, packSize: 8, packs: 3 },
       cancellationTerms: terms(true),
       verification: { quantity: { status: 'known' } },
+      affiliateDisclosure: 'Simulated listing; no affiliate link.',
       whyChosenOrRejected: 'Three packs cover 20 guests.',
     },
   ],
-  actions: [
-    {
-      actionId: 'act_sim_venue',
-      kind: 'venue_booking',
-      supplierName: 'Harbor Loft (simulated)',
-      target: 'Main hall, 2026-12-12 evening',
-      quantityOrSchedule: '4 hours',
-      maximumAmount: 30000,
-      cancellationTerms: terms(true),
-      sourceUrl: 'https://example.com/venue-a',
-      dependsOn: [],
-      mode: 'simulated',
-    },
-    {
-      actionId: 'act_sim_item',
-      kind: 'item_purchase',
-      supplierName: 'Paper plates, 8-pack (simulated)',
-      target: 'Paper plates, 8-pack',
-      quantityOrSchedule: '3 packs',
-      maximumAmount: 1500,
-      cancellationTerms: terms(true),
-      sourceUrl: 'https://example.com/plates',
-      dependsOn: ['act_sim_venue'],
-      mode: 'simulated',
-    },
+  recommendations: [
+    { candidateId: 'cand_venue_a', rank: 1, matched: ['capacity', 'budget', 'cancellation'], unmet: [], unchecked: ['availability', 'taxes'] },
+    { candidateId: 'cand_venue_b', rank: 2, matched: ['capacity'], unmet: [], unchecked: ['price', 'cancellation'] },
+    { candidateId: 'cand_item_plates', rank: 1, matched: ['quantity', 'cancellation'], unmet: [], unchecked: ['delivery'] },
   ],
-  total: 31500,
-  currency: 'usd',
-  serviceFee: 0,
-  cancellationTerms: 'Both commitments are free to cancel until 48 hours before the event.',
-  agentReasoning: 'Chose the venue with stated terms and a quote, and the cheapest pack count that covers 20 guests.',
-  mode: 'simulated',
-  researchOutcome: 'success',
   budgetFit: 'within',
   budgetBasis: 'Venue quote 30000 plus supplies 1500 is 31500, under the 50000 budget; taxes and delivery are not included.',
-  missing: [],
+  currency: 'usd',
   warnings: ['Date-specific venue availability is unverified.'],
+  sourceChecks: [
+    { url: 'https://example.com/venue-a/terms', tool: 'simulated-research', candidateId: 'cand_venue_a', outcome: 'ok', missingFields: ['availability'] },
+    { url: 'https://example.com/venue-b', tool: 'simulated-research', candidateId: 'cand_venue_b', outcome: 'absent', missingFields: ['price', 'cancellation'], reason: 'Page has no pricing or terms.' },
+  ],
+  superseded: false,
+  createdAt: T0,
 }
+
+const built = buildPlanFromResult({
+  result: researchResult,
+  brief,
+  planId: 'plan_sim_1',
+  revision: 1,
+  actionIds: { cand_venue_a: 'act_sim_venue', cand_item_plates: 'act_sim_item' },
+  executionMode: 'simulated',
+})
+if (!built.ok) throw new Error(`fixture plan failed to build: ${built.reason}`)
+const plan: Plan = built.plan
 
 const approval: Approval = {
   approvalId: 'appr_sim_1',
@@ -182,6 +191,8 @@ const run = {
   naiveSessionId: 'ses_sim_1',
   lastSequence: 53,
   state: 'succeeded' as const,
+  advancingUntil: null,
+  correctionsUsed: 0,
   createdAt: T0,
 }
 
@@ -194,6 +205,7 @@ const progress = [
 export const planReadyEvent: EventView = {
   event,
   run,
+  researchResult,
   plan,
   approval: null,
   payment: null,
@@ -204,6 +216,7 @@ export const planReadyEvent: EventView = {
 export const bookedEvent: EventView = {
   event: { ...event, status: 'booked', progressSequence: 6 },
   run,
+  researchResult,
   plan,
   approval,
   payment,
@@ -219,6 +232,7 @@ export const bookedEvent: EventView = {
 export const canceledEvent: EventView = {
   event: { ...bookedEvent.event, status: 'canceled', cancelRequestedAt: T2, progressSequence: 9 },
   run,
+  researchResult,
   plan,
   approval,
   payment: { ...payment, refundId: 're_sim_1', refundState: 'pending', refundReason: 'customer_cancellation' },
