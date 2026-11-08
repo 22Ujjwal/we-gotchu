@@ -1,4 +1,4 @@
-import { OpenApprovalExistsError } from '../store'
+import { ApprovalCanceledError, OpenApprovalExistsError } from '../store'
 import { randomUUID } from 'node:crypto'
 import {
   assessPlanForApproval,
@@ -262,6 +262,9 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
     await deps.store.createApproval(approval, payment)
   } catch (err) {
     await deps.stripe.checkout.sessions.expire(session.id).catch(() => undefined)
+    if (err instanceof ApprovalCanceledError) {
+      throw new ApiError(409, 'invalid_status', 'Cancellation was requested while Checkout was being created.')
+    }
     if (err instanceof OpenApprovalExistsError) {
       // A concurrent approve won; hand back its Checkout instead of a second one.
       const winner = await deps.store.findOpenApproval(eventId, planRevision, now)

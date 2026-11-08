@@ -14,7 +14,7 @@ import {
   canTransitionAttempt,
   type EventStatus,
 } from '../../contracts'
-import { OpenApprovalExistsError, type Store } from '../store'
+import { ApprovalCanceledError, OpenApprovalExistsError, type Store } from '../store'
 import { approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
 
 // Store implementation over Drizzle. Works with any Postgres driver Drizzle
@@ -503,7 +503,7 @@ export function createStore(db: Db): Store {
         // Lock the event so a concurrent updateBrief cannot drop the plan
         // between this check and the insert (updateBrief locks the same row).
         const locked = await tx
-          .select({ id: events.id })
+          .select({ cancelRequestedAt: events.cancelRequestedAt })
           .from(events)
           .innerJoin(plans, eq(plans.eventId, events.id))
           .where(
@@ -516,6 +516,7 @@ export function createStore(db: Db): Store {
           )
           .for('update', { of: events })
         if (locked.length === 0) throw new Error(`createApproval: plan ${approval.planId} revision ${approval.planRevision} is not current`)
+        if (locked[0].cancelRequestedAt !== null) throw new ApprovalCanceledError()
         // Re-check under the event lock: a concurrent approve may have inserted first.
         const [open] = await tx
           .select({ id: approvals.id })

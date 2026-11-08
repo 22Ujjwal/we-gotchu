@@ -106,6 +106,9 @@ export interface Store {
   appendProgress(eventId: string, actor: ProgressEntry['actor'], message: string): Promise<ProgressEntry>
 }
 
+/** Cancellation won before the approval could be stored. */
+export class ApprovalCanceledError extends Error {}
+
 /** A concurrent approve already created an open approval for this plan revision. */
 export class OpenApprovalExistsError extends Error {
   constructor(eventId: string, planRevision: number) {
