@@ -47,6 +47,8 @@ export const Route = createFileRoute('/api/demo/all-set')({
         try {
           await sender.send(to, email, `demo-${key}-all-set`)
         } catch (error) {
+          // A repeat of the same booking while the first send is in flight: that one delivers.
+          if ((error as { statusCode?: number }).statusCode === 409) return json({ sent: true, to })
           console.error('[email] demo all-set failed', error)
           return json({ sent: false, to }, 502)
         }
