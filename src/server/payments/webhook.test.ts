@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../events/errors'
 import { approve, cancel, createEvent, getEventView } from '../events/service'
 import { makeDeps, validBrief, WEBHOOK_SECRET } from '../events/testFakes'
@@ -69,6 +69,23 @@ describe('stripe webhook', () => {
     const stored = store.payments.get(payment.paymentId)!
     expect(stored.refundReason).toBe('late_or_revoked')
     expect(stored.refundState).toBe('pending')
+  })
+
+  it('retries an interrupted refund on redelivery of the same webhook', async () => {
+    const { deps, store, stripe, eventId, session, payment, confirmed } = await awaitingPayment()
+    await cancel(deps, eventId)
+    const { payload, header } = signed('checkout.session.completed', session)
+    const create = vi.spyOn(stripe.refunds, 'create').mockRejectedValueOnce(new Error('connection lost'))
+
+    await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('connection lost')
+    expect(store.payments.get(payment.paymentId)?.state).toBe('paid')
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('refunded_late_or_revoked')
+    expect(store.payments.get(payment.paymentId)?.refundId).toBeTruthy()
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect(create).toHaveBeenCalledTimes(2)
+    expect(create.mock.calls[1]).toEqual(create.mock.calls[0])
+    expect(stripe.refundCalls[0].params.amount).toBe(payment.amount)
+    expect(confirmed).toHaveLength(0)
   })
 
   it('refunds a payment completed after the approval expired', async () => {
