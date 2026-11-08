@@ -166,13 +166,13 @@ export const planningConversations = pgTable('planning_conversations', {
 
 export const supplierMailOperations = pgTable('supplier_mail_operations', {
   id: text('id').primaryKey(),
-  requestId: text('request_id').notNull().unique(),
+  requestId: text('request_id').notNull().unique('supplier_mail_operations_request_id_key'),
   data: jsonb('data').$type<SendOperation>().notNull(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 })
 export const supplierMailReceipts = pgTable('supplier_mail_receipts', {
   id: text('id').primaryKey(),
-  key: text('key').notNull().unique(),
+  key: text('key').notNull().unique('supplier_mail_receipts_key_key'),
   data: jsonb('data').$type<IncomingReceipt>().notNull(),
   completed: boolean('completed').notNull().default(false),
   leaseToken: text('lease_token'),
