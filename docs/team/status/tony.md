@@ -1,59 +1,69 @@
 # Tony's status
 
-Owner: Tony.
 Updated: 2026-11-07, America/Los_Angeles.
-Implementation baseline: main at `4f50215`.
-Branch: feat/research-workflow, merged by PR #18 as `b181e1e`.
-Availability: merged.
-Prior report commit: `f756c9bd1cd86b779ebc6fe418da75b914bd9a68`.
-Implementation verification at `4a50290`: 45 tests, typecheck, and production build passed using Bun 1.4.4.
-The live smoke ran that implementation and cleaned up its evaluation session and definition.
-PR review fixes on top of `dac021a`: 50 tests, typecheck, and production build passed using Bun 1.3.11; the live smoke was not rerun.
-The GitHub ci check passed on PR #18 at `eaac453`.
+This handoff separates merged work, on-branch changes, and historical runtime evidence.
+Owner review remains pending where noted; passing tests or exhausted automated review quota are not approval.
 
-## Current result
+## Application research integration
 
-Ticket 01 now has a standalone read-only research workflow on main.
-It imports the merged contract 0.4 and includes real Monid discovery and Naive ranking adapters.
-The live smoke check returned six candidates with source provenance and unknown final costs after one bounded correction.
-The workflow is not wired into the application API or database yet.
-The backend startResearch and advanceResearch polling integration remains coordinated work under ticket 05.
-See [runtime instructions and verification](../../../src/agent/README.md).
+PR #24 is on branch t3/durable-research-sessions and has not been merged by this session.
+It connects application handlers to durable, bounded discovery, investigation, hosted ranking, progress, and run-based cancellation.
+The default configured path uses the detail adapter from PR #25.
+Supplier listing prices remain evidence, with unknown final costs and no invented bookable plan.
 
-## Earlier research evidence
+Review fixes reproduced nine application-boundary failures and one configuration failure before fixing them.
+All 18 GitHub comments have dispositions, including the matching Sol S1 cleanup finding.
+The Sol review was partial and incomplete, not approval.
+See the [review ledger](../../research/research-integration-review.md) and [integration setup and limits](../../../src/agent/INTEGRATION.md).
+The [standalone runtime README](../../../src/agent/README.md) describes the separate standalone workflow.
 
-Naive pi is live-verified for one synthetic read-only research session using `openai/gpt-4.1-nano`, with a $0.50 cap and all ordinary tools denied except web_search.
-The first turn failed required structured output, and one corrective message produced a conforming object.
-SSE progress, text deltas, sequence replay, message-based resumption, and terminal cancellation were observed.
-The isolated managed-agents SDK 0.12.3 also parsed live harness and canceled-session responses.
-The returned recommendation remains simulated and contains an unsupported budget claim, so it must not become an approved plan.
-The session reported $0.002983 consumed; organization billing reconciliation was blocked by missing billing:read scope.
-Monid product and Maps searches completed with provider HTTP 200 and reported costs of $0.007 and $0.00015.
-No supplier availability, final price, booking, order, payment, cancellation, or refund was verified.
+The combined application regression uses migrated PGlite storage and real REST adapters with controlled HTTP responses.
+It covers discovery, detail evidence, ranking projection, correction, cleanup, and preservation of unknown final costs.
+Other boundary tests cover failed cleanup, legacy runs, sequence persistence, duplicates, cancellation during an in-flight call, and stale revisions.
+Exact final head and complete check results are recorded in [PR #24](https://github.com/22Ujjwal/we-gotchu/pull/24) and the coordinator handoff.
+No deployed application, authenticated combined run, or full crash recovery is claimed.
 
-## Verification and cleanup
+The exact standalone route repair, PR #26 at 60e20a03cc2cb9bf10782ab905e39d23836d2485, is in the integration branch's ancestry.
+PR #25 at 4148d5504ae262afb96a3e96f3f7f44ad9c6b9a8 is also integrated as a branch dependency.
+Merge order is PR26, PR25, then PR24, subject to owner review and coordinator decisions.
+Ujjwal must review private storage, migration, run-based cancellation, configuration, and dependency wiring.
+No shared-schema version change or supplier transaction is included.
 
-Local assertions checked structured-result fields and types, enum values, event identity, two-source bound, event sequences 1 through 53, and the observed tool allowlist.
-Documentation checks covered ASCII, embedded JSON, local links, whitespace, and credential-pattern scanning.
-That earlier documentation-only report ran no application build or test suite; package.json had no test script then.
-The evaluation session is canceled, the evaluation agent is deleted, and GET of its computer returned null.
-Both Monid runs are terminal, with no persistent resource provisioned by either search.
-Temporary SDK dependencies were removed, while credential-free snapshots remain under `/tmp/we-gotchu-agent-research` for local review.
-The existing .entire metadata was preserved.
+## Supplier detail research
 
-## Contracts and next steps
+[PR #25](https://github.com/22Ujjwal/we-gotchu/pull/25) is on branch at 4148d5504ae262afb96a3e96f3f7f44ad9c6b9a8.
+Its GitHub check passed at that exact head.
+Its owner reports 161 tests, typecheck, and build passing on the integrated route-repair head.
+Five reproduced review behaviors were fixed, and all seven comments are accounted for in the [detail evidence ledger](../../research/supplier-detail-evidence.md).
+Transport consolidation was deferred with evidence rather than treated as a required architecture rewrite.
+Canonical enrichment uses ResearchProviders['enrich'] and the investigating stage.
+Owner re-review remains pending.
 
-The [research specification](../../../.scratch/specs/agent-research.md) is approved and merged through PR #11.
-Tony approved six implementation slices covering discovery, supplier details, recommendations, brief changes, progress, and recovery.
-The local implementation tracker publishes those slices separately with explicit dependencies.
-Ujjwal's PR #16 merged shared schemas, fixtures, Vitest, and CI configuration.
-Database and MCP integration remain separate work.
-His proposed backend changes require review and do not establish a working integration.
-Leo's PR #12 provides an application shell and contract questions, not the research interface.
+The historical live detail smoke at 6ceb165 returned six candidates and recommendations with partial outcome, unknown budget fit, null total price estimates, sourced listing/pack notes, and confirmed cleanup.
+That earlier smoke is not proof of the later review fixes or the combined application path.
+Those fixes were tested with controlled providers, without new live calls.
 
-The research workflow now codes against the merged contract 0.4; provenance rule changes go to Ujjwal as contract changes.
-Tony can next implement quantity normalization, semantic evidence validation, and progress persistence using shared fixtures.
-Ujjwal must provide the guarded transaction interface and exact-action approval checks before supplier execution.
-Approval denial and call-scoped resume, budget exhaustion, forced disconnect and crash recovery, and Naive-to-provider MCP remain untested.
-The research worker must reject unsupported cost and availability claims even when the JSON schema passes.
-Supplier access, secure checkout, confirmations, cancellation terms, and reconciliation remain separate blockers to live commitments.
+## Development coordination tools
+
+[PR #23](https://github.com/22Ujjwal/we-gotchu/pull/23) is on branch at d17c8397a32a18c9c77f8efc3a0591de2e3db8b3 and is ready for review according to its owner handoff.
+The owner reports a successful GitHub check at that head, 22 standalone tests on Node 22.23.4 and 26.6.0, and 135 application tests plus typecheck/build with Bun 1.4.4.
+A manual live refresh completed with 11 documents and 29 items.
+See its pinned [verification record](https://github.com/22Ujjwal/we-gotchu/blob/d17c8397a32a18c9c77f8efc3a0591de2e3db8b3/docs/team/coordination-setup/verification.md) and [review ledger](https://github.com/22Ujjwal/we-gotchu/blob/d17c8397a32a18c9c77f8efc3a0591de2e3db8b3/docs/team/coordination-setup/review-ledger.md).
+
+That PR provides a manually refreshed, read-only review queue and chief/lead prompts.
+It does not launch background agents, send teammate messages, learn preferences, or merge automatically.
+Its eight review comments are accounted for through fixes, the coordinated PR27 CI work, and this single-writer shared status update.
+PR26/PR27 dependencies and Ujjwal's shared-file review remain coordinator responsibilities.
+This session has not independently approved or merged PR23.
+
+## Earlier merged evidence and remaining limits
+
+PR #18 merged the standalone ticket01 workflow against shared contract 0.4.
+Its historical live smoke retrieved six source-backed candidates and used one bounded ranking correction, with unknown final costs.
+Its evaluation session and definition were cleaned up.
+That evidence does not establish supplier availability, final quotes, booking, payment, cancellation terms, or refunds.
+
+The current work remains read-only supplier research.
+Full crash recovery, forced disconnect recovery, automatic reconciliation of unknown provider resources, model-quality evaluation, and deployed application verification remain unproven.
+Supplier outreach, commitments, payment, execution, and refunds remain outside these research PRs.
+The .entire metadata has remained unread and unchanged.

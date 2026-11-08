@@ -25,7 +25,7 @@ function transport(options: { productFails?: boolean; invalidRanking?: boolean; 
     else if (path.endsWith('/sessions') && init?.method === 'POST') response = { id: 'ses', status: 'queued' }
     else if (path.endsWith('/messages')) response = { accepted_seq: 2 }
     else if (path.endsWith('/cancel')) response = { id: 'ses', status: 'cancelled' }
-    else if (init?.method === 'DELETE') response = { deleted: true }
+    else if (init?.method === 'DELETE') response = { id: 'agt', deleted: true }
     else if (path.endsWith('/sessions/ses')) response = {
       id: 'ses', status: 'idle', stop_reason: 'end_turn', last_seq: requests.length,
       structured_output: options.invalidRanking ? { candidateIds: ['fake'], budgetFit: 'within' } : { candidateIds: ['venue:hall'] },

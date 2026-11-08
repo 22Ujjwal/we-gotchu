@@ -10,6 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run coordination tests when present
+        shell: bash
+        run: |
+          shopt -s nullglob
+          tests=(tools/team-coordination/*.test.mjs)
+          if ((${#tests[@]})); then
+            node --test "${tests[@]}"
+          else
+            echo 'Coordination tests activate when PR23 test files are present.'
+          fi
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run typecheck

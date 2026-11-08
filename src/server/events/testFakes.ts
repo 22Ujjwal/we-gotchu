@@ -99,9 +99,9 @@ export class MemoryStore implements Store {
     const run = this.newRun(eventId, 'research', event.briefRevision, `${eventId}:research:${event.briefRevision}`)
     return { ok: true as const, event: { ...event }, run: { ...run }, previousRun }
   }
-  async setEventStatus(eventId: string, from: readonly Event['status'][], to: Event['status']) {
+  async setEventStatus(eventId: string, from: readonly Event['status'][], to: Event['status'], expectedBriefRevision?: number) {
     const e = this.events.get(eventId)
-    if (!e || !from.includes(e.status)) return false
+    if (!e || !from.includes(e.status) || (expectedBriefRevision !== undefined && e.briefRevision !== expectedBriefRevision)) return false
     e.status = to
     return true
   }
@@ -135,8 +135,9 @@ export class MemoryStore implements Store {
     r.advancingUntil = new Date(now.getTime() + leaseMs).toISOString()
     return { ...r }
   }
-  async releaseRunAdvance(runId: string, lastSequence: number) {
+  async releaseRunAdvance(runId: string, lastSequence: number, lease?: string | null) {
     const r = this.runs.get(runId)!
+    if (lease && r.advancingUntil !== lease) return
     r.advancingUntil = null
     r.lastSequence = Math.max(r.lastSequence, lastSequence)
   }
@@ -152,18 +153,20 @@ export class MemoryStore implements Store {
     r.state = to
     return true
   }
-  async publishResearchResult(result: ResearchResult) {
+  async publishResearchResult(result: ResearchResult, lease?: string | null, lastSequence = 0) {
     const run = this.runs.get(result.runId)
     const event = this.events.get(result.eventId)
     if (!run || !event) return { ok: false as const, reason: 'not_found' as const }
     if (this.results.has(run.runId)) return { ok: false as const, reason: 'duplicate' as const }
-    if (run.state !== 'running') return { ok: false as const, reason: 'run_not_active' as const }
-    if (run.briefRevision !== event.briefRevision || result.briefRevision !== event.briefRevision) {
+    if (run.state !== 'running' || (lease && (run.advancingUntil !== lease || new Date(lease) <= this.now()))) return { ok: false as const, reason: 'run_not_active' as const }
+    if (event.cancelRequestedAt || run.briefRevision !== event.briefRevision || result.briefRevision !== event.briefRevision) {
       return { ok: false as const, reason: 'stale_brief' as const }
     }
     this.results.set(run.runId, structuredClone(result))
     const runState = { success: 'succeeded', partial: 'partial', awaiting_input: 'awaiting_input', failed: 'failed', canceled: 'canceled' } as const
     run.state = runState[result.outcome]
+    run.lastSequence = Math.max(run.lastSequence, lastSequence)
+    run.advancingUntil = null
     if (result.outcome === 'awaiting_input') event.status = 'needs_input'
     if (result.outcome === 'failed') event.status = 'failed'
     if (result.outcome === 'canceled') event.status = 'canceled'

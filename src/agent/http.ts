@@ -1,5 +1,11 @@
 import { setTimeout } from 'node:timers/promises'
 
+export class ProviderHttpError extends Error {
+  constructor(readonly status: number, readonly code?: string) {
+    super(`Research provider HTTP ${status}`)
+  }
+}
+
 export async function requestJson(
   fetcher: typeof fetch, url: string, key: string, signal: AbortSignal,
   body?: unknown, idempotencyKey?: string, method = body === undefined ? 'GET' : 'POST',
@@ -14,7 +20,11 @@ export async function requestJson(
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
-  if (!response.ok) throw new Error(`Research provider HTTP ${response.status}`)
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { code?: unknown }; code?: unknown } | null
+    const code = body?.error?.code ?? body?.code
+    throw new ProviderHttpError(response.status, typeof code === 'string' ? code : undefined)
+  }
   return response.json()
 }
 

@@ -7,18 +7,33 @@ export type Discovery = {
   warnings?: string[]
 }
 export type ResearchProviders = {
+  enrich?: (input: ResearchInput, evidence: Discovery, signal: AbortSignal) => Promise<Discovery>
   discover: (input: ResearchInput, signal: AbortSignal) => Promise<Discovery>
   recommend: (input: ResearchInput, candidates: Candidate[], signal: AbortSignal, correction: boolean) => Promise<unknown>
 }
 export type ResearchOptions = {
   timeoutMs?: number
+  detailTimeoutMs?: number
+  rankingReserveMs?: number
   signal?: AbortSignal
-  onProgress?: (stage: 'discovering' | 'recommending' | 'finished') => void
+  onProgress?: (stage: 'discovering' | 'investigating' | 'recommending' | 'finished') => void
 }
 
 // The model may select and order evidence, but cannot author supplier facts.
 export const Ranking = z.object({ candidateIds: z.array(z.string().min(1)).min(1) }).strict()
 const MAX_CANDIDATES = 12
+
+// Detail prose is evidence for the reader, not input to the ordering model.
+// Retain discovery names for relevance; this does not certify them as injection-free.
+export function rankingCandidates(candidates: Candidate[]): Candidate[] {
+  return candidates.map(candidate => ({
+    ...candidate,
+    verification: Object.fromEntries(Object.entries(candidate.verification).map(([field, value]) => [field, { status: value.status }])),
+    cancellationTerms: { known: candidate.cancellationTerms.known },
+    affiliateDisclosure: undefined,
+    whyChosenOrRejected: 'Candidate retrieved for the brief; unverified requirements remain unknown.',
+  }))
+}
 
 export async function researchEvent(
   rawInput: unknown,
@@ -47,27 +62,33 @@ export async function researchEvent(
   const input = parsed.data
   const timeoutMs = options.timeoutMs ?? 120_000
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) throw new Error('Research timeout must be a positive integer')
+  const detailTimeoutMs = options.detailTimeoutMs ?? 45_000
+  const rankingReserveMs = options.rankingReserveMs ?? Math.max(1, Math.min(30_000, Math.floor(timeoutMs / 2)))
+  if (![detailTimeoutMs, rankingReserveMs].every(value => Number.isSafeInteger(value) && value > 0)) {
+    throw new Error('Detail timeout and ranking reserve must be positive integers')
+  }
+  const startedAt = Date.now()
   const deadline = AbortSignal.timeout(timeoutMs)
   const signal = options.signal ? AbortSignal.any([deadline, options.signal]) : deadline
   let evidence: Discovery = { candidates: [], sourceChecks: [] }
   const withEvidenceWarnings = (...warnings: string[]) => [...(evidence.warnings ?? []), ...warnings]
   const progress = (stage: Parameters<NonNullable<ResearchOptions['onProgress']>>[0]) => options.onProgress?.(stage)
   // A provider must honor the signal; the race also bounds a faulty provider's wait.
-  const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
-    signal.throwIfAborted()
+  const bounded = async <T>(operation: () => Promise<T>, operationSignal = signal): Promise<T> => {
+    operationSignal.throwIfAborted()
     let stop: () => void = () => {}
     const aborted = new Promise<never>((_, reject) => {
       stop = () => reject(new Error('Research interrupted'))
-      signal.addEventListener('abort', stop, { once: true })
+      operationSignal.addEventListener('abort', stop, { once: true })
     })
     try { return await Promise.race([operation(), aborted]) }
-    finally { signal.removeEventListener('abort', stop) }
+    finally { operationSignal.removeEventListener('abort', stop) }
   }
   try {
     progress('discovering')
     const discovery = await bounded(() => providers.discover(input, signal))
     const ids = new Set<string>()
-    const candidates: Candidate[] = []
+    let candidates: Candidate[] = []
     let skipped = 0
     // One malformed or repeated search result must not discard the rest of the evidence.
     for (const raw of discovery.candidates) {
@@ -82,10 +103,36 @@ export async function researchEvent(
       warnings: [...(discovery.warnings ?? []), ...(skipped ? [`${skipped} invalid or duplicate discovery results were skipped.`] : [])],
     }
     if (!candidates.length) return { ...base, sourceChecks: evidence.sourceChecks, warnings: withEvidenceWarnings('No usable supplier candidates were found.') }
+    if (providers.enrich) {
+      progress('investigating')
+      const detailBudget = Math.min(detailTimeoutMs, timeoutMs - (Date.now() - startedAt) - rankingReserveMs)
+      if (detailBudget > 1) {
+        // Abort cooperative adapters first so they can return already gathered evidence.
+        // The separate hard deadline also bounds a provider that ignores cancellation.
+        const grace = Math.min(50, Math.max(1, Math.floor(detailBudget / 4)))
+        const detailSignal = AbortSignal.any([signal, AbortSignal.timeout(detailBudget - grace)])
+        const hardSignal = AbortSignal.any([signal, AbortSignal.timeout(detailBudget)])
+        try {
+          const enriched = await bounded(() => providers.enrich!(input, structuredClone(evidence), detailSignal), hardSignal)
+          const validated = ResearchResult.parse({ ...base, ...enriched })
+          if (validated.candidates.length !== candidates.length || validated.candidates.some((c, i) =>
+            c.candidateId !== candidates[i].candidateId || c.supplierId !== candidates[i].supplierId || c.kind !== candidates[i].kind)) {
+            throw new Error('Detail enrichment changed candidate identities')
+          }
+          evidence = { candidates: validated.candidates, sourceChecks: validated.sourceChecks, warnings: validated.warnings }
+          candidates = evidence.candidates
+        } catch {
+          signal.throwIfAborted()
+          evidence.warnings = withEvidenceWarnings('Detail investigation did not finish safely; ranking uses discovery evidence.')
+        }
+      } else {
+        evidence.warnings = withEvidenceWarnings('Detail investigation was skipped to reserve time for ranking.')
+      }
+    }
     progress('recommending')
     let ranking: z.infer<typeof Ranking> | undefined
     for (let turn = 0; turn < 2; turn++) {
-      const output = Ranking.safeParse(await bounded(() => providers.recommend(input, candidates, signal, turn === 1)))
+      const output = Ranking.safeParse(await bounded(() => providers.recommend(input, rankingCandidates(candidates), signal, turn === 1)))
       if (output.success && output.data.candidateIds.every(id => ids.has(id)) &&
           new Set(output.data.candidateIds).size === output.data.candidateIds.length) {
         ranking = output.data
@@ -101,7 +148,7 @@ export async function researchEvent(
       ...base, ...evidence, outcome: 'partial',
       recommendations: ordered.map((candidateId, index) => ({
         candidateId, rank: index + 1, matched: [], unmet: [],
-        unchecked: ['Price, schedule, capacity, and cancellation terms need supplier-detail verification.'],
+        unchecked: ['Final costs, event-date availability, capacity fit, required quantities, and cancellation terms remain unconfirmed.'],
       })),
       warnings: withEvidenceWarnings('Discovery candidates are not confirmed bookings or final quotes.'),
     })
