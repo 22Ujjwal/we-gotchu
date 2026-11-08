@@ -13,7 +13,8 @@ The workflow emits `investigating` before calling it and validates its result be
 Callers that omit it retain discovery-only behavior.
 Ticket05 can consume the same adapter through its own durable execution boundary; this in-process function does not supply persistence or crash recovery.
 
-The adapter alternates venues and supplies in discovery order, selecting two candidates by default.
+The adapter alternates venues and supplies in discovery order, attempting two eligible candidates by default.
+Unsupported identities and missing or unsupported websites do not consume that allowance.
 This is a bounded selection policy, not a claim that these are the best suppliers.
 Each selected product gets one Channel3 detail request.
 Each selected venue gets its source page and at most one linked informational page on the same hostname, allowing only a www prefix difference.
@@ -32,7 +33,8 @@ Affiliate disclosures from search and detail are retained.
 Listing stock is an attributed observation and never establishes event-date availability or delivery.
 
 A narrow, complete product feature such as "Includes 20 plates" is retained in `verification.packSize.note` with its API source.
-Contradictory supported statements produce `conflict`.
+Contradictory counts for the same unit produce `conflict`.
+Punctuation differences and counts for different units do not conflict.
 Other wording remains unknown instead of relying on a broad quantity regex.
 No `quantityInfo` is created because that contract field also requires needed units and packs, which belong to ticket03.
 Ticket03 must not treat a product feature as a completed quantity calculation.
@@ -40,16 +42,23 @@ Ticket03 must not treat a product feature as a completed quantity calculation.
 Venue keyword matches only select bounded excerpts for review.
 They never establish numerical capacity, price, cancellation rights, or availability.
 Each excerpt remains `unknown`, identifies its source URL, and says it is unverified supplier-page text.
+The first matched excerpt for a field survives later pages, while later pages can fill fields without an earlier match.
 Missing statements, failed responses, and checks that require further verification or supplier contact remain explicit.
 No supplier contact occurs.
 Successful sources include retrieval timestamps; failed attempts record their check time and provider run reference when available.
 
 ## Limits and safety
 
-Defaults allow at most three detail creations, two venue pages and one product record.
+For a mixed eligible venue and supply selection, defaults allow three detail creations, two venue pages and one product record.
+If both selected candidates are venues, the page-count ceiling is four creations, still bounded by the detail deadline.
 Configuration permits one to six selected candidates and one or two pages per venue.
 Each creation can have at most twenty status reads, a 25-second deadline by default, and a configured maximum deadline of 30 seconds.
 The overall workflow retains its separate deadline.
+The standalone workflow caps enrichment at 45 seconds by default and reserves up to 30 seconds, or half the configured overall timeout, for ranking.
+It reduces the detail allowance further when discovery consumes time.
+A cooperative detail abort precedes the hard cutoff by at most 50 milliseconds so the adapter can return completed pages and failed checks.
+Throwing, identity-changing, or noncooperative enrichment falls back to discovery with a warning, then ranking continues if the run remains active.
+Discovery itself can still exhaust the overall deadline; this reserve limits enrichment, not the separate discovery budget.
 There is no automatic retry of a creation whose outcome is uncertain.
 A timed-out hosted run may continue remotely; its known run reference is recorded for reconciliation.
 These read-only endpoints do not provision persistent supplier resources.
@@ -66,6 +75,10 @@ Off-site returned content is rejected rather than used as supplier evidence.
 Provider bodies and exceptions never become customer-visible error strings.
 Supplier content is untrusted data, and only fixed read-only endpoints can execute.
 The ranking model still orders existing IDs and cannot author supplier facts or select supplier tools.
+The exported `rankingCandidates` projection removes verification prose and field source links, affiliate disclosure text, and cancellation summary text before both initial and corrective ranking.
+It replaces rationale text with a fixed sentence and keeps the original evidence for the returned research result.
+Discovery names and source references remain available for relevance, so this closes the newly added detail-prose path without claiming universal prompt-injection resistance.
+PR24 must apply the same projection before hosted session submission.
 
 ## Provider choice
 
@@ -133,6 +146,37 @@ Naive cleanup reported no errors after cancellation and deletion of the evaluati
 Local evidence is `/tmp/we-gotchu-ticket02-final-result.json`, `/tmp/we-gotchu-ticket02-final-checkpoint.json`, and `/tmp/ticket02-price-final-live.log`.
 Private raw snapshots are not committed.
 
-The final implementation's controlled suite has 151 tests, including 16 detail cases.
+Before review fixes, the controlled suite had 151 tests, including 16 detail cases.
 Full-app integration, crash recovery, bookability, payment, supplier contact, and exact event terms remain unverified.
 An overall research interruption may return discovery evidence before an in-flight detail result is accepted; per-call detail failures are recorded when enrichment finishes.
+
+
+## Review disposition
+
+All seven inline comments in review 5816228639 were read, along with the complete PR review and conversation lists.
+Controlled workflow regressions reproduced the reported behavior before the fixes.
+No new live provider calls were made for these review changes; the earlier live evidence above remains historical.
+
+| Comment | Disposition | Evidence |
+| --- | --- | --- |
+| [4504742519](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742519) | Fixed with a bounded detail phase and ranking reserve | Tests cover a stalled second page, preserved completed evidence, a larger configured detail budget, thrown enrichment, identity mismatch, and noncooperative enrichment |
+| [4504742520](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742520) | Fixed by counting only eligible attempted candidates | A Maps fallback followed by an eligible venue now yields venue and product detail within the two-candidate allowance |
+| [4504742524](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742524) | Fixed narrowly through the shared ranking projection | Hostile capacity text and disclosure stay in returned evidence but are absent from the ranker's received candidates |
+| [4504742526](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742526) | Fixed by preserving the first matched excerpt per field | A specific homepage capacity excerpt survives a generic guests sentence on the second page |
+| [4504742530](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742530) | Fixed by comparing numeric counts within each unit | Punctuation and different units agree; different counts for plates still conflict |
+| [4504742533](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742533) | Shared transport extraction deferred | No behavioral defect was identified in the duplication; consolidating discovery and shared HTTP would also change status validation, response bounds, polling limits, and failure-provenance behavior during concurrent lifecycle work |
+| [4504742537](https://github.com/22Ujjwal/we-gotchu/pull/25#discussion_r4504742537) | Ticket updated here; shared status handed to PR24 owner | Ticket02 is marked implemented on branch, and Tony assigned PR24 the final integration README and shared status edits |
+
+The transport-refactor suggestion would reduce future drift, but it is not required for these behavior fixes.
+The two paths currently differ deliberately in response-byte caps, accepted status validation, polling bounds, and retained failure run references.
+A future consolidation should preserve those behaviors with the discovery and detail workflow tests and coordinate the shared HTTP ownership.
+The verification field lists are also not identical: listing-only facts and event requirements have different missing-field semantics.
+No owner approval is inferred from this deferral.
+
+The canonical enrichment type remains `ResearchProviders['enrich']`, taking input, discovery evidence, and an AbortSignal and returning Discovery.
+The canonical progress and durable integration stage is `investigating`.
+PR24 owns durable request budgeting, lifecycle requests, default adapter wiring, and combined integration verification.
+The shared route repair commit `60e20a03cc2cb9bf10782ab905e39d23836d2485` from PR26 is now merged into this feature branch, without an independent regeneration.
+The earlier baseline failure above is historical; final branch checks use the actual integrated route file.
+PR26 must land first, and Ujjwal's ownership review remains pending.
+No PR or main branch has been merged by this work.
