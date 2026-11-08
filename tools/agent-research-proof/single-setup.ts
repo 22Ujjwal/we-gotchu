@@ -4,8 +4,8 @@ import { isDeepStrictEqual } from 'node:util'
 import { singlePlannerDefinition } from '../../src/agent/planning/single'
 import { createPlanningFetch } from '../../src/agent/planning/transport'
 
-const model = process.env.NAIVE_MODEL
-if (!model) throw new Error('NAIVE_MODEL is required')
+const model = process.env.NAIVE_PLANNING_MODEL ?? process.env.NAIVE_MODEL
+if (!model) throw new Error('NAIVE_PLANNING_MODEL or NAIVE_MODEL is required')
 const desired = singlePlannerDefinition(model)
 if (process.env.RESEARCH_LIVE_SMOKE !== '1') {
   console.log(JSON.stringify({ mode: 'dry-run', name: desired.name, model, startsSessions: false, changesTeam: false }))
