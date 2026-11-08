@@ -28,7 +28,7 @@ export function EventPage({ eventId, identity, paid = false, onCheckout = (url) 
   return <EventSessionPage key={`${identity}:${eventId}`} eventId={eventId} identity={identity} onCheckout={onCheckout} signIn={signIn} paid={paid} />
 }
 
-function Loading() {
+export function Loading() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step="setting" />
@@ -37,7 +37,7 @@ function Loading() {
   )
 }
 
-function Notice({ title, action, step = 'setting' }: { title: string; action: ReactNode; step?: 'setting' | 'party' }) {
+export function Notice({ title, action, step = 'setting' }: { title: string; action: ReactNode; step?: 'setting' | 'party' }) {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step={step} />
@@ -94,6 +94,7 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid }: {
         order={settings.order(settings.planned)}
         place={event.brief.location}
         timezone={event.brief.timezone}
+        receiptsHref={`/events/${encodeURIComponent(eventId)}/receipts`}
         incomplete={event.status !== 'booked' ||
           view.attempts.some((a) => a.kind === 'commit' && a.state !== 'succeeded')}
       />

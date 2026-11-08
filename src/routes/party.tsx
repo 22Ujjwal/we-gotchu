@@ -42,6 +42,7 @@ function PreviewPartyPage() {
       extras={extras}
       place={`${venue.neighbourhood}, Berlin`}
       timezone="Europe/Berlin"
+      receiptsHref="/receipts"
     />
   )
 }
