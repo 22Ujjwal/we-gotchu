@@ -77,3 +77,15 @@ A conflict retains typed answers and the original revision even after automatic 
 Closing the editor and reopening it loads the current brief for a deliberate new edit.
 Focused regression tests failed before the fixes and passed afterward.
 These checks remain controlled HTTP component tests, not live deployment evidence.
+
+## Additional independent review
+
+An unchanged Update brief previously sent an empty PATCH, which starts another revision on the server.
+The screen now closes the editor without a request when no fields changed.
+Conflict recovery now offers the latest saved answers and an explicit Apply my edits to the latest revision action.
+That action keeps typed input and the original comparison baseline, so only fields the user edited are submitted.
+Automatic polling and repeated Edit brief clicks still cannot silently advance the captured revision.
+The controlled-server regression confirms successful saving at revision 3 while preserving another tab's headcount change.
+Pending Checkout reads now run every five seconds; research and other active states retain the one-second cadence.
+Uncertain creation explains that an event may already exist and blocks retry instead of directing the host to an unavailable event page.
+No server, contract, payment, or provider behavior changed in these corrections.
