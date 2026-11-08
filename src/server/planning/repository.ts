@@ -50,7 +50,7 @@ export function createPlanningRepository(db: PgDatabase<PgQueryResultHKT, typeof
       // recovery slot forever while a later conversation has a ready reply.
       // A reserved follow-up (including uncertain sends) must never be retried here.
       const rows = await db.select().from(table).where(sql`
-        ${table.data}->'view'->'arrangement'->>'status' IN ('requested', 'preparing')
+        ${table.data}->'view'->'arrangement'->>'status' IN ('requested', 'preparing', 'awaiting_offer_confirmation')
         OR (
           ${table.data}->'view'->'arrangement'->>'status' = 'awaiting_reply'
           AND (${table.data}->>'pending') IS NULL

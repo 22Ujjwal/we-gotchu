@@ -55,3 +55,67 @@ export async function finishVendorConfirmation(repository: PlanningRepository, p
       `View your arrangement: ${appUrl.replace(/\/$/, '')}/planning/${encodeURIComponent(record.id)}`].join('\n\n'),
   })
 }
+
+// The approval is tied to an immutable offer revision; the reply must target its confirmation request.
+export async function requestOfferConfirmation(repository: PlanningRepository, transport: SupplierMailTransport,
+  record: PlanningRecord, recipient: string): Promise<void> {
+  const offer = record.view.offer
+  const approval = record.view.offerApproval
+  if (!offer || approval?.offerId !== offer.id || approval.offerRevision !== offer.revision || record.view.paymentLink
+    || record.view.arrangement?.status !== 'awaiting_offer_confirmation') return
+  const { calculateOfferCosts } = await import('../../agent/planning/offer-contract')
+  const { formatPaymentAmount } = await import('../../lib/payment-money')
+  const costs = calculateOfferCosts(offer)
+  if (!costs.ok || offer.missing.length) return
+  const money = (amount: number) => formatPaymentAmount(amount, offer.currency)
+  const key = `hold:${offer.id}:${offer.revision}`
+  await sendVendorNote(repository, transport, record, recipient, {
+    key, subject: `Please confirm approved terms for ${record.view.selections.find(option => option.kind === 'venue')?.name ?? 'our event'}`,
+    text: [
+      'The customer approved the following offer. Before payment, please confirm availability and that every term below remains unchanged.',
+      `${offer.brief.startsAt}, ${offer.brief.timezone}, ${offer.brief.headcount} guests.`,
+      ...offer.lines.map((line, index) => `${line.option.name}: ${line.quantityDescription}. Line total ${money(costs.amounts[index])}. Deposit ${money(line.deposit.amount!)} ${line.deposit.treatment}. Cancellation: ${line.cancellationTerms}`),
+      `Total including all quoted charges: ${money(costs.total)}.`,
+      'Please reply in this thread with confirmation of the unchanged terms and availability, or explain any changes. Can you hold this offer while the customer completes payment?',
+      'This requests confirmation only. No payment or binding reservation is authorized.',
+    ].join('\n\n'),
+  })
+}
+
+export async function processSupplierDecision(repository: PlanningRepository, provider: MailProvider,
+  record: PlanningRecord, appUrl: string): Promise<void> {
+  const reply = record.view.inquiry?.replies?.at(-1)
+  const arrangement = record.view.arrangement
+  if (!reply || reply.status !== 'ready' || !arrangement?.controlled || arrangement.status === 'stale' || record.view.paymentLink) return
+  const interpretation = reply.interpretation
+  const link = `${appUrl.replace(/\/$/, '')}/planning/${encodeURIComponent(record.id)}`
+  if (interpretation?.kind === 'question' || interpretation?.kind === 'refusal') {
+    const text = `${interpretation.summary}\n\n${interpretation.nextAction}`
+    const current = await repository.getById(record.id)
+    if (!current || current.view.inquiry?.replies?.at(-1)?.id !== reply.id) return
+    const saved = current.view.supplierQuestion?.replyId === reply.id ? current
+      : await repository.compareAndSet(current, { ...current, view: { ...current.view, version: current.view.version + 1,
+        supplierQuestion: { replyId: reply.id, text }, offerApproval: undefined } })
+    if (!saved) throw new Error('The supplier question changed before it could be saved.')
+    await sendCustomerNotification(repository, provider, saved, `${arrangement.id}:question:${reply.id}`, {
+      subject: 'Your arrangement needs your input', text: `${text}\n\nReview and answer securely: ${link}\n\nNo payment or booking has been made.`,
+    })
+    return
+  }
+  const approval = record.view.offerApproval
+  const offer = record.view.offer
+  if (!offer || approval?.offerId !== offer.id || approval.offerRevision !== offer.revision
+    || interpretation?.kind !== 'confirmation' || interpretation.confirmsApprovedOffer !== true || interpretation.missing.length
+    || !interpretation.facts.some(fact => fact.field === 'availability')
+    || Date.parse(reply.message.receivedAt) < Date.parse(approval.approvedAt)) return
+  const sent = record.vendorNotes?.[`hold:${offer.id}:${offer.revision}`]?.result
+  if (sent?.status !== 'accepted' || !(reply.message.inReplyTo === sent.messageId || reply.message.references?.includes(sent.messageId))) return
+  const saved = approval.confirmedReplyId === reply.id ? record : await repository.compareAndSet(record, { ...record,
+    view: { ...record.view, version: record.view.version + 1, offerApproval: { ...approval, confirmedReplyId: reply.id },
+      arrangement: { ...arrangement, status: 'offer_ready', detail: 'The supplier confirmed your approved terms and availability. You can now continue to sandbox payment.' } } })
+  if (!saved) throw new Error('The approved offer changed before confirmation was saved.')
+  await sendCustomerNotification(repository, provider, saved, `${arrangement.id}:payment-ready:${offer.id}:${offer.revision}`, {
+    subject: 'Your approved arrangement is ready for payment',
+    text: `The supplier confirmed the terms and availability for your approved offer.\n\nContinue to sandbox payment: ${link}\n\nNo payment or real booking has been made.`,
+  })
+}

@@ -4,8 +4,8 @@ import { arrangementAcknowledgment, notifySupplierOffer, sendCustomerNotificatio
 import { waitUntil } from '@vercel/functions'
 import { createCompanyTools } from './company-tools'
 import { createCompanyWebhook } from './company-webhook'
-import { finishVendorConfirmation } from './vendor-coordination'
-import { continueCompanyReply, prepareCompanyInquiry } from './company-preparation'
+import { finishVendorConfirmation, requestOfferConfirmation, processSupplierDecision } from './vendor-coordination'
+import { continueCompanyReply, continueCompanyAnswer, prepareCompanyInquiry } from './company-preparation'
 import { dispatchReplyProcessing, withReplyProcessing } from './reply-dispatch'
 import { createConfiguredPlanningAgent } from '../../agent/planning/provider'
 import { requireCustomerId } from '../auth'
@@ -55,7 +55,12 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
       if (record?.view.arrangement && record.view.inquiry?.id === job.inquiryId) records.set(record.id, record)
     }
     await Promise.all([...records.values()].map(async record => {
-      if (record.view.inquiry?.delivery) await continueCompanyReply(saved.repository, record, env)
+      if (record.view.arrangement?.status === 'awaiting_offer_confirmation') {
+        const transport = (await getMail())?.transport
+        if (transport && env.PLANNING_TEST_SUPPLIER_EMAIL) await requestOfferConfirmation(saved.repository, transport, record, env.PLANNING_TEST_SUPPLIER_EMAIL)
+      }
+      if (record.view.supplierQuestion?.answer) await continueCompanyAnswer(saved.repository, record, env)
+      if (record.view.inquiry?.delivery && record.view.inquiry.replies?.length) await continueCompanyReply(saved.repository, record, env)
       else await prepareCompanyInquiry(saved.repository, record, env)
     }))
     return { processed: records.size }
@@ -101,6 +106,10 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
             await finishVendorConfirmation(saved.repository,
               createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY, inboxId: env.AGENTMAIL_INBOX_ID }), record, env.APP_URL ?? 'http://localhost:3000')
           },
+        }, async record => {
+          if (!env.AGENTMAIL_API_KEY || !env.AGENTMAIL_INBOX_ID) return
+          await processSupplierDecision(saved.repository,
+            createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY, inboxId: env.AGENTMAIL_INBOX_ID }), record, env.APP_URL ?? 'http://localhost:3000')
         })
     },
     async notifyPayment(checkoutSessionId: string) {
@@ -115,6 +124,16 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     async getDeps(): Promise<PlanningDeps> {
       return { repository: (await getStorage()).repository, offers: (await getStorage()).offers,
         mail: (await getMail())?.transport, requireCustomerId,
+        approveOffer: record => {
+          waitUntil(getStorage().then(async saved => {
+            const transport = (await getMail())?.transport
+            if (transport && env.PLANNING_TEST_SUPPLIER_EMAIL) await requestOfferConfirmation(saved.repository, transport, record, env.PLANNING_TEST_SUPPLIER_EMAIL)
+          }).catch(() => console.error('[planning] approved offer confirmation request needs recovery')))
+        },
+        answerSupplier: record => {
+          waitUntil(getStorage().then(saved => continueCompanyAnswer(saved.repository, record, env))
+            .catch(() => console.error('[planning] customer answer delivery needs recovery')))
+        },
         refreshArrangement: async record => refreshCompanyStatus((await getStorage()).repository, record, env),
         ...(env.PLANNING_TEST_SUPPLIER_EMAIL ? { testSupplierEmail: env.PLANNING_TEST_SUPPLIER_EMAIL } : {}),
         ...(env.NAIVE_COMPANY_AGENT_ID && env.PLANNING_TOOLS_SECRET && env.NAIVE_API_KEY

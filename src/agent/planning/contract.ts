@@ -48,13 +48,15 @@ export const planningCreateSchema = z.object({ requestId, message: text.max(8000
 const version = z.number().int().nonnegative()
 export const arrangementSchema = z.object({
   id: text, inquiryId: text, requestedAt: z.iso.datetime(),
-  status: z.enum(['requested', 'preparing', 'awaiting_reply', 'needs_attention', 'offer_ready', 'awaiting_vendor_confirmation', 'vendor_confirmed', 'stale']),
+  status: z.enum(['requested', 'preparing', 'awaiting_reply', 'needs_attention', 'offer_ready', 'awaiting_offer_confirmation', 'awaiting_vendor_confirmation', 'vendor_confirmed', 'stale']),
   selections: z.array(planningOptionSchema), detail: text, customerEmail: z.email().max(254).optional(), controlled: z.boolean().optional(),
 }).strict()
 
 export const planningCommandSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('arrange'), requestId, expectedVersion: version, customerEmail: z.email().max(254) }).strict(),
   z.object({ kind: z.literal('release_payment'), requestId, expectedVersion: version, eventId: text }).strict(),
+  z.object({ kind: z.literal('approve_offer'), requestId, expectedVersion: version, offerId: text, offerRevision: z.number().int().positive() }).strict(),
+  z.object({ kind: z.literal('answer_supplier'), requestId, expectedVersion: version, replyId: text, answer: text.max(2000) }).strict(),
   z.object({ kind: z.literal('prepare_payment'), requestId, expectedVersion: version, offerId: text, offerRevision: z.number().int().positive() }).strict(),
   z.object({ kind: z.literal('retry_reply'), requestId, expectedVersion: version, inquiryId: text, replyId: text }).strict(),
   z.object({ kind: z.literal('send_inquiry'), requestId, expectedVersion: version,
@@ -85,6 +87,8 @@ export type PlanningView = {
   inquiry?: PlanningInquiry
   arrangement?: z.infer<typeof arrangementSchema>
   offer?: SelectedOffer
+  offerApproval?: { offerId: string; offerRevision: number; approvedAt: string; confirmedReplyId?: string }
+  supplierQuestion?: { replyId: string; text: string; answer?: string; answerRequestId?: string }
   paymentLink?: PlanningPaymentLink
   progress: string | null
   error: string | null

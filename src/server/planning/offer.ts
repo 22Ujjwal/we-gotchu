@@ -53,6 +53,14 @@ export function buildSelectedOfferPlan(input: Input): Result {
   return plan.success ? { ok: true, plan: plan.data } : fail('The offer could not be converted to a transaction plan.')
 }
 
+export function supplierConfirmedOffer(view: import('../../agent/planning/contract').PlanningView): boolean {
+  const approval = view.offerApproval
+  const reply = view.inquiry?.replies?.at(-1)
+  return !!view.offer && approval?.offerId === view.offer.id && approval.offerRevision === view.offer.revision
+    && !!approval.confirmedReplyId && approval.confirmedReplyId === reply?.id && reply?.status === 'ready'
+    && reply.interpretation?.kind === 'confirmation'
+}
+
 // Approval and execution both recheck the saved offer against the immutable plan.
 export function isCurrentPlanningOffer(record: import('./repository').PlanningRecord | null, plan: Plan, now: Date): boolean {
   const binding = plan.planningOffer
@@ -63,8 +71,9 @@ export function isCurrentPlanningOffer(record: import('./repository').PlanningRe
   const reply = inquiry?.replies?.at(-1)
   const link = record.view.paymentLink
   if (!offer || offer.id !== binding.offerId || offer.revision !== binding.revision || offer.expiresAt !== binding.expiresAt
-    || inquiry?.id !== offer.inquiryId || inquiry.status === 'stale' || reply?.id !== offer.replyId || reply.status !== 'ready'
-    || reply.message.mode !== offer.mode || link?.eventId !== plan.eventId || link.planId !== plan.planId) return false
+    || inquiry?.id !== offer.inquiryId || inquiry.status === 'stale' || (reply?.id !== offer.replyId && !supplierConfirmedOffer(record.view)) || reply?.status !== 'ready'
+    || reply?.message.mode !== offer.mode || link?.eventId !== plan.eventId || link.planId !== plan.planId) return false
+  if (record.view.arrangement?.controlled && !supplierConfirmedOffer(record.view)) return false
   const built = buildSelectedOfferPlan({ offer, selections: record.view.selections,
     contextMessageIds: record.view.messages.filter(message => message.role === 'user').map(message => message.id),
     eventId: plan.eventId, runId: plan.runId, briefRevision: plan.briefRevision, planId: plan.planId,

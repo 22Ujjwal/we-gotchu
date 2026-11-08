@@ -9,6 +9,7 @@ export const supplierMessageSchema = z.object({
 }).strict()
 export const replyInterpretationSchema = z.object({
   kind: z.enum(['question', 'refusal', 'tentative', 'quote', 'confirmation', 'other']),
+  confirmsApprovedOffer: z.boolean().optional(),
   summary: text.max(3000), nextAction: text.max(1500),
   facts: z.array(z.object({
     field: z.enum(['price', 'currency', 'date', 'time', 'timezone', 'capacity', 'deposit', 'charges', 'terms', 'expiry', 'availability']),

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { approvals, payments, events, plans, planningConversations, runs, schema } from '../db/schema'
 import { ApiError } from '../events/errors'
-import { buildSelectedOfferPlan, selectedOfferSchema, type SelectedOffer } from './offer'
+import { buildSelectedOfferPlan, supplierConfirmedOffer, selectedOfferSchema, type SelectedOffer } from './offer'
 import type { PlanningRecord } from './repository'
 import type { PlanningPaymentLink } from '../../agent/planning/offer-contract'
 
@@ -13,7 +13,7 @@ function sourceMatches(record: PlanningRecord, offer: SelectedOffer) {
   const inquiry = record.view.inquiry
   const reply = inquiry?.replies?.at(-1)
   return inquiry?.id === offer.inquiryId && inquiry.status !== 'stale'
-    && reply?.id === offer.replyId && reply.status === 'ready' && reply.message.mode === offer.mode
+    && (reply?.id === offer.replyId || supplierConfirmedOffer(record.view)) && reply?.status === 'ready' && reply?.message.mode === offer.mode
     && isDeepStrictEqual(offer.contextMessageIds, record.view.messages.filter(message => message.role === 'user').map(message => message.id))
 }
 
@@ -33,7 +33,7 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
         if (!record.view.offer && offer.revision !== 1) throw stale()
         const data = { ...record, revision: row.revision + 1,
           requests: request ? { ...record.requests, [request.id]: request.fingerprint } : record.requests,
-          view: { ...record.view, version: record.view.version + 1, offer } }
+          view: { ...record.view, version: record.view.version + 1, offer, offerApproval: undefined } }
         await tx.update(planningConversations).set({ revision: data.revision, data }).where(eq(planningConversations.id, conversationId))
         return data
       })
@@ -70,6 +70,9 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
         const record = row.data
         const offer = record.view.offer
         if (!offer || offer.id !== offerId || offer.revision !== offerRevision || record.pending || !sourceMatches(record, offer)) throw stale()
+        if (record.view.arrangement?.controlled && !supplierConfirmedOffer(record.view)) {
+          throw new ApiError(409, 'supplier_confirmation_required', 'Approve this offer and wait for the supplier to confirm the same terms before payment.')
+        }
         const existing = record.view.paymentLink
         const link: PlanningPaymentLink = existing ?? { eventId: `evt_${randomUUID()}`, planId: `plan_${randomUUID()}`,
           planRevision: 1, offerId, offerRevision }

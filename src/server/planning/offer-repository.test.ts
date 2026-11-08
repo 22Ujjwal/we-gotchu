@@ -35,6 +35,35 @@ afterEach(async () => db.close())
 test('saves one offer and atomically links concurrent preparation to the same existing transaction records', async () => {
   const saved = await db.offers.save('customer', 'conversation', 0, offer)
   expect(saved.view.offer).toEqual(offer)
+  const controlled = await db.repository.compareAndSet(saved, { ...saved, view: { ...saved.view,
+    arrangement: { id: 'arrangement', inquiryId: 'inquiry', status: 'offer_ready', controlled: true,
+      requestedAt: now.toISOString(), selections: [venue], detail: 'Review offer' } } })
+  await expect(db.offers.prepare('customer', 'conversation', 'offer', 1, now)).rejects.toMatchObject({ errorCode: 'supplier_confirmation_required' })
+  await db.repository.compareAndSet(controlled!, { ...controlled!, view: { ...controlled!.view,
+    offerApproval: { offerId: 'offer', offerRevision: 1, approvedAt: now.toISOString() } } } as PlanningRecord)
+  await expect(db.offers.prepare('customer', 'conversation', 'offer', 1, now)).rejects.toMatchObject({ errorCode: 'supplier_confirmation_required' })
+  const waiting = (await db.repository.getById('conversation'))!
+  const { requestOfferConfirmation, processSupplierDecision } = await import('./vendor-coordination')
+  const confirming = (await db.repository.compareAndSet(waiting, { ...waiting, view: { ...waiting.view,
+    arrangement: { ...waiting.view.arrangement!, status: 'awaiting_offer_confirmation' } } }))!
+  const sendInquiry = async () => ({ status: 'accepted' as const, messageId: 'hold-request', threadId: 'thread', acceptedAt: now.toISOString() })
+  await requestOfferConfirmation(db.repository, { sendInquiry }, confirming, 'venue@example.com')
+  const sent = (await db.repository.getById('conversation'))!
+  const confirmation = { ...sent.view.inquiry!.replies![0], id: 'confirmation',
+    message: { ...sent.view.inquiry!.replies![0].message, messageId: 'confirmation', inReplyTo: 'wrong-request',
+      text: 'The approved terms are unchanged and the room is available.' },
+    interpretation: { kind: 'confirmation' as const, confirmsApprovedOffer: true, summary: 'Confirmed', nextAction: 'Pay', missing: [],
+      facts: [{ field: 'availability' as const, value: 'Available', quote: 'The approved terms are unchanged and the room is available.' }] } }
+  const received = (await db.repository.compareAndSet(sent, { ...sent, view: { ...sent.view,
+    inquiry: { ...sent.view.inquiry!, replies: [...sent.view.inquiry!.replies!, confirmation] } } }))!
+  const provider = { inboxId: 'arrange', send: async () => ({ messageId: 'customer-notice' }), getMessage: async () => { throw new Error('Unexpected provider read') } }
+  await processSupplierDecision(db.repository, provider, received, 'http://localhost:3000')
+  expect((await db.repository.getById('conversation'))!.view.offerApproval?.confirmedReplyId).toBeUndefined()
+  const linked = (await db.repository.compareAndSet(received, { ...received, view: { ...received.view,
+    inquiry: { ...received.view.inquiry!, replies: [received.view.inquiry!.replies![0],
+      { ...confirmation, message: { ...confirmation.message, inReplyTo: 'hold-request' } }] } } }))!
+  await processSupplierDecision(db.repository, provider, linked, 'http://localhost:3000')
+  expect((await db.repository.getById('conversation'))!.view.offerApproval?.confirmedReplyId).toBe('confirmation')
   const [first, second] = await Promise.all([
     db.offers.prepare('customer', 'conversation', 'offer', 1, now),
     db.offers.prepare('customer', 'conversation', 'offer', 1, now),
@@ -163,6 +192,8 @@ test.each([
     const { notifyPlanningPayment } = await import('./payment-notification')
     const customerRecord = (await db.repository.getById('conversation'))!
     await db.repository.compareAndSet(customerRecord, { ...customerRecord, view: { ...customerRecord.view,
+      offerApproval: { offerId: 'offer', offerRevision: 1, approvedAt: now.toISOString(), confirmedReplyId: 'reply' },
+      inquiry: { ...customerRecord.view.inquiry!, replies: customerRecord.view.inquiry!.replies!.map(reply => ({ ...reply, interpretation: { ...reply.interpretation!, kind: 'confirmation' as const } })) },
       arrangement: { id: 'arrangement', inquiryId: 'inquiry', requestedAt: now.toISOString(), status: 'offer_ready',
         selections: customerRecord.view.selections, detail: 'Ready', customerEmail: 'customer@example.com', controlled: true } } })
     const sent: Array<{ to: string; subject: string; text: string }> = []

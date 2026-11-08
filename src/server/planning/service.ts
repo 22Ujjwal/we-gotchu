@@ -1,3 +1,4 @@
+import { buildSelectedOfferPlan } from './offer'
 import type { createOfferRepository } from './offer-repository'
 import { inquirySendResultSchema, type SupplierMailTransport } from './supplier-mail'
 import { prepareInquiry, staleInquiry } from './inquiry'
@@ -15,6 +16,8 @@ export type PlanningDeps = {
   agent: () => PlanningAgent
   requireCustomerId: () => Promise<string>
   arrange?: (record: PlanningRecord) => void
+  approveOffer?: (record: PlanningRecord) => void
+  answerSupplier?: (record: PlanningRecord) => void
   refreshArrangement?: (record: PlanningRecord) => Promise<PlanningRecord>
   testSupplierEmail?: string
   allowResearchReview?: boolean
@@ -200,6 +203,37 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
         detail: 'Your request is saved. We are preparing the venue inquiry and checking the details. Nothing is booked or paid.' },
     }) })
     deps.arrange(saved)
+    return saved.view
+  }
+  if (command.kind === 'approve_offer') {
+    const offer = record.view.offer
+    if (!deps.approveOffer || !record.view.arrangement?.controlled || record.view.arrangement.status === 'stale'
+      || record.view.paymentLink || record.pending || !offer || offer.id !== command.offerId || offer.revision !== command.offerRevision
+      || record.view.inquiry?.replies?.at(-1)?.id !== offer.replyId) throw stale()
+    const built = buildSelectedOfferPlan({ offer, selections: record.view.selections,
+      contextMessageIds: record.view.messages.filter(message => message.role === 'user').map(message => message.id),
+      eventId: 'review', runId: 'review', briefRevision: 1, planId: 'review', planRevision: 1, now: now(deps) })
+    if (!built.ok) throw new ApiError(422, 'offer_incomplete', built.reason)
+    const saved = await save(deps, record, { ...record, requests, view: changed(record, {
+      offerApproval: record.view.offerApproval?.offerId === offer.id && record.view.offerApproval.offerRevision === offer.revision
+        ? record.view.offerApproval : { offerId: offer.id, offerRevision: offer.revision, approvedAt: new Date(now(deps)).toISOString() },
+      arrangement: { ...record.view.arrangement, status: 'awaiting_offer_confirmation',
+        detail: 'You approved the offer. We are asking the supplier to confirm these exact terms before payment.' },
+    }) })
+    deps.approveOffer(saved)
+    return saved.view
+  }
+  if (command.kind === 'answer_supplier') {
+    const question = record.view.supplierQuestion
+    if (!deps.answerSupplier || !question || question.answer || question.replyId !== command.replyId
+      || record.view.inquiry?.replies?.at(-1)?.id !== question.replyId || record.view.paymentLink
+      || !record.view.arrangement || record.view.arrangement.status === 'stale') throw stale()
+    const saved = await save(deps, record, { ...record, requests, view: changed(record, {
+      supplierQuestion: { ...question, answer: command.answer, answerRequestId: command.requestId },
+      offerApproval: undefined,
+      arrangement: { ...record.view.arrangement, status: 'awaiting_reply', detail: 'Your answer is saved. We are continuing the supplier conversation.' },
+    }) })
+    deps.answerSupplier(saved)
     return saved.view
   }
   if (command.kind === 'release_payment') {

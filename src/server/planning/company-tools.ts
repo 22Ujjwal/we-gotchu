@@ -71,7 +71,7 @@ function parseToolCall(name: string, raw: unknown) {
   }
 }
 
-export function createCompanyTools(repository: PlanningRepository, secret: string, onPrepared?: (record: PlanningRecord) => Promise<void>, followupMail?: { transport: SupplierMailTransport; recipient: string }, offerActions?: { save: ReturnType<typeof createOfferRepository>['save']; onSaved: (record: PlanningRecord) => Promise<void> }, vendorActions?: { verifyPayment: (record: PlanningRecord) => Promise<boolean>; onConfirmed: (record: PlanningRecord) => Promise<void> }) {
+export function createCompanyTools(repository: PlanningRepository, secret: string, onPrepared?: (record: PlanningRecord) => Promise<void>, followupMail?: { transport: SupplierMailTransport; recipient: string }, offerActions?: { save: ReturnType<typeof createOfferRepository>['save']; onSaved: (record: PlanningRecord) => Promise<void> }, vendorActions?: { verifyPayment: (record: PlanningRecord) => Promise<boolean>; onConfirmed: (record: PlanningRecord) => Promise<void> }, onReply?: (record: PlanningRecord) => Promise<void>) {
   async function call(name: string, raw: unknown) {
     const tool = parseToolCall(name, raw)
     const input = tool.input
@@ -90,9 +90,10 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
         selections: record.view.selections, inquiry: { recipient: inquiry.recipient, subject: inquiry.subject, text: inquiry.text },
         latestReply: scope.replyId ? inquiry.replies?.at(-1) : undefined,
         supplierReplies: inquiry.replies ?? [],
+        customerQuestion: record.view.supplierQuestion, approvedOffer: record.view.offerApproval,
         offer: record.view.offer, verifiedPayment: record.verifiedPayment, vendorBooking: record.vendorBooking, vendorMessages: record.vendorNotes,
         controlled: !!record.view.arrangement?.controlled,
-        instruction: record.view.arrangement?.controlled ? 'The customer requested a controlled arrangement. Preserve the supplied recipient. Write natural supplier correspondence without test labels. The service handles the authorized test email. No real reservation, purchase or payment is authorized.' : 'Prepare an inquiry only. No supplier contact, reservation, purchase or payment is authorized.' }
+        instruction: record.view.arrangement?.controlled ? 'The customer requested a controlled arrangement. Preserve the supplied recipient. Write natural supplier correspondence without test labels. The service handles the authorized test email. No real reservation, purchase or payment is authorized. If the supplier asks a customer question, record its interpretation as question with a clear nextAction for the customer; the application emails it. Read customerQuestion.answer before following up. If approvedOffer exists and payment is absent, classify a reply as confirmation only when it explicitly confirms availability and every approved term unchanged; include an availability fact and exact excerpt and set confirmsApprovedOffer true only for unchanged approved terms. Changed terms require a new quote and customer approval. For an unchanged confirmation, record_supplier_reply is sufficient; do not replace the offer or send a booking request.' : 'Prepare an inquiry only. No supplier contact, reservation, purchase or payment is authorized.' }
     }
     if (tool.name === 'record_supplier_reply') {
       if (!scope.replyId || inquiry.revision !== scope.revision) throw new Error('The selected reply changed.')
@@ -102,6 +103,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       const saved = await repository.getById(record.id)
       const reply = saved?.view.inquiry?.replies?.at(-1)
       if (reply?.status !== 'ready') throw new Error('The selected reply could not be recorded. Supply exact excerpts from the original message.')
+      if (saved) await onReply?.(saved)
       return { saved: true, interpretation: reply.interpretation }
     }
     if (tool.name === 'send_vendor_message') {

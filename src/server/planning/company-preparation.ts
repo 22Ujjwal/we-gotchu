@@ -27,10 +27,10 @@ export function authorizedInquiryCall(record: PlanningRecord, action: { name: st
 }
 
 async function dispatchCompanyTurn(repository: PlanningRepository, record: PlanningRecord, env: NodeJS.ProcessEnv,
-  event: 'arrangement_requested' | 'supplier_reply' | 'payment_verified'): Promise<void> {
+  event: 'arrangement_requested' | 'supplier_reply' | 'payment_verified' | 'customer_answer'): Promise<void> {
   const arrangement = record.view.arrangement
   const inquiry = record.view.inquiry
-  const replyId = event === 'supplier_reply' ? inquiry?.replies?.at(-1)?.id : undefined
+  const replyId = (event === 'supplier_reply' || event === 'customer_answer') ? inquiry?.replies?.at(-1)?.id : undefined
   const paymentId = event === 'payment_verified' ? record.verifiedPayment?.paymentId : undefined
   if (!arrangement?.controlled || ['stale', 'vendor_confirmed'].includes(arrangement.status)
     || !inquiry || inquiry.id !== arrangement.inquiryId || record.pending || record.view.status !== 'ready'
@@ -75,7 +75,7 @@ async function dispatchCompanyTurn(repository: PlanningRepository, record: Plann
   }
   if (!renewed) throw new Error('Supplier access renewal needs retry.')
   await client.sessions.send(companySession.id, { queue: true, message: JSON.stringify({ event, draftAccess: access }) },
-    { idempotencyKey: `arrangement-turn:${arrangement.id}:${event}:${replyId ?? paymentId ?? 'initial'}` })
+    { idempotencyKey: `arrangement-turn:${arrangement.id}:${event}:${event === 'customer_answer' ? record.view.supplierQuestion?.answerRequestId : replyId ?? paymentId ?? 'initial'}` })
 }
 
 export async function continueCompanyReply(repository: PlanningRepository, record: PlanningRecord, env: NodeJS.ProcessEnv, paymentTurn = false): Promise<void> {
@@ -92,4 +92,9 @@ export async function prepareCompanyInquiry(repository: PlanningRepository, reco
     record = claimed
   }
   await dispatchCompanyTurn(repository, record, env, 'arrangement_requested')
+}
+
+export async function continueCompanyAnswer(repository: PlanningRepository, record: PlanningRecord, env: NodeJS.ProcessEnv): Promise<void> {
+  if (!record.view.supplierQuestion?.answerRequestId) return
+  await dispatchCompanyTurn(repository, record, env, 'customer_answer')
 }
