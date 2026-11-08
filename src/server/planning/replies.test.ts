@@ -62,3 +62,17 @@ test('rejects extracted facts without supporting text and does not invent curren
     facts: [{ field: 'currency', value: 'USD', quote: 'USD 200' }], missing: [] }))
   expect((await db.repository.get('customer', 'conversation'))?.view.inquiry?.replies?.[0].status).toBe('failed')
 })
+
+test('older replies remain separate and late interpretation cannot overwrite a newer lease', async () => {
+  const first = await acceptIncomingReply(db.repository, target, incoming)
+  let release!: (value: unknown) => void
+  const old = interpretReply(db.repository, target, first.id, () => new Promise(resolve => { release = resolve }), () => 0, 1)
+  while (!release) await new Promise(resolve => setTimeout(resolve, 1))
+  await interpretReply(db.repository, target, first.id, async () => ({ ...question, summary: 'Recovered interpretation.' }), () => 2)
+  release(question)
+  await old
+  await acceptIncomingReply(db.repository, target, { ...incoming, messageId: 'older', receivedAt: '2026-11-08T09:30:00Z' })
+  const replies = (await db.repository.get('customer', 'conversation'))!.view.inquiry!.replies!
+  expect(replies.map(reply => reply.message.messageId)).toEqual(['older', 'reply-1'])
+  expect(replies[1].interpretation?.summary).toBe('Recovered interpretation.')
+})
