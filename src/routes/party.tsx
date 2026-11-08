@@ -173,7 +173,7 @@ function PartyPage() {
               <Fact
                 badge={<IconBadge icon="guests" />}
                 title={`${brief.guests} guests`}
-                detail={[...extras, `$${order.total.toFixed(2)} paid`].join(' · ')}
+                detail={[...extras, `€${order.total.toFixed(2)} paid`].join(' · ')}
               />
             </div>
           </div>
