@@ -45,3 +45,14 @@ The specification uses the existing ready-for-agent triage label; the implementa
 
 - [Connect the event interface to the working backend](../../.scratch/specs/event-ui-integration.md).
 - [01: Connect and verify the existing event journey](../../.scratch/event-integration/issues/01-connect-event-journey.md).
+
+## Single-planner live milestone
+
+Tony approved two local tickets for a useful single-planner proposal and a persistent follow-up journey.
+These tickets replace mandatory Monid and specialist-delegation assumptions for this milestone without modifying or closing the earlier planning ticket.
+Use real-run-first verification with no new automated tests by default; consider focused regression coverage if a live failure exposes a bug.
+Existing shipping checks still apply, and the local-only hold remains in effect.
+Work ticket 01 first; ticket 02 starts after its blocker passes.
+
+- [01: Deliver a useful proposal with one planner](../../.scratch/single-planner/issues/01-deliver-useful-proposal.md).
+- [02: Keep customer choices through changes and return visits](../../.scratch/single-planner/issues/02-preserve-choices-and-return.md).
