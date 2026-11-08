@@ -105,3 +105,15 @@ describe('the complete event ledger', () => {
     expect(final.commerce.notifications.filter(n => n.kind === 'confirmed')).toHaveLength(1)
   })
 })
+
+it('does not contact suppliers outside the customer choice or charge an obsolete offer', async () => {
+  await app.ledger.publishOptions(eventId, 'options', [{ id: 'venue', name: 'Venue', reason: 'Fits', sourceUrl: 'https://example.test', knownTerms: [], unknownTerms: ['Price'], contactIds: [contactId] }])
+  await expect(app.sendSupplierEmail({ eventId, contactId, subject: 'Quote', body: 'Please quote', operationKey: 'too-early' })).rejects.toMatchObject({ code: 'choice_required' })
+})
+
+it('replays event creation after a lost response without creating a second event or session', async () => {
+  const first = await app.createEventForCustomer('same-customer', brief, true, 'request-1')
+  const again = await app.createEventForCustomer('same-customer', brief, true, 'request-1')
+  expect(again.eventId).toBe(first.eventId)
+  await expect(app.createEventForCustomer('same-customer', { ...brief, guests: 30 }, true, 'request-1')).rejects.toMatchObject({ code: 'key_conflict' })
+})
