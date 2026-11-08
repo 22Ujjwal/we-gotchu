@@ -7,6 +7,15 @@ import { PlanningPayment } from './planning-payment'
 const link = { eventId: planReadyEvent.event.eventId, planId: planReadyEvent.plan!.planId,
   planRevision: planReadyEvent.plan!.revision, offerId: 'offer', offerRevision: 1 }
 afterEach(() => vi.unstubAllGlobals())
+test('uses the charge currency units in the approval amount', async () => {
+  const view = structuredClone(planReadyEvent)
+  view.plan!.currency = 'jpy'
+  view.plan!.total = 20000
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(view))))
+  render(<PlanningPayment link={link} identity="customer" stale={false} />)
+  expect(await screen.findByText('Selected plan total: \u00a520,000')).toBeVisible()
+  expect(screen.getByRole('checkbox')).toHaveAccessibleName(/20,000 total/)
+})
 test('requires explicit approval and uses the existing event approval API exactly once', async () => {
   const requests: string[] = []
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {

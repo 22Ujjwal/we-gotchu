@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { PlanningPaymentLink } from '../../agent/planning/offer-contract'
 import { useEventSession } from '../../lib/hostwell/use-event-session'
 import { Button } from './ui'
+import { formatPaymentAmount } from '../../lib/payment-money'
 
 export function PlanningPayment({ link, identity, stale, onRelease, onCheckout = url => window.location.assign(url) }: {
   link: PlanningPaymentLink; identity: string | null; stale: boolean; onRelease?: () => void; onCheckout?: (url: string) => void;
@@ -13,7 +14,7 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
   const matches = view?.plan?.planId === link.planId && view.plan.revision === link.planRevision
   const canApprove = matches && !stale && !view?.event.cancelRequestedAt
     && ['plan_ready', 'awaiting_payment'].includes(view?.event.status ?? '') && view?.payment?.state !== 'paid'
-  const total = view?.plan && new Intl.NumberFormat('en-US', { style: 'currency', currency: view.plan.currency.toUpperCase() }).format(view.plan.total / 100)
+  const total = view?.plan && formatPaymentAmount(view.plan.total, view.plan.currency)
   return <section aria-label="Sandbox payment" className="flex flex-col gap-4 border border-sand p-5">
     <h2 className="text-[26px] font-light">Sandbox payment</h2>
     {session.loading && <p role="status">Loading saved payment status...</p>}

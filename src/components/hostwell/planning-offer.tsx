@@ -1,10 +1,9 @@
 import { calculateOfferCosts, type SelectedOffer } from '../../agent/planning/offer-contract'
+import { formatPaymentAmount } from '../../lib/payment-money'
 
 export function PlanningOfferReview({ offer, stale }: { offer: SelectedOffer; stale: boolean }) {
   const costs = calculateOfferCosts(offer)
-  const money = (amount: number | null) => amount === null ? 'Not confirmed' : new Intl.NumberFormat('en-US', {
-    style: 'currency', currency: offer.currency.toUpperCase(),
-  }).format(amount / 100)
+  const money = (amount: number | null) => amount === null ? 'Not confirmed' : formatPaymentAmount(amount, offer.currency)
   const complete = costs.ok && !offer.missing.length
   return <section aria-label="Selected offer" className="flex flex-col gap-5 border border-sand p-5">
     <h2 className="text-[26px] font-light">Your selected offer</h2>
