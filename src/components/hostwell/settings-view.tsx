@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
+import type { PhotoFallback } from './ui'
 import { ArrowUp } from './icons'
 import { Button, FeatureRow, Guests, Header, MetaLine, Photo } from './ui'
 import { to24h } from '#/lib/hostwell/fixture'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
 
-type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'> & { evidence?: ReactNode; photoCredit?: ReactNode }
+type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'> & { evidence?: ReactNode; photoCredit?: ReactNode; photoFallback?: PhotoFallback }
 
 const suggestions = ['Cheaper candles', 'Closer to U-Bahn', 'More venues']
 
@@ -65,8 +66,9 @@ export function SettingsView({
             className="gold-frame order-first flex w-full max-w-[468px] shrink-0 lg:w-[468px] p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
           >
             <article className="flex w-full flex-col overflow-hidden bg-white">
-              {current.photos.length ? <Photo
+              {current.photos.length || current.photoFallback ? <Photo
                 photos={current.photos}
+                fallback={current.photoFallback}
                 alt={current.name}
                 className="h-[230px] w-full lg:h-[290px]"
               /> : <p className="bg-cream px-6 py-5 text-[14px] text-stone">Photo not available</p>}
@@ -143,9 +145,10 @@ function CardTitle({ venue, large }: { venue: SettingVenue; large?: boolean }) {
 function SideCard({ venue, onSelect, disabled = false }: { venue: SettingVenue; onSelect: () => void; disabled?: boolean }) {
   return (
     <article className="flex w-full max-w-[468px] shrink-0 lg:w-[340px] lg:max-w-[340px] flex-col overflow-hidden border border-line bg-white shadow-[0_12px_32px_#1F1B160F]">
-      {venue.photos.length ? <Photo
+      {venue.photos.length || venue.photoFallback ? <Photo
         key={venue.id}
         photos={venue.photos}
+        fallback={venue.photoFallback}
         alt={venue.name}
         className="h-[190px] w-full lg:h-[210px]"
         arrows={false}

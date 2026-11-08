@@ -1,3 +1,4 @@
+import { interiorInspiration } from '../../lib/hostwell/interior-inspiration'
 import { usePlanningImages } from '../../lib/hostwell/planning-images'
 import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
 import { ArrangingView } from './arranging-view'
@@ -60,7 +61,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   for (const option of view?.proposal?.options ?? []) options.set(option.id, option)
   // Saved snapshots remain authoritative even if a later proposal changes or omits the option.
   for (const option of view?.selections ?? []) options.set(option.id, option)
-  const { images: venueImages, canRetry: canRetryPhotos, retry: retryPhotos } = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
+  const { images: venueImages, attempted: attemptedImages, canRetry: canRetryPhotos, retry: retryPhotos } = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
   const selected = new Set(view?.selections.map(option => option.id))
   const offer = view?.offer
   const offerStale = !!offer && (view?.inquiry?.status === 'stale'
@@ -70,7 +71,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     || !!offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now())
   const offerCosts = offer && calculateOfferCosts(offer)
   const venueOptions = [...options.values()].filter(option => option.kind === 'venue')
-  const venueCards = venueOptions.map(option => ({ id: option.id, name: displayCopy(option.name), photos: (venueImages[option.id] ?? []).map(image => image.url),
+  const venueCards = venueOptions.map(option => ({ id: option.id, photoFallback: attemptedImages.includes(option.id) ? interiorInspiration(option.id) : undefined, name: displayCopy(option.name), photos: (venueImages[option.id] ?? []).map(image => image.url),
     photoCredit: (venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[12px] text-stone underline">{image.attribution.text}</a>),
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
       : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: displayFactValue(fact.value).split(/(?<=[.!?])\s/)[0] })) }))
@@ -142,7 +143,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         {[...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id)).map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
-      {!browsingSettings && <PlanningArrangement images={venueImages} customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
+      {!browsingSettings && <PlanningArrangement attemptedImages={attemptedImages} images={venueImages} customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
       {!view.paymentLink && !browsingSettings && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
       {view.offer && (view.paymentLink ? <details><summary className="cursor-pointer underline">Quoted terms and sources</summary><PlanningOfferReview offer={view.offer} stale={offerStale} /></details>
         : <PlanningOfferReview offer={view.offer} stale={offerStale} />)}

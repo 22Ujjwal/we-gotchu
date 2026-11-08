@@ -1,3 +1,4 @@
+import { interiorInspiration } from '../../lib/hostwell/interior-inspiration'
 import { researchPrice } from '../../lib/hostwell/research-price'
 import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
 import type { PlanningVenueImage } from '../../lib/hostwell/planning-images'
@@ -10,7 +11,8 @@ import { Receipt } from './receipt'
 import { VenueView } from './venue-view'
 import { defaultBrief } from '../../lib/hostwell/fixture'
 
-export function PlanningArrangement({ view, disabled, submit, onBack, customerEmail, images = {} }: {
+export function PlanningArrangement({ view, disabled, submit, onBack, customerEmail, images = {}, attemptedImages = [] }: {
+  attemptedImages?: string[]
   images?: Record<string, PlanningVenueImage[]>
   customerEmail: string
   onBack: () => void
@@ -65,7 +67,7 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         </>}
       {!view.paymentLink && <p className="text-[14px] text-stone">Choosing a setting or requesting an arrangement does not reserve it or authorize a charge.</p>}
     </div>
-  return <VenueView photoCredit={(images[venue.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[12px] text-stone underline">{image.attribution.text}</a>)} embedded brief={view.brief ?? defaultBrief}
+  return <VenueView photoFallback={attemptedImages.includes(venue.id) ? interiorInspiration(venue.id) : undefined} photoCredit={(images[venue.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[12px] text-stone underline">{image.attribution.text}</a>)} embedded brief={view.brief ?? defaultBrief}
     venue={{ name: displayCopy(venue.name), neighbourhood: view.brief?.area ?? '', photos: (images[venue.id] ?? []).map(image => image.url), description: displayCopy(venue.why),
       detailFeatures: offer ? [] : venue.facts.filter(fact => /capacity|seat|guest|duration|hour|access/i.test(fact.label) && fact.value.length < 100).slice(0, 4).map(fact => ({ icon: /capacity|seat|guest/i.test(fact.label) ? 'guests' as const : 'calendar' as const, label: displayFactValue(fact.value) })) }}
     back={<button type="button" className="underline" onClick={onBack}>Back to settings</button>}

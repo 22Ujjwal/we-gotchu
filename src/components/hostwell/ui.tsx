@@ -107,30 +107,38 @@ export function FeatureRow({ feature }: { feature: Feature }) {
  * Venue photo with an optional gallery: when given more than one photo it
  * shows prev/next arrows (cycling, wraps around) and position dots.
  */
+export type PhotoFallback = { photos: string[]; alt: string; label: string; href: string }
+
 export function Photo(props: {
   photos: Array<string>
   alt: string
+  fallback?: PhotoFallback
   className?: string
   arrows?: boolean
 }) {
   // Reset only when the actual source list changes, not on ordinary parent renders.
-  return <PhotoCarousel key={JSON.stringify([props.alt, props.photos])} {...props} />
+  return <PhotoCarousel key={JSON.stringify([props.alt, props.photos, props.fallback])} {...props} />
 }
 
 function PhotoCarousel({
   photos,
   alt,
+  fallback,
   className = '',
   arrows = true,
 }: {
   photos: Array<string>
   alt: string
+  fallback?: PhotoFallback
   className?: string
   arrows?: boolean
 }) {
   const [position, setPosition] = useState(0)
   const [failed, setFailed] = useState<Set<string>>(() => new Set())
-  const usable = photos.filter(photo => !failed.has(photo))
+  const primary = photos.filter(photo => !failed.has(photo))
+  const inspiration = primary.length === 0 && fallback
+  const usable = inspiration ? inspiration.photos.filter(photo => !failed.has(photo)).slice(0, 1) : primary
+  const imageAlt = inspiration ? inspiration.alt : alt
   const n = usable.length
   const index = Math.min(position, n - 1)
   if (n === 0) return <div role="img" aria-label={`${alt}: Photo unavailable`}
@@ -140,10 +148,11 @@ function PhotoCarousel({
   const arrow =
     'absolute top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center bg-white/85 hover:bg-white focus-visible:outline-2 focus-visible:outline-gold'
   return (
+    <>
     <div
       role={n > 1 ? 'group' : undefined}
       aria-roledescription={n > 1 ? 'carousel' : undefined}
-      aria-label={n > 1 ? `${alt} photos` : undefined}
+      aria-label={n > 1 ? `${imageAlt} photos` : undefined}
       className={`relative shrink-0 overflow-hidden ${className}`}
     >
       <img
@@ -152,9 +161,9 @@ function PhotoCarousel({
         onError={() => {
           const source = usable[index]
           setFailed(previous => new Set([...previous, source]))
-          setPosition(index)
+          setPosition(!inspiration && primary.length === 1 ? 0 : index)
         }}
-        alt={n > 1 ? `${alt}, photo ${index + 1} of ${n}` : alt}
+        alt={n > 1 ? `${imageAlt}, photo ${index + 1} of ${n}` : imageAlt}
         className="size-full object-cover"
       />
       {n > 1 && (
@@ -163,7 +172,7 @@ function PhotoCarousel({
             aria-hidden
             className="absolute inset-x-0 bottom-3.5 flex justify-center gap-1.5"
           >
-            {usable.map((p, i) => (
+            {n > 4 ? <span className="rounded bg-black/65 px-2 py-0.5 text-xs text-white">{index + 1} / {n}</span> : usable.map((p, i) => (
               <span
                 key={p}
                 className={`size-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/50'}`}
@@ -193,6 +202,8 @@ function PhotoCarousel({
         </>
       )}
     </div>
+    {inspiration && <a href={inspiration.href} target="_blank" rel="noreferrer" className="self-start px-3 py-1 text-[12px] leading-4 text-stone underline">{inspiration.label}</a>}
+    </>
   )
 }
 
