@@ -1,7 +1,7 @@
 # Prepare the event-demo team handoff
 
 Label: wayfinder:map
-Status: open
+Status: draft handoff complete; human decisions open
 
 ## Destination
 
@@ -20,13 +20,15 @@ The service is free, three options are a demo example rather than a product limi
 
 ## Decisions so far
 
-No decision tickets have been resolved yet.
-Existing product agreements remain in the linked project documents rather than being re-decided here.
+- [Verify Naive SDK and OpenAI credit compatibility](issues/01-naive-openai.md): research complete, with Naive-funded hosted pi proposed and OpenAI BYOK unverified.
+- [Verify supplier booking and payment feasibility](issues/02-supplier-payments.md): research complete, with separate customer collection and supplier funding required.
 
 ## Not yet specified
 
-Additional provider-specific setup or approval requirements may emerge from research.
-Exact framework versions and supplier selections await the integration findings.
+Exact package versions will be selected when implementation begins.
+Supplier selection, funding, and refund timing are now explicit review items in the transaction decision.
+The [team handoff](../../docs/team/README.md) contains draft contracts and four role briefs.
+The requested documentation finish condition is met; human decision tickets stay open for team review.
 
 ## Out of scope
 

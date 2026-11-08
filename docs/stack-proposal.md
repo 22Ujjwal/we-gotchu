@@ -1,5 +1,16 @@
 # Stack and team proposal
 
+## Existing scaffold update
+
+The team has already added a TanStack Start scaffold under src on main.
+Preserve that implementation and its package manager.
+The earlier Next.js choice and apps/web paths below remain proposals, not migration instructions.
+Before editing, the developers must map the role boundaries to the existing src layout and agree on any framework change.
+Frontend owns UI routes and components; transactions owns server endpoints and shared configuration; agent workflow owns supplier and runtime modules.
+Coordinate shared route files through the transaction owner if UI and server code occupy the same file.
+
+## Original draft
+
 Status: proposed, awaiting the team's decision.
 
 Tony set the team split to one pitch owner, one frontend owner, and two other developers.
@@ -13,7 +24,7 @@ Use Drizzle for database access and migrations, and Zod schemas for shared reque
 Use Vitest for workflow and contract behavior, with Playwright for the customer journey.
 These are recommendations rather than verified installed dependencies.
 
-Evaluate the Naive Agent SDK and its runtime for supplier research and tool use because this is Naive's hackathon.
+Propose Naive managed-agents with hosted pi for supplier research and tool use, based on the completed [research](research-index.md).
 Also consider the team's OpenAI credits when choosing the model provider and billing route.
 Naive SDK selection and OpenAI model usage are distinct decisions rather than assumed alternatives.
 Verify whether the selected Naive integration supports the intended OpenAI model and the team's credited API account, or whether direct OpenAI calls are needed.
@@ -25,7 +36,8 @@ Do not make a browser request wait through supplier replies or an entire booking
 Use Monid for discovering and invoking useful supplier or product research tools where the catalog supports the actual task.
 Use AgentMail for supplier email and processing booking, cancellation, and refund messages when email is part of the real supplier workflow.
 Use Stripe Checkout and its refund APIs for the customer-facing payment portion.
-Supplier payment remains a separate feasibility decision.
+Supplier payment requires a separately funded eligible card and verified supplier checkout, as detailed in the [architecture draft](architecture-draft.md).
+Naive cards and wallet are documented as unavailable and are not proposed live dependencies.
 Stripe Connect transfers target connected accounts and do not establish a way to purchase from arbitrary venue or retailer checkouts.
 
 ## Team ownership proposal
@@ -67,4 +79,6 @@ Invitation integrations remain optional.
 - [Vercel request execution limits](https://vercel.com/docs/functions/limitations)
 - [Stripe separate charges and transfers](https://docs.stripe.com/connect/separate-charges-and-transfers)
 
-Documentation review does not establish team credentials, claimed sponsor credits, or a tested live supplier transaction.
+Tony confirmed sponsor benefits for all four teammates, so credit budget does not constrain this proposal.
+Documentation review does not establish working integration access or a tested live supplier transaction.
+The [team handoff](team/README.md) and [shared contract draft](contracts-draft.md) make this proposal reviewable before implementation.

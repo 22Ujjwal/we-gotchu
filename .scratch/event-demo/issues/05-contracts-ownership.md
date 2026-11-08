@@ -10,3 +10,8 @@ Blocked by: 03-runtime-stack.md, 04-transaction-flow.md
 ## Question
 
 Which shared schemas, action lifecycle, approval rules, idempotency behavior, and file ownership boundaries should the three developers adopt? Include one owner and a change process for shared files.
+
+## Draft for review
+
+See the [proposed handoff document](../../../docs/contracts-draft.md).
+This human decision remains open; preparing a draft does not approve it on the team's behalf.
