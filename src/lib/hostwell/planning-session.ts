@@ -44,6 +44,7 @@ export function usePlanningSession(id?: string) {
       current.failures = 0
       if (!keepError) setError(previous => previous?.uncertain ? previous : null)
       if (next.status === 'working') schedule(2000)
+      else if (next.status === 'blocked') schedule(5000)
     } catch (cause) {
       if (!current.active || generation !== current.generation) return
       const failure = cause instanceof PlanningApiError ? cause : new PlanningApiError(0, false)
@@ -79,6 +80,7 @@ export function usePlanningSession(id?: string) {
       accept(next)
       setUncertain(null)
       if (id && next.status === 'working') schedule(2000)
+      else if (id && next.status === 'blocked') schedule(5000)
       return next
     } catch (cause) {
       if (!current.active || generation !== current.generation) return null
