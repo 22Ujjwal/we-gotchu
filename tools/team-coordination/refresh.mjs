@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync, renameSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { buildQueue, renderMarkdown } from './queue.mjs';
+import { referencedPRs } from './references.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const repository = '22Ujjwal/we-gotchu';
@@ -32,7 +33,7 @@ export function collect(execute = run) {
     snapshot.prs = JSON.parse(execute('gh', ['pr', 'list', '--repo', repository, '--state', 'open', '--limit', '1000', '--json', fields]));
     if (snapshot.prs.length === 1000) snapshot.errors.push('Open PR limit reached; collection may be truncated.');
   } catch { snapshot.errors.push('Cannot read open GitHub PRs. Check gh authentication and connectivity.'); }
-  const referenced = new Set(snapshot.documents.flatMap(doc => [...doc.text.matchAll(/(?:PR\s*#|\/pull\/)(\d+)/g)].map(x => Number(x[1]))));
+  const referenced = new Set(snapshot.documents.flatMap(doc => referencedPRs(doc.text, repository)));
   for (const number of [...referenced].sort((a, b) => a - b)) {
     if (snapshot.prs.some(x => x.number === number)) continue;
     try { snapshot.prs.push(JSON.parse(execute('gh', ['pr', 'view', String(number), '--repo', repository, '--json', fields]))); }

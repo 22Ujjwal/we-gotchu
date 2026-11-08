@@ -1,3 +1,5 @@
+import { referencedPRs } from './references.mjs';
+
 // Pure transformation keeps GitHub access separate from review policy.
 export function buildQueue(snapshot) {
   const items = [];
@@ -25,7 +27,7 @@ export function buildQueue(snapshot) {
       if (/awaiting the owner's first update/i.test(line)) addLine('missing-report', 4, 'Owner report unavailable. Activity elsewhere is unknown.');
       if (/^Blockers?:/i.test(line) && !/^Blockers?:\s*(none\b|no\b)/i.test(line)) addLine('blocker', 1, `Reported blocker, unverified: ${line}`);
       if (/^Needs? from\b|^Decision(?: needed)?:/i.test(line)) addLine('decision', 2, `Reported request, unverified: ${line}`);
-      const numbers = [...line.matchAll(/(?:PR\s*#|\/pull\/)(\d+)/g)].map(x => Number(x[1]));
+      const numbers = referencedPRs(line, snapshot.repository);
       for (const number of new Set(numbers)) {
         const pr = snapshot.prs.find(x => x.number === number);
         if (pr && pr.state !== 'OPEN') addLine('reconcile', 2, `Source references PR #${number}, now ${pr.state.toLowerCase()}. Check whether the handoff needs an owner update.`, `:${number}`);
