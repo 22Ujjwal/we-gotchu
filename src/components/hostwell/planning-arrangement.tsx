@@ -1,6 +1,5 @@
 import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
 import type { PlanningVenueImage } from '../../lib/hostwell/planning-images'
-import type { Feature } from '../../lib/hostwell/fixture'
 import { useState } from 'react'
 import type { PlanningCommand, PlanningOption, PlanningView } from '../../agent/planning/contract'
 import { Button } from './ui'
@@ -25,18 +24,20 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
   const active = arrangement && arrangement.status !== 'stale'
   const extras = <div className="flex flex-col gap-5 pt-8">
       <button type="button" className="self-start underline" onClick={onBack}>Change venue</button>
-      <Button className="self-start px-5 py-3" aria-pressed="true" disabled={disabled || !!view.paymentLink}
-        onClick={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: venue.id })}>Remove {venue.name}</Button>
-      <h3 className="text-[22px]">Add to your arrangement</h3>
+      <Button className="self-start px-5 py-3" aria-label={`Remove ${venueName}`} aria-pressed="true" disabled={disabled || !!view.paymentLink}
+        onClick={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: venue.id })}>Remove venue</Button>
+      <h3 className="text-[22px]">Extras</h3>
       {[...supplies.values()].map(option => <label key={option.id} className="flex items-start gap-3 border-b border-sand pb-4">
         <input type="checkbox" checked={selected.has(option.id)} disabled={disabled || !!view.paymentLink}
           onChange={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />
-        <span><span className="block font-semibold">{displayCopy(option.name)}</span><span className="block text-stone">{displayCopy(option.why)}</span>
+        <span><span className="block font-semibold line-clamp-2" title={displayCopy(option.name)}>{displayCopy(option.name)}</span>
           {option.facts.filter(fact => /price|cost|subtotal|pack/i.test(fact.label)).slice(0, 2).map((fact, index) => <span key={index} className="mt-1 block text-[15px]">{displayFactValue(fact.value)}</span>)}
         </span>
       </label>)}
-      {!supplies.size && <p className="text-stone">Ask for any extras in the message below the settings.</p>}
-      <details><summary className="cursor-pointer underline">Venue evidence and details</summary>
+      {!supplies.size && <p className="text-stone">No extras yet.</p>}
+      <details><summary className="cursor-pointer underline">Venue details</summary>
+        <p className="mt-3">{displayCopy(venue.why)}</p>
+        {venue.unknowns.map((unknown, index) => <p key={index} className="mt-2">{displayCopy(unknown)}</p>)}
         {venue.facts.map((fact, index) => <p key={index} className="mt-3">{displayFactValue(fact.value)} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">Source</a></p>)}
       </details>
     </div>
@@ -63,8 +64,8 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         </>}
     </div>
   return <VenueView embedded brief={view.brief ?? defaultBrief}
-    venue={{ name: venueName, neighbourhood: view.brief?.area ?? '', photos: (images[venue.id] ?? []).map(image => image.url), description: displayCopy(venue.why),
-      detailFeatures: venue.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests' : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: displayFactValue(fact.value) })) }}
+    venue={{ name: venueName, neighbourhood: view.brief?.area ?? '', photos: (images[venue.id] ?? []).map(image => image.url), description: '',
+      detailFeatures: [] }}
     back={null}
     extras={extras} receipt={receipt} action={<span />} onArrange={() => {}} />
 }

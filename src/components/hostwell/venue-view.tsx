@@ -67,7 +67,7 @@ export function VenueView({
               className="-mx-5 aspect-[390/260] w-[calc(100%+40px)] lg:mx-0 lg:aspect-[664/400] lg:w-full"
             /> : <p className="border-b border-sand py-5 text-[14px] text-stone">Photo not available</p>}
             {photoCredit && <div className="mt-2 flex flex-wrap gap-2">{photoCredit}</div>}
-            <div className="flex flex-col gap-4 pt-6 lg:gap-[18px] lg:pt-8">
+            {(venue.description || venue.detailFeatures.length > 0) && <div className="flex flex-col gap-4 pt-6 lg:gap-[18px] lg:pt-8">
               <p className="m-0 font-body text-[16px] leading-[26px] text-body lg:text-[18px] lg:leading-[29px]">
                 {venue.description}
               </p>
@@ -76,7 +76,7 @@ export function VenueView({
                   <FeatureRow key={f.label} feature={f} />
                 ))}
               </ul>
-            </div>
+            </div>}
             {extras}
             {addOns && (
               <section className="flex flex-col pt-8 lg:pt-10">
