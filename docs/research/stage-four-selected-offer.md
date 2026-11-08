@@ -80,3 +80,19 @@ The review and transaction builder share the same cost calculation.
 The offer component and existing chat checks passed 33 DOM tests, and typecheck passed.
 The extractor checks used a controlled completion response, not a live model call.
 The customer approval action, local transaction runtime and real browser/payment checks remain unfinished.
+
+## Local payment wiring checkpoint
+
+At `2169b23`, all 621 application tests in 62 files, 25 coordination tests, typecheck and build passed.
+Logs are `/tmp/stage4-local-tests.log`, `/tmp/stage4-local-coordination.log`, `/tmp/stage4-local-typecheck.log` and `/tmp/stage4-local-build.log`.
+
+The explicit local runtime now shares the planning database with event approval, signed payment webhooks and simulated execution.
+Customer notification email is disabled in this local rehearsal configuration.
+The customer can prepare a linked payment plan, approve its displayed terms and total, and use the existing approval API.
+Checkout returns to the originating planning conversation.
+The payment panel reads saved event/payment state and does not infer payment from the return URL.
+
+Controlled component checks exercised one approval request and payment-state restoration.
+They used fake HTTP responses and do not establish real Stripe acceptance or signed local webhook delivery.
+The selected-offer browser recipe is recorded as a draft pending the deferred live run.
+The complete real browser journey, failed and abandoned Checkout, actual mail receipt and browser-closed provider processing remain unverified.
