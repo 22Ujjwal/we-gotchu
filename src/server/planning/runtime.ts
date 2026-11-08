@@ -116,6 +116,7 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
         mail: (await getMail())?.transport, requireCustomerId,
         ...(env.PLANNING_TEST_SUPPLIER_EMAIL ? { testSupplierEmail: env.PLANNING_TEST_SUPPLIER_EMAIL } : {}),
         ...(env.NAIVE_COMPANY_AGENT_ID && env.PLANNING_TOOLS_SECRET && env.NAIVE_API_KEY
+          && env.PLANNING_TOOLS_BEARER && env.NAIVE_WEBHOOK_SECRET
           && env.PLANNING_TEST_SUPPLIER_EMAIL && env.AGENTMAIL_API_KEY && env.AGENTMAIL_INBOX_ID && env.AGENTMAIL_WEBHOOK_SECRET ? {
           arrange: (record: import('./repository').PlanningRecord) => {
             const work = getStorage().then(async saved => {

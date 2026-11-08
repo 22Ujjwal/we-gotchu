@@ -26,13 +26,18 @@ export async function arrangeResearchedEvent(deps: PlanningDeps, event: EventVie
   const id = `planning_${key}`
   const brief = previewFromBrief(event.event.brief)
   const message = `Arrange the selected venue for this event. Customer brief: ${JSON.stringify(event.event.brief)}. Venue: ${candidate.name}. Source: ${candidate.sources[0].url}. Research estimates are not supplier quotes.`
-  const venue = { id: candidateId, kind: 'venue' as const, name: candidate.name, url: candidate.sources[0].url,
-    why: 'Selected by the customer.', facts: [], unknowns: ['Confirm availability, total price and cancellation terms.'] }
+  const rank = (id: string) => research.recommendations.find(item => item.candidateId === id)?.rank ?? Infinity
+  const supply = research.candidates.filter(item => item.kind === 'supply' && item.priceEstimate !== null)
+    .sort((left, right) => rank(left.candidateId) - rank(right.candidateId))[0]
+  const selections = [candidate, ...(supply ? [supply] : [])].map(item => ({
+    id: item.candidateId, kind: item.kind, name: item.name, url: item.sources[0].url,
+    why: 'Included in the selected arrangement.', facts: [], unknowns: ['Confirm availability, total price and cancellation terms.'],
+  }))
   const record: PlanningRecord = { id, customerId, createRequestId: `event:${key}`, initialMessage: message,
     revision: 0, sessionId: null, sequence: 0, pending: null, requests: {},
-    view: { id, version: 0, status: 'ready', brief, selections: [venue], progress: null, error: null,
+    view: { id, version: 0, status: 'ready', brief, selections, progress: null, error: null,
       messages: [{ id: `event:${key}`, role: 'user', text: message, createdAt: new Date().toISOString() }],
-      proposal: { summary: 'Your selected venue.', nextQuestion: null, options: [venue] } } }
+      proposal: { summary: 'Your selected venue.', nextQuestion: null, options: selections } } }
   const saved = await deps.repository.insert(record)
   if (saved.view.arrangement) return saved.view
   return commandPlanning(deps, saved.id, { kind: 'arrange', requestId: `arrange:${key}`, expectedVersion: saved.view.version, customerEmail })
