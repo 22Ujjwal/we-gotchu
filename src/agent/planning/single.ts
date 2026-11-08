@@ -8,7 +8,7 @@ export function singlePlannerDefinition(model: string): AgentPatch {
     ...research,
     name: 'Arrange planner',
     description: 'Research venues and supplies and return a useful first proposal directly to the customer.',
-    multiagent: null,
+    multiagent: false,
     system: `${research.system}
 You own BOTH venue and supply research. There is no team to delegate to.
 Your first response is a decision-ready starting point, not exhaustive event procurement. Aim to deliver within 90 seconds.
