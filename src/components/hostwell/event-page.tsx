@@ -5,6 +5,7 @@ import { settingsFromView } from '../../lib/hostwell/brief-adapter'
 import { useEventSession } from '../../lib/hostwell/use-event-session'
 import { PartyView } from './party-view'
 import { ReceiptLoader } from './receipt-loader'
+import { SearchLoader } from './search-loader'
 import { SettingsView } from './settings-view'
 import { Header } from './ui'
 import { VenueView } from './venue-view'
@@ -38,6 +39,15 @@ export function Loading() {
     <div className="flex min-h-screen flex-col">
       <Header step="setting" />
       <ReceiptLoader />
+    </div>
+  )
+}
+
+function Researching() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header step="setting" />
+      <SearchLoader />
     </div>
   )
 }
@@ -123,7 +133,7 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
     )
   }
   if (settings.venues.length === 0) {
-    if (event.status === 'researching' || view.run?.state === 'running') return <Loading />
+    if (event.status === 'researching' || view.run?.state === 'running') return <Researching />
     return <Notice title="We couldn't find a setting" action={<a href="/">Edit brief</a>} />
   }
 

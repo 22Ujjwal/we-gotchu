@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DateTimePicker } from '#/components/hostwell/date-time-picker'
 import type { ScheduleField } from '#/components/hostwell/date-time-picker'
-import { ReceiptLoader } from '#/components/hostwell/receipt-loader'
+import { SearchLoader } from '#/components/hostwell/search-loader'
 import { Button, Header } from '#/components/hostwell/ui'
 import { briefFromPreview } from '#/lib/hostwell/brief-adapter'
 import { EventApiError, createEventApi } from '#/lib/hostwell/event-api'
@@ -121,7 +121,7 @@ function BriefFlow({
     return (
       <div className="flex min-h-screen flex-col">
         <Header step="setting" />
-        <ReceiptLoader onDone={onLoaderDone} />
+        <SearchLoader onDone={onLoaderDone} />
       </div>
     )
 

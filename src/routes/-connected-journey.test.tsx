@@ -110,7 +110,7 @@ test('signed out visitors are sent to sign in and back to the event', () => {
   expect(fetch).not.toHaveBeenCalled()
 })
 
-test('running research shows only the receipt loader', async () => {
+test('running research shows only the search loader', async () => {
   getOnly(createEventViewFixture('running'))
   render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
   await flush()
