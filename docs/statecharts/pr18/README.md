@@ -37,6 +37,40 @@ The result remains partial because discovery alone does not verify the final eve
 If ranking fails after candidates are found, the workflow can return the evidence without an ordered recommendation.
 The workflow permits one correction when the ranking output is invalid.
 
+## Architecture
+
+The solid connections show the standalone workflow in this PR.
+The dashed connections show planned application integration and are not implemented by this PR.
+
+```mermaid
+flowchart LR
+  Smoke[Standalone smoke caller] --> Workflow[researchEvent workflow]
+  Workflow --> Contracts[Shared schemas]
+  Workflow --> Discovery[Discovery adapter]
+  Discovery --> Monid[Monid API]
+  Monid --> Places[Litescrape venue search]
+  Monid --> Products[Channel3 product search]
+  Discovery --> Workflow
+  Workflow --> Ranker[Naive ranking adapter]
+  Ranker --> Naive[Naive hosted session]
+  Naive --> Ranker
+  Ranker --> Workflow
+  Workflow --> Result[Research result with sources and unknowns]
+  Workflow --> Progress[In-process progress callback]
+  FutureUI[Customer interface - future] -.-> FutureBackend[Application API and persistence - future]
+  FutureBackend -.-> Workflow
+  FutureBackend -.-> FutureUI
+```
+
+The discovery adapter calls Monid for venue and product leads and returns evidence to the workflow.
+The Naive adapter receives the brief and retrieved candidates, then returns a ranking of candidate IDs.
+The workflow validates the ranking and returns the original supplier evidence with unknown details preserved.
+Naive does not call Monid in this implementation.
+The result is not a confirmed booking or final quote.
+
+The standalone caller manages the Naive adapter's checkpoint and cleanup operations.
+Durable checkpoints, database-backed progress, and the application integration remain future work.
+
 ## Model check
 
 The accompanying TLA+ model is a simplified representation of the intended research behavior, not a proof of the implementation.
