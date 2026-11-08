@@ -290,3 +290,19 @@ test('expired saved listing calculations return to unknown without discarding th
   expect(result.candidates[0].verification).toEqual(item.verification)
   expect(result.budgetFit).toBe('unknown')
 })
+
+
+test('combined supply requests remain unknown instead of treating distinct items as alternatives', async () => {
+  const plates = listing('plates')
+  const cups = listing('cups')
+  cups.verification.packSize.note = cups.verification.packSize.note.replace('plates', 'cups')
+  const items = [plates, cups]
+  const result = await researchEvent({ ...input, brief: { ...input.brief, supplyNeeds: ['plates and cups'], budget: 2000 } }, {
+    discover: async () => ({ candidates: items, sourceChecks: [] }),
+    recommend: async () => ({ candidateIds: items.map(item => item.candidateId) }),
+  })
+  expect(result.candidates.every(item => item.priceEstimate === null && item.quantityInfo === undefined)).toBe(true)
+  expect(result.budgetFit).toBe('unknown')
+  expect(result.budgetBasis).toContain('Uncovered supply needs: plates and cups')
+  expect(result.recommendations.flatMap(item => [...item.matched, ...item.unmet]).join(' ')).not.toContain('Alternative for')
+})
