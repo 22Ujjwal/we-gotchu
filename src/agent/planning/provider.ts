@@ -1,5 +1,6 @@
 import { createClient, type SessionCreate } from '@usenaive-sdk/managed-agents'
 import { z } from 'zod'
+import { createPlanningFetch } from './transport'
 import { ApiError } from '../../server/events/errors'
 import { planningProposalSchema, type PlanningAgent } from './contract'
 
@@ -62,6 +63,6 @@ export function createConfiguredPlanningAgent(env: NodeJS.ProcessEnv = process.e
   }
   return createPlanningAgent({ agentId: env.NAIVE_PLANNING_AGENT_ID, client: createClient({
     apiKey: env.NAIVE_API_KEY, baseUrl: 'https://api.vetta.sh',
-    fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(45_000) }),
+    fetch: createPlanningFetch(),
   }) })
 }
