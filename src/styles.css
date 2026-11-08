@@ -1,5 +1,29 @@
-
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Archivo", system-ui, sans-serif;
+  --font-script: "Momo Signature", cursive;
+  --font-body: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  --color-ink: #1f1b16;
+  --color-body: #3e3830;
+  --color-stone: #8a8174;
+  --color-muted: #a79d8d;
+  --color-faint: #b8ae9e;
+  --color-sage: #5e6b63;
+  --color-sand: #c9beab;
+  --color-line: #ece6dc;
+  --color-line-strong: #e3ddd3;
+  --color-cream: #faf4e6;
+  --color-cream-line: #eaddbf;
+  --color-brass: #6b5a35;
+  --color-gold: #c99a3b;
+  --color-receipt: #fffefa;
+  --color-receipt-ink: #2b2620;
+  --color-receipt-muted: #6f6658;
+  --color-receipt-rule: #cfc5b4;
+}
 
 * {
   box-sizing: border-box;
@@ -13,5 +37,57 @@ body,
 
 body {
   margin: 0;
+  background: #ffffff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* Inline "mad-lib" field (contentEditable span). */
+.blank {
+  caret-color: var(--color-ink);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.blank:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-faint);
+}
+.blank:empty:not([data-placeholder])::before {
+  content: "\00a0\00a0\00a0";
+}
+
+.gold-frame {
+  background-image: linear-gradient(
+    in oklab 135deg,
+    #f0d58c 0%,
+    #c99a3b 40%,
+    #f6e6b8 65%,
+    #b4852a 100%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .confetti > * {
+    animation: drift 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes drift {
+  from {
+    opacity: 0;
+    translate: 0 -24px;
+  }
+}
