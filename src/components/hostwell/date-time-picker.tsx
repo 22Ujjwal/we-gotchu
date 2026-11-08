@@ -33,7 +33,7 @@ export function DateTimePicker({ value, field, onSave, onClose }: {
   const [from, setFrom] = useState(value.from ? to24h(value.from) : '19:00')
   const [till, setTill] = useState(value.till ? to24h(value.till) : '23:00')
 
-  const [editing, setEditing] = useState<string | null>(`${field === 'till' ? 'till' : 'from'}-hour`)
+  const [editing, setEditing] = useState<string | null>(null)
 
   useEffect(() => {
     const element = dialog.current!
@@ -99,7 +99,7 @@ export function DateTimePicker({ value, field, onSave, onClose }: {
       <div className="mt-7 space-y-2">
         <TimeChoice label="Start" field="from" value={from} onChange={setFrom} editing={editing} onEdit={setEditing} />
         <TimeChoice label="End" field="till" value={till} onChange={setTill} editing={editing} onEdit={setEditing} />
-        <p className="text-center text-xs text-stone">Give it a spin. Or use the arrow keys.</p>
+        {editing && <p className="text-center text-xs text-stone">Give it a spin. Or use the arrow keys.</p>}
       </div>
       {from && till && till <= from && <p className="mt-3 text-sm text-stone">{till === from ? 'Choose a different end time.' : 'Ends the following day.'}</p>}
       <Button
