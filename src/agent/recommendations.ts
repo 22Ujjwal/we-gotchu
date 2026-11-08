@@ -24,6 +24,11 @@ function assess(candidate: Candidate, brief: Brief, now: number, policy: Freshne
     result.unchecked.push('A compatible, current event quote or total is unavailable.')
     return result
   }
+  // Saved listing calculations must be re-established against the current brief and source age.
+  if (candidate.priceProvenance === 'supplier_listing' &&
+      (candidate.verification.packSize || candidate.verification.listingPrice)) {
+    result.candidate = { ...candidate, priceEstimate: null, quantityInfo: undefined }
+  }
   const pack = candidate.verification.packSize
   const price = candidate.verification.listingPrice
   const trusted = (field: typeof pack, type: 'packSize' | 'listingPrice') => field?.status === 'known' &&
