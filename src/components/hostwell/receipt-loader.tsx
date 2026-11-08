@@ -9,10 +9,31 @@ function printed(text: string, elapsed: number) {
   return <><span>{text.slice(0, count)}</span><span className="slip-unprinted">{text.slice(count)}</span></>
 }
 
-export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 'Research in progress', brief }: {
+function ActivityDial({ tasks, index }: { tasks: string[]; index: number }) {
+  const hasLongStatus = tasks.slice(Math.max(0, index - 1), index + 2).some(text => text.length > 34)
+  return <div className="slip-activity" data-live={hasLongStatus || undefined}>
+    <span className="sr-only" role="status">{tasks[index]}</span>
+    <div className="activity-track" aria-hidden="true" style={{ transform: `translateY(calc(${1 - index} * var(--dial-row)))` }}>
+      {tasks.map((text, i) => <div key={i} className="activity-row" data-current={i === index}>
+        <span title={text}>{text}</span>
+      </div>)}
+    </div>
+  </div>
+}
+
+// Connected research reports completed and current messages; future messages
+// only appear in the preview, where the sequence is known ahead of time.
+function LiveActivityDial({ text }: { text: string }) {
+  const [history, setHistory] = useState([text])
+  if (history[history.length - 1] !== text) setHistory([...history, text])
+  return <ActivityDial tasks={history} index={history.length - 1} />
+}
+
+export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 'Research in progress', brief, activity }: {
   onDone?: () => void
   title?: string
   label?: string
+  activity?: string
   brief?: Brief
 } = {}) {
   const [percent, setPercent] = useState(0)
@@ -55,12 +76,10 @@ export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 
     }
   }, [stage])
 
-  const displayPercent = preview ? percent : Math.min(95, percent)
   return <section className="slip-loader" data-finishing={preview && percent === 100 || undefined} aria-label={label}>
     <h1 className="sr-only">{title}</h1>
-    <div className="slip-meter" role="progressbar" aria-label="Planning animation" aria-valuetext={displayPercent + '% - ' + slips[stage].task} aria-valuenow={displayPercent} aria-valuemin={0} aria-valuemax={100}>
-      <span>{displayPercent}</span><small>%</small>
-    </div>
+    {preview ? <ActivityDial tasks={slips.map(slip => slip.task)} index={stage} />
+      : <LiveActivityDial text={activity ?? title} />}
     <ol ref={strip} className="slip-strip" aria-label="Planning steps">
       {slips.map((slip, i) => {
         const elapsed = duration * (percent / 100 - i / slips.length)

@@ -210,7 +210,7 @@ body {
 
 /* Keep the header still while receipts give way to the venue shortlist. */
 @media (prefers-reduced-motion: no-preference) {
-  .slip-loader[data-finishing] > :is(.slip-meter, .slip-strip) {
+  .slip-loader[data-finishing] > :is(.slip-activity, .slip-strip) {
     animation: receipts-leave 360ms 260ms cubic-bezier(.4, 0, .6, 1) both;
   }
   .venue-reveal > div,
