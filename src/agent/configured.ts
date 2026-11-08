@@ -1,3 +1,4 @@
+import { createDetailEnricher } from '../suppliers/details'
 import { ApiError } from '../server/events/errors'
 import type { Store } from '../server/store'
 import type { ResearchPort } from '../server/events/deps'
@@ -23,7 +24,8 @@ export function createConfiguredResearch(store: Store, env: NodeJS.ProcessEnv = 
     validateConfiguration()
     if (port) return port
     port = createResearchIntegration({ store, providers: {
-      discover: createDiscovery({ apiKey: env.MONID_API_KEY! }), enrich,
+      discover: createDiscovery({ apiKey: env.MONID_API_KEY! }),
+      enrich: enrich ?? createDetailEnricher({ apiKey: env.MONID_API_KEY! }),
       session: createResearchSession({ apiKey: env.NAIVE_API_KEY!, model: env.NAIVE_MODEL! }),
     } })
     return port
@@ -32,6 +34,6 @@ export function createConfiguredResearch(store: Store, env: NodeJS.ProcessEnv = 
     validateConfiguration,
     startResearch: input => configured().startResearch(input),
     advanceResearch: input => configured().advanceResearch(input),
-    cancelResearch: sessionId => configured().cancelResearch(sessionId),
+    cancelResearch: run => configured().cancelResearch(run),
   }
 }

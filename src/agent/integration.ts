@@ -1,14 +1,14 @@
 import { cleanupResearchResources } from './cleanup'
-import { CONTRACT_VERSION, ResearchInput } from '../contracts'
+import { CONTRACT_VERSION, ResearchInput, canSendCorrection } from '../contracts'
 import type { ResearchPort } from '../server/events/deps'
 import type { Store } from '../server/store'
 import type { ResearchCheckpoint } from '../server/research-checkpoint'
-import { researchEvent, type Discovery, type ResearchProviders } from './research'
+import { researchEvent, rankingCandidates, type Discovery, type ResearchProviders } from './research'
 import { RESEARCH_BUDGET_MICRO_USD, type ResearchSession } from './session'
 
 export type IntegrationProviders = {
   discover: ResearchProviders['discover']
-  enrich?: (input: ResearchInput, evidence: Discovery, signal: AbortSignal) => Promise<Discovery>
+  enrich?: ResearchProviders['enrich']
   session: ResearchSession
 }
 
@@ -66,6 +66,7 @@ export function createResearchIntegration(options: {
       }
       const leaseMs = new Date(run.advancingUntil ?? 0).getTime() - Date.now() - 100
       if (leaseMs <= 0) return running
+      const stepDeadline = Date.now() + Math.min(stepMs, leaseMs)
       const signal = AbortSignal.timeout(Math.min(stepMs, leaseMs))
       const save = async (patch: Partial<ResearchCheckpoint>, message?: string) => {
         const next = { ...c!, ...patch }
@@ -108,14 +109,22 @@ export function createResearchIntegration(options: {
             }, { timeoutMs: stepMs, signal }))
             const terminal = result.outcome === 'awaiting_input' || !result.candidates.length
             await save({ evidence: result, result: terminal ? result : null,
-              stage: terminal ? 'done' : options.providers.enrich ? 'enrichment' : 'agent',
+              stage: terminal ? 'done' : options.providers.enrich ? 'investigating' : 'agent',
             }, terminal ? 'Research needs attention; see the outcome details.' : 'Discovery evidence saved; supplier details remain unverified.')
             return running
           }
-          case 'enrichment': {
+          case 'investigating': {
             await save({}, 'Investigating supplier details.')
-            const enriched = await bounded(() => options.providers.enrich!(c!.input, evidenceOf(c!), signal))
-            const result = await validate(c, supportedOrder, async () => enriched)
+            // Reuse the shared enrichment validator and its cooperative-abort grace period.
+            // Discovery is already saved and recommendation here is only a private ID order.
+            const remaining = stepDeadline - Date.now()
+            if (remaining < 4) throw new Error('Investigation request deadline reached')
+            const reserve = Math.max(1, Math.floor(remaining / 10))
+            const result = await bounded(() => researchEvent(c!.input, {
+              discover: async () => evidenceOf(c!), enrich: options.providers.enrich, recommend: supportedOrder,
+            }, { timeoutMs: remaining - reserve, detailTimeoutMs: remaining - reserve,
+              rankingReserveMs: reserve, signal }))
+            result.warnings = [...new Set(result.warnings)]
             await save({ evidence: result, stage: result.candidates.length ? 'agent' : 'done',
               result: result.candidates.length ? null : result }, 'Supplier investigation evidence saved.')
             return running
@@ -129,7 +138,7 @@ export function createResearchIntegration(options: {
           }
           case 'session': {
             await save({ stage: 'uncertain' })
-            const sessionId = await bounded(() => session.start(c!.input, c!.evidence!.candidates, c!.agentId!, signal))
+            const sessionId = await bounded(() => session.start(c!.input, rankingCandidates(c!.evidence!.candidates), c!.agentId!, signal))
             try { await save({ naiveSessionId: sessionId, stage: 'ranking' }, 'Comparing the retrieved candidates.') }
             catch (error) { await discard(sessionId, c.agentId); throw error }
             return running
@@ -161,7 +170,7 @@ export function createResearchIntegration(options: {
               if (correction) invalid = true
               return snapshot.structured_output
             })
-            if (invalid && c.correctionsUsed === 0) {
+            if (invalid && canSendCorrection({ ...run, correctionsUsed: c.correctionsUsed })) {
               await save({ stage: 'correcting' })
             } else {
               await save({ result, stage: 'cleanup' }, 'Research evidence validated; final costs remain unconfirmed.')

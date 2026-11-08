@@ -7,7 +7,7 @@ export type ResearchCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | '
   sessionStopped?: boolean
   version: number
   input: ResearchInput
-  stage: 'discovery' | 'enrichment' | 'agent' | 'session' | 'ranking' | 'correcting' | 'cleanup' | 'delete_agent' | 'done' | 'uncertain'
+  stage: 'discovery' | 'investigating' | 'agent' | 'session' | 'ranking' | 'correcting' | 'cleanup' | 'delete_agent' | 'done' | 'uncertain'
   evidence: ResearchResult | null
   result: ResearchResult | null
   agentId: string | null

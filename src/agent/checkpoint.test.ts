@@ -59,3 +59,10 @@ test('result publication rejects an older lease and a canceled event', async () 
     expect(await store.getResearchResult(run.runId)).toBeNull()
   }
 })
+
+test('late cleanup failures cannot erase confirmed cleanup for the same resources', async () => {
+  const { run } = await setup()
+  await store.researchCheckpoints!.recordCleanup(run.runId, { sessionId: 'session', agentId: 'agent', confirmed: true })
+  await store.researchCheckpoints!.recordCleanup(run.runId, { sessionId: 'session', agentId: 'agent', confirmed: false })
+  expect((await store.researchCheckpoints!.read(run.runId))!.cleanup).toMatchObject({ confirmed: true, sessionStopped: true, agentDeleted: true })
+})
