@@ -78,7 +78,7 @@ function ConnectedBriefPage() {
         sessionStorage.setItem(savedBrief, JSON.stringify(draft))
         submitting.current = true
         try {
-          const plan = await createPlanningApi().create({ requestId: crypto.randomUUID(), message }, new AbortController().signal)
+          const plan = await createPlanningApi().create({ requestId: crypto.randomUUID(), message, brief: draft }, new AbortController().signal)
           sessionStorage.removeItem(savedBrief)
           await navigate({ to: '/planning/$id', params: { id: plan.id } })
         } catch (error) {
@@ -206,7 +206,7 @@ function BriefFlow({
                     onClick={() => setStep(i)}
                     className="cursor-pointer text-center text-[16px] leading-[26px] text-stone hover:text-ink lg:text-[22px] lg:leading-[38px]"
                   >
-                    {s.map((part, j) =>
+                    {(i === 2 && !draft.canLose.trim() ? s.slice(0, 2).concat('.') : s).map((part, j) =>
                       typeof part === 'string' ? (
                         <Fragment key={j}>{part}</Fragment>
                       ) : (

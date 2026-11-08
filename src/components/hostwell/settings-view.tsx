@@ -5,6 +5,8 @@ import { Button, FeatureRow, Guests, Header, MetaLine, Photo } from './ui'
 import { to24h } from '#/lib/hostwell/fixture'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
 
+type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'>
+
 const suggestions = ['Cheaper candles', 'Closer to U-Bahn', 'More venues']
 
 /** The picked-for-you venue in the middle, the others either side. */
@@ -14,26 +16,34 @@ export function SettingsView({
   others,
   onChoose: choose,
   editBrief,
+  embedded = false,
+  disabled = false,
+  followup,
+  summary,
 }: {
-  brief: Brief
-  featured: Venue
-  others: Array<Venue>
+  brief?: Brief
+  featured: SettingVenue
+  others: Array<SettingVenue>
   onChoose: (venueId: string) => void
   /** The "Edit brief" link. */
   editBrief: ReactNode
+  embedded?: boolean
+  disabled?: boolean
+  followup?: ReactNode
+  summary?: ReactNode
 }) {
   const [ask, setAsk] = useState('')
   const [prev, next] = others
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip">
-      <Header step="setting" />
-      <main className="venue-reveal flex flex-col items-center gap-6 px-5 pt-8 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
+    <div className={`flex w-full flex-col overflow-x-clip ${embedded ? '' : 'min-h-screen'}`}>
+      {!embedded && <Header step="setting" />}
+      <section className="venue-reveal flex flex-col items-center gap-6 px-5 pt-8 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
         <div className="flex flex-col items-center gap-2 text-center lg:gap-3.5">
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
-            {brief.occasion}
+            {brief?.occasion || 'Your event options'}
           </h1>
-          <MetaLine>
+          {brief && <MetaLine>
             <span>
               {brief.date}, {to24h(brief.from)}
             </span>
@@ -41,14 +51,15 @@ export function SettingsView({
             <Guests n={brief.guests} />
             <span>≤ ${brief.budget.replace(/^\$/, '')}</span>
             {editBrief}
-          </MetaLine>
+          </MetaLine>}
         </div>
 
+        {summary}
         <section
           aria-label="Suggested venues"
           className="flex w-full flex-col items-center gap-5 lg:w-max lg:flex-row lg:gap-12 lg:pt-2"
         >
-          {prev && <SideCard venue={prev} onSelect={() => choose(prev.id)} />}
+          {prev && <SideCard disabled={disabled} venue={prev} onSelect={() => choose(prev.id)} />}
           <div
             key={current.id}
             className="gold-frame order-first flex w-full max-w-[468px] shrink-0 lg:w-[468px] p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
@@ -68,6 +79,8 @@ export function SettingsView({
                 </ul>
                 <Button
                   type="button"
+                  disabled={disabled}
+                  aria-label={`Choose ${current.name}`}
                   onClick={() => choose(current.id)}
                   className="py-[15px] text-[16px] leading-5 lg:mt-2 lg:text-[17px] lg:leading-[22px]"
                 >
@@ -76,10 +89,10 @@ export function SettingsView({
               </div>
             </article>
           </div>
-          {next && <SideCard venue={next} onSelect={() => choose(next.id)} />}
+          {next && <SideCard disabled={disabled} venue={next} onSelect={() => choose(next.id)} />}
         </section>
 
-        <form
+        {followup ?? <form
           onSubmit={(e) => e.preventDefault()}
           className="flex w-full max-w-[760px] flex-col gap-2.5 pt-1 lg:gap-3 lg:pt-0"
         >
@@ -111,13 +124,13 @@ export function SettingsView({
               </button>
             ))}
           </div>
-        </form>
-      </main>
+        </form>}
+      </section>
     </div>
   )
 }
 
-function CardTitle({ venue, large }: { venue: Venue; large?: boolean }) {
+function CardTitle({ venue, large }: { venue: SettingVenue; large?: boolean }) {
   return (
     <h2 className={`m-0 font-semibold ${large ? 'text-[22px] leading-7 lg:text-[26px] lg:leading-8' : 'text-[20px] leading-6 lg:text-[22px] lg:leading-7'}`}>
       {venue.name}
@@ -125,7 +138,7 @@ function CardTitle({ venue, large }: { venue: Venue; large?: boolean }) {
   )
 }
 
-function SideCard({ venue, onSelect }: { venue: Venue; onSelect: () => void }) {
+function SideCard({ venue, onSelect, disabled = false }: { venue: SettingVenue; onSelect: () => void; disabled?: boolean }) {
   return (
     <article className="flex w-full max-w-[468px] shrink-0 lg:w-[340px] lg:max-w-[340px] flex-col overflow-hidden border border-line bg-white shadow-[0_12px_32px_#1F1B160F]">
       <Photo
@@ -144,6 +157,7 @@ function SideCard({ venue, onSelect }: { venue: Venue; onSelect: () => void }) {
         </ul>
         <button
           type="button"
+          disabled={disabled}
           onClick={onSelect}
           aria-label={`Choose ${venue.name}`}
           className="flex cursor-pointer items-center justify-center border border-line-strong bg-white py-[13px] text-[16px] leading-5 font-semibold text-body transition-colors hover:border-ink hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
