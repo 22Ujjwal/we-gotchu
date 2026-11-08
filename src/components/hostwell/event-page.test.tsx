@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 import { planReadyEvent } from '../../contracts/fixtures'
 import { EventPage } from './event-page'
@@ -34,4 +34,44 @@ test('unsupported saved timezone reports an edit error without losing the event 
   fireEvent.click(await screen.findByRole('button', { name: 'Edit brief' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('timezone')
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(view.event.brief.eventType)
+})
+test('an open editor keeps its original revision after polling loads another tab changes', async () => {
+  vi.useFakeTimers()
+  try {
+    const first = structuredClone(planReadyEvent)
+    first.plan = null
+    first.event.status = 'researching'
+    first.run!.state = 'running'
+    const newer = structuredClone(first)
+    newer.event.briefRevision = 2
+    newer.run!.briefRevision = 2
+    newer.event.brief.location = 'Berkeley, CA'
+    let reads = 0
+    vi.mocked(fetch).mockImplementation(async (_url, init) => {
+      if (init?.method === 'PATCH') {
+        const body = JSON.parse(String(init.body))
+        return body.expectedBriefRevision === 1
+          ? Response.json({ errorCode: 'stale_brief', message: 'Review the latest answers.' }, { status: 409 })
+          : Response.json(newer)
+      }
+      return Response.json(reads++ === 0 ? first : newer)
+    })
+    render(<EventPage eventId={first.event.eventId} identity="alice" />)
+    await act(async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Edit brief' }))
+    fireEvent.change(screen.getByLabelText('Area'), { target: { value: 'Oakland, CA' } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+    expect(reads).toBe(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
+    await act(async () => {})
+    const write = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === 'PATCH')!
+    expect(JSON.parse(String(write[1]!.body))).toEqual({ expectedBriefRevision: 1, changes: { location: 'Oakland, CA' } })
+    expect(screen.getByLabelText('Area')).toHaveValue('Oakland, CA')
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
+    await act(async () => {})
+    const writes = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')
+    expect(writes).toHaveLength(2)
+    expect(JSON.parse(String(writes[1][1]!.body)).expectedBriefRevision).toBe(1)
+  } finally { vi.useRealTimers() }
 })
