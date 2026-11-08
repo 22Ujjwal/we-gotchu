@@ -51,9 +51,13 @@ test('an open editor keeps its original revision after polling loads another tab
     vi.mocked(fetch).mockImplementation(async (_url, init) => {
       if (init?.method === 'PATCH') {
         const body = JSON.parse(String(init.body))
-        return body.expectedBriefRevision === 1
-          ? Response.json({ errorCode: 'stale_brief', message: 'Review the latest answers.' }, { status: 409 })
-          : Response.json(newer)
+        if (body.expectedBriefRevision !== newer.event.briefRevision) {
+          return Response.json({ errorCode: 'stale_brief', message: 'Review the latest answers.' }, { status: 409 })
+        }
+        newer.event.brief = { ...newer.event.brief, ...body.changes }
+        newer.event.briefRevision++
+        newer.run!.briefRevision = newer.event.briefRevision
+        return Response.json(newer)
       }
       return Response.json(reads++ === 0 ? first : newer)
     })
@@ -82,6 +86,8 @@ test('an open editor keeps its original revision after polling loads another tab
     const accepted = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')[2]
     expect(JSON.parse(String(accepted[1]!.body))).toEqual({ expectedBriefRevision: 2, changes: { location: 'Oakland, CA' } })
     expect(screen.queryByRole('region', { name: 'Edit event brief' })).not.toBeInTheDocument()
+    expect(newer.event.briefRevision).toBe(3)
+    expect(newer.event.brief).toMatchObject({ location: 'Oakland, CA', headcount: 80 })
   } finally { vi.useRealTimers() }
 })
 
