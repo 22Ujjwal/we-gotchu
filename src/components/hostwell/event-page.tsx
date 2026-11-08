@@ -16,17 +16,22 @@ export function ConnectedEventPage({ eventId, paid = false }: { eventId: string;
 }
 
 // Used by the canonical route; explicit identity also supports controlled HTTP journey tests.
-export function EventPage({ eventId, identity, paid = false, onCheckout = (url) => window.location.assign(url) }: {
+export function EventPage({ eventId, identity, paid = false, onCheckout = (url) => window.location.assign(url), quoteScreenMs = QUOTE_SCREEN_MS }: {
   eventId: string
   identity: string | null
   /** Back from a completed Stripe checkout. */
   paid?: boolean
   onCheckout?: (url: string) => void
+  /** Shortest time the quote screen shows before Checkout, so it doesn't just flash. */
+  quoteScreenMs?: number
 }) {
   const signIn = `/sign-in?redirect_url=${encodeURIComponent(`/events/${encodeURIComponent(eventId)}`)}`
   if (!identity) return <Notice title="Sign in to see your event" action={<a href={signIn}>Sign in</a>} />
-  return <EventSessionPage key={`${identity}:${eventId}`} eventId={eventId} identity={identity} onCheckout={onCheckout} signIn={signIn} paid={paid} />
+  return <EventSessionPage key={`${identity}:${eventId}`} eventId={eventId} identity={identity} onCheckout={onCheckout} signIn={signIn} paid={paid} quoteScreenMs={quoteScreenMs} />
 }
+
+// Long enough for the first receipt to finish printing.
+const QUOTE_SCREEN_MS = 4000
 
 function Loading() {
   return (
@@ -49,9 +54,10 @@ function Notice({ title, action, step = 'setting' }: { title: string; action: Re
   )
 }
 
-function EventSessionPage({ eventId, identity, onCheckout, signIn, paid }: {
+function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteScreenMs }: {
   eventId: string
   paid: boolean
+  quoteScreenMs: number
   identity: string
   onCheckout: (url: string) => void
   signIn: string
@@ -59,10 +65,17 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid }: {
   const session = useEventSession({ eventId, identity })
   const [chosen, setChosen] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [quoting, setQuoting] = useState(false)
   const active = useRef(true)
   useEffect(() => {
     active.current = true
     return () => { active.current = false }
+  }, [])
+  // Back from Checkout can restore this page from the browser cache with the quote screen still up.
+  useEffect(() => {
+    const restored = (e: PageTransitionEvent) => { if (e.persisted) setQuoting(false) }
+    window.addEventListener('pageshow', restored)
+    return () => window.removeEventListener('pageshow', restored)
   }, [])
 
   const { view } = session
@@ -74,6 +87,15 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid }: {
         action={session.error.status === 401 ? <a href={signIn}>Sign in</a>
           : <button type="button" disabled={session.loading} onClick={() => void session.refresh().catch(() => {})}>Try again</button>}
       />
+    )
+  }
+
+  if (quoting) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header step="setting" />
+        <ReceiptLoader title="Getting quotes for everything" label="Getting quotes" />
+      </div>
     )
   }
 
@@ -141,10 +163,14 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid }: {
       }
       onArrange={() => {
         setError('')
-        session.approve().then(
-          (url) => { if (active.current) onCheckout(url) },
+        setQuoting(true)
+        const shown = new Promise((resolve) => setTimeout(resolve, quoteScreenMs))
+        Promise.all([session.approve(), shown]).then(
+          ([url]) => { if (active.current) onCheckout(url) },
           (cause: unknown) => {
-            if (active.current) setError(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')
+            if (!active.current) return
+            setQuoting(false)
+            setError(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')
           },
         )
       }}

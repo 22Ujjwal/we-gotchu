@@ -142,7 +142,7 @@ test('a ready plan is chosen, approved once and sent to checkout', async () => {
     }
     throw new Error(`Unexpected request: ${request.method} ${path}`)
   })
-  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" onCheckout={checkout} />)
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" onCheckout={checkout} quoteScreenMs={0} />)
   const cards = within(await screen.findByRole('region', { name: 'Suggested venues' }))
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ready.event.brief.eventType)
   expect(cards.getByRole('heading', { name: 'Harbor Loft (simulated)' })).toBeVisible()
@@ -163,7 +163,8 @@ test('a ready plan is chosen, approved once and sent to checkout', async () => {
   fireEvent.click(button)
   fireEvent.click(button)
   await flush()
-  expect(button).toBeDisabled()
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Getting quotes for everything')
+  expect(screen.queryByRole('button', { name: 'Arrange' })).not.toBeInTheDocument()
   expect(posts).toEqual([{ planId: ready.plan!.planId, planRevision: ready.plan!.revision }])
   await act(async () => { approval.resolve(Response.json({ approval: pending.approval, payment: pending.payment,
     checkoutUrl: 'https://checkout.example.test/session-controlled' })) })

@@ -271,10 +271,14 @@ function SlipCard({ slip, at }: { slip: Slip; at: (typeof schedule)[number] & { 
 }
 
 /**
- * Shown while the agent researches. Loops until the parent swaps it out;
+ * Shown while the agent works. Loops until the parent swaps it out;
  * pass onDone to play the sequence once instead.
  */
-export function ReceiptLoader({ onDone }: { onDone?: () => void } = {}) {
+export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 'Research in progress' }: {
+  onDone?: () => void
+  title?: string
+  label?: string
+} = {}) {
   const now = useClock(onDone)
 
   // Three columns, filled left to right, so new slips land in a flowing grid.
@@ -282,9 +286,9 @@ export function ReceiptLoader({ onDone }: { onDone?: () => void } = {}) {
   slips.forEach((_, i) => columns[i % 3].push(i))
 
   return (
-    <section aria-label="Research in progress" className="flex w-full flex-col items-center px-5 pt-10 pb-20 lg:pt-12">
+    <section aria-label={label} className="flex w-full flex-col items-center px-5 pt-10 pb-20 lg:pt-12">
         <h1 className="m-0 font-script text-[40px] leading-14 font-normal lg:text-[52px] lg:leading-[72px]">
-          Finding your setting
+          {title}
         </h1>
 
         <div className="mt-12 grid w-full max-w-[1020px] grid-cols-1 items-start gap-12 sm:grid-cols-3">
