@@ -60,6 +60,10 @@ export function createSupplierMailRepositories(db: PgDatabase<PgQueryResultHKT, 
     async release(id, token) { await fenced(id, token, { leaseToken: null, leaseUntil: null }) },
   }
   return { operations, receipts,
+    async operationForRequest(requestId: string) {
+      const [row] = await db.select().from(operationsTable).where(eq(operationsTable.requestId, requestId))
+      return row?.data ?? null
+    },
     async references(inboxId: string): Promise<InquiryReference[]> {
       const rows = await db.select({ data: operationsTable.data }).from(operationsTable)
         .where(sql`${operationsTable.data}->>'inboxId' = ${inboxId} AND ${operationsTable.data}->'result'->>'messageId' IS NOT NULL`)

@@ -5,7 +5,7 @@ import type { MailProvider } from '../email/supplier-inquiries/types'
 import type { EvidenceMode } from '../email/supplier-inquiries/incoming-types'
 import type { createSupplierMailRepositories } from './mail-repository'
 import type { PlanningRepository } from './repository'
-import type { SupplierMailTransport } from './supplier-mail'
+import { inquirySendResultSchema, type SupplierMailTransport } from './supplier-mail'
 import { acceptIncomingReply } from './replies'
 
 export function createPlanningMail({ repository, storage, provider, secret, evidenceMode = 'live' }: {
@@ -17,6 +17,14 @@ export function createPlanningMail({ repository, storage, provider, secret, evid
 }) {
   const rawTransport = createSupplierInquiryTransport({ provider, operations: storage.operations })
   const transport: SupplierMailTransport = {
+    async reconcileInquiry(input) {
+      const operation = await storage.operationForRequest(input.requestId)
+      if (!operation || operation.input.conversationId !== input.conversationId || operation.input.inquiryId !== input.inquiryId) return null
+      const result = await rawTransport.reconcileInquiry(operation.id)
+      if (!result) return null
+      const { provider: _provider, ...value } = result
+      return inquirySendResultSchema.parse(value.status === 'accepted' ? { ...value, threadId: value.threadId ?? null } : value)
+    },
     async sendInquiry(input) {
       const result = await rawTransport.sendInquiry(input)
       // Keep the application's strict contract while preserving provider operation identity.

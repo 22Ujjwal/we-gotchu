@@ -250,7 +250,30 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   return deliver(deps, reserved)
 }
 
-export async function getPlanning(deps: PlanningDeps, id: string, options: { savedOnly?: boolean } = {}): Promise<PlanningView> {
+async function reconcileInquiry(deps: PlanningDeps, record: PlanningRecord): Promise<PlanningView> {
+  const inquiry = record.view.inquiry
+  const delivery = inquiry?.delivery
+  if (!inquiry || delivery?.status !== 'uncertain' || !deps.mail?.reconcileInquiry) return record.view
+  const result = await bounded(() => deps.mail!.reconcileInquiry!({
+    requestId: delivery.requestId, conversationId: record.id, inquiryId: inquiry.id,
+  }), timeout(deps))
+  if (!result) return record.view
+  const checked = inquirySendResultSchema.parse(result)
+  let current = record
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const latest = current.view.inquiry
+    if (latest?.id !== inquiry.id || latest.delivery?.requestId !== delivery.requestId || latest.delivery.status !== 'uncertain') return current.view
+    const resolved = checked.status === 'failed'
+      ? { ...latest.delivery, status: checked.status, error: 'The email provider rejected this inquiry. Nothing was confirmed sent.' }
+      : { ...latest.delivery, ...checked, error: checked.status === 'accepted' ? undefined : latest.delivery.error }
+    const saved = await deps.repository.compareAndSet(current, { ...current, view: changed(current, { inquiry: { ...latest, delivery: resolved } }) })
+    if (saved) return saved.view
+    current = await owned(deps, record.customerId, record.id)
+  }
+  return current.view
+}
+
+export async function getPlanning(deps: PlanningDeps, id: string, options: { savedOnly?: boolean; reconcileMail?: boolean } = {}): Promise<PlanningView> {
   const customerId = await deps.requireCustomerId()
   let record = await owned(deps, customerId, id)
   if (options.savedOnly) return record.view
@@ -262,6 +285,7 @@ export async function getPlanning(deps: PlanningDeps, id: string, options: { sav
     }) })
     record = recovered ?? await owned(deps, customerId, id)
   }
+  if (options.reconcileMail) return reconcileInquiry(deps, record)
   if (record.pending && record.view.status !== 'uncertain') {
     if (record.pending.expiresAt > now(deps)) return record.view
     const recovered = await deps.repository.compareAndSet(record, {

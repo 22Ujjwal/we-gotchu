@@ -20,4 +20,5 @@ export type InquirySendInput = {
 // The caller has persisted approval of these exact fields before invoking transport.
 export interface SupplierMailTransport {
   sendInquiry(input: InquirySendInput): Promise<InquirySendResult>
+  reconcileInquiry?(input: Pick<InquirySendInput, 'requestId' | 'conversationId' | 'inquiryId'>): Promise<InquirySendResult | null>
 }
