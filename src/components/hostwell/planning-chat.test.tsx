@@ -365,3 +365,33 @@ test('a lost operator confirmation recovers after a read shows that exact call i
   expect(writes).toBe(1)
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
+
+test('prepares, edits and reloads an inquiry without sending mail', async () => {
+  const user = userEvent.setup()
+  let saved = view({ selections: [venue] })
+  const commands: Record<string, unknown>[] = []
+  http(async request => {
+    if (request.method === 'GET') return Response.json(saved)
+    const command = await request.json(); commands.push(command)
+    if (command.kind === 'prepare_inquiry') saved = { ...saved, version: 2, inquiry: {
+      id: 'inquiry-a', revision: 1, status: 'draft', venue, recipient: '', contactSourceUrl: null,
+      subject: 'Event inquiry', text: 'Please confirm our date and all-in price.', contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z',
+    } }
+    else saved = { ...saved, version: 3, inquiry: { ...saved.inquiry!, revision: 2,
+      recipient: command.recipient, subject: command.subject, text: command.text } }
+    return Response.json(saved)
+  })
+  const page = render(<ConnectedPlanningPage id="plan-a" />)
+  await user.click(await screen.findByRole('button', { name: 'Prepare venue inquiry' }))
+  expect(await screen.findByText(/No published email address/)).toBeVisible()
+  await user.type(screen.getByRole('textbox', { name: 'Venue email' }), 'test@example.com')
+  await user.type(screen.getByRole('textbox', { name: 'Inquiry message' }), ' We need space for 12.')
+  await user.click(screen.getByRole('button', { name: 'Save inquiry draft' }))
+  expect(await screen.findByText('Draft saved. Nothing has been sent.')).toBeVisible()
+  expect(commands.map(command => command.kind)).toEqual(['prepare_inquiry', 'save_inquiry'])
+  page.unmount()
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByRole('textbox', { name: 'Venue email' })).toHaveValue('test@example.com')
+  expect(screen.getByRole('textbox', { name: 'Inquiry message' })).toHaveValue('Please confirm our date and all-in price. We need space for 12.')
+  expect(screen.queryByRole('button', { name: /Send inquiry/ })).not.toBeInTheDocument()
+})
