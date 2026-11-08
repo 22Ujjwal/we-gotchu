@@ -1,3 +1,4 @@
+import { scriptedAgentHooks } from '../execution/scripted-agent'
 import { configureStore } from '../runtime'
 import { configureDeps, getDeps } from './deps'
 import type { Store } from '../store'
@@ -11,7 +12,8 @@ export async function getRequestDeps(env: NodeJS.ProcessEnv = process.env) {
     const store = await getPlanningTransactionStore()
     if (store !== localStore) {
       configureStore(store)
-      configureDeps({ store })
+      // The local rehearsal uses simulated fulfillment and does not send customer notifications.
+      configureDeps({ store, notifications: null, hooks: scriptedAgentHooks })
       localStore = store
     }
   }
