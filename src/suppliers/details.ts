@@ -124,7 +124,7 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL, mat
   }
   const final = urls[2]!
   const keywords: Record<string, RegExp> = {
-    capacity: /\b(capacity|seated|standing|guests)\b/i,
+    capacity: /\b(?:capacity\s*(?:of\s*|up to\s*|:\s*)?\d+|(?:seats|accommodates)\s+(?:up to\s+)?\d+|\d+\s+(?:seated|standing|guests|people))\b/i,
     price: /\b(price|pricing|minimum|rental|rate|cost)\b|\$[0-9]/i,
     cancellation: /\b(cancel|cancellation|refund|nonrefundable)\b/i,
     delivery: /\b(delivery|shipping|pickup)\b/i,
@@ -142,7 +142,7 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL, mat
     matchedFields.add(field)
     const excerpt = lines.join(' ').slice(0, 500)
     candidate.verification[field] = { status: 'unknown', sourceUrl: final.href,
-      note: `Unverified supplier-page excerpt: ${excerpt}. Requires review for this event; no supplier was contacted.` }
+      note: `Unverified supplier-page excerpt: ${excerpt}${/[.!?]$/.test(excerpt) ? '' : '.'} Requires review for this event; no supplier was contacted.` }
   }
   // One selected informational link, never forms, checkout, arbitrary crawl paths or off-site links.
   for (const match of page.markdown.matchAll(/\]\((https:\/\/[^\s)]+)\)/g)) {
@@ -156,18 +156,15 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL, mat
 export type DetailOptions = {
   apiKey: string
   fetch?: typeof fetch
-  maxCandidates?: number
   maxPagesPerVenue?: number
   timeoutMs?: number
 }
 
 export function createDetailEnricher(options: DetailOptions): NonNullable<ResearchProviders['enrich']> {
   const fetcher = options.fetch ?? fetch
-  const maxCandidates = options.maxCandidates ?? 2
   const maxPages = options.maxPagesPerVenue ?? 2
   const timeoutMs = options.timeoutMs ?? 25_000
-  if (!Number.isInteger(maxCandidates) || maxCandidates < 1 || maxCandidates > 6 ||
-      !Number.isInteger(maxPages) || maxPages < 1 || maxPages > 2 ||
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 2 ||
       !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 30_000) throw new Error('Invalid detail bounds')
   return async (input: ResearchInput, evidence: Discovery, signal: AbortSignal): Promise<Discovery> => {
     const result: Discovery = structuredClone(evidence)
@@ -176,7 +173,6 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
     const supplies = result.candidates.filter(c => c.kind === 'supply')
     const ordered = Array.from({ length: Math.max(venues.length, supplies.length) }, (_, i) => [venues[i], supplies[i]])
       .flat().filter((c): c is Candidate => !!c)
-    let attemptedCandidates = 0
     for (const candidate of ordered) {
       const source = candidate.sources.find(s => s.stage === 'discovery') ?? candidate.sources[0]
       const tool = candidate.kind === 'supply' ? PRODUCT_TOOL : PAGE_TOOL
@@ -194,11 +190,6 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
         ? source.tool === 'monid:channel3/v1/search' && productId && /^[a-zA-Z0-9_-]{1,200}$/.test(productId)
         : source.tool === 'monid:litescrape/google/maps' && original && !/(^|\.)(google\.com|maps\.google\.com)$/.test(original.hostname)
       if (!original || !trusted || source.stage !== 'discovery' || candidate.evidenceMode !== 'live') { check(source.url, 'absent', 'No supported supplier detail identity or public HTTPS source.'); continue }
-      if (attemptedCandidates >= maxCandidates) {
-        check(source.url, 'absent', 'Detail not attempted because the configured candidate limit was reached.')
-        continue
-      }
-      attemptedCandidates++
       const matchedFields = new Set<string>()
       let target = candidate.kind === 'supply' ? new URL(`https://api.trychannel3.com/v1/products/${productId}`) : original
       for (let page = 0; page < (candidate.kind === 'supply' ? 1 : maxPages); page++) {

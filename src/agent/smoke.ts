@@ -27,7 +27,7 @@ try {
       headcount: 20, budget: 50000, currency: 'usd', supplyNeeds: ['paper plates'], maximumCancellationLoss: 1000 },
   }, {
     discover: createDiscovery({ apiKey: monidKey, limitPerSource: 3 }),
-    enrich: createDetailEnricher({ apiKey: monidKey, maxCandidates: 2, maxPagesPerVenue: 2 }),
+    enrich: createDetailEnricher({ apiKey: monidKey, maxPagesPerVenue: 2 }),
     recommend: ranker.recommend,
   }, {
     timeoutMs: 120_000,

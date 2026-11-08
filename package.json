@@ -22,6 +22,7 @@
     "@tanstack/react-router": "1.170.46",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-start": "1.169.4",
+    "@usenaive-sdk/managed-agents": "0.12.3",
     "agentmail": "^0.5.53",
     "drizzle-orm": "^0.45.4",
     "nitro": "^3.0.261103-rc",

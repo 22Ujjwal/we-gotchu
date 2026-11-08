@@ -87,8 +87,11 @@ export function receiptsFromView(view: EventView): Receipts {
   const currency = plan.currency
   const approved = plan.actions.filter((a) => approval.actionIds.includes(a.actionId))
   const covered = approved.map((a) => (a.kind === 'venue_booking' ? 'the venue' : lowerFirst(a.target))).join(' + ')
-  const startsAt = formatDate(event.brief.startsAt, event.brief.timezone,
-    { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const day = formatDate(event.brief.startsAt, event.brief.timezone,
+    { weekday: 'short', day: 'numeric', month: 'short' })
+  const time = formatDate(event.brief.startsAt, event.brief.timezone,
+    { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const startsAt = `${day} at ${time}`
 
   // The agent's research narrative leads every receipt's story.
   const research: Array<TimelineEntry> = progress

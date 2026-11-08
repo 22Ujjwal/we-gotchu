@@ -6,6 +6,7 @@ export type ResearchCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | '
   cleanup?: ResearchCleanup | null
   sessionStopped?: boolean
   readFailures?: number
+  investigatedCandidateIds?: string[]
   pendingOperation?: { kind: 'agent' | 'session' | 'correction'; idempotencyKey: string; startedAt: string } | null
   version: number
   input: ResearchInput

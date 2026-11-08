@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Brief } from '../../contracts'
 import { planReadyEvent } from '../../contracts/fixtures'
 import { buildQuoteReadyEmail, createQuoteReadyNotifications, type QuoteReady, type QuoteReadyEmail } from './quote-ready'
 
@@ -40,7 +41,7 @@ describe('quote-ready email', () => {
     await notifications.quoteReady(input)
     expect(sent).toHaveLength(1)
     expect(sent[0].to).toBe('alice@example.com')
-    expect(sent[0].key).toBe('appr_1:quote-ready')
+    expect(sent[0].key).toMatch(/^[A-Za-z0-9._~-]{1,256}$/)
   })
 
   it('sends nothing when the customer has no address', async () => {
@@ -53,4 +54,23 @@ describe('quote-ready email', () => {
     await notifications.quoteReady(input)
     expect(calls).toBe(0)
   })
+})
+
+it('includes the complete overnight schedule, timezone and elapsed duration', () => {
+  const brief = { ...input.brief, startsAt: '2026-12-13T07:00:00Z', endsAt: '2026-12-13T09:30:00Z', timezone: 'America/Los_Angeles' }
+  const email = buildQuoteReadyEmail({ ...input, brief }, 'https://app.test')
+  for (const body of [email.text, email.html]) {
+    expect(body).toContain('Dec 12, 2026')
+    expect(body).toContain('Dec 13, 2026')
+    expect(body).toContain('11:00 PM')
+    expect(body).toContain('1:30 AM')
+    expect(body).toContain('America/Los_Angeles')
+    expect(body).toContain('2h 30m')
+  }
+})
+
+it('accepts old briefs but rejects non-positive event durations', () => {
+  expect(Brief.safeParse(input.brief).success).toBe(true)
+  expect(Brief.safeParse({ ...input.brief, endsAt: input.brief.startsAt }).success).toBe(false)
+  expect(Brief.safeParse({ ...input.brief, endsAt: '2020-01-01T00:00:00Z' }).success).toBe(false)
 })

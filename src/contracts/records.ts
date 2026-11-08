@@ -23,12 +23,15 @@ export const Brief = z.object({
   eventType: z.string().min(1),
   location: z.string().min(1),
   startsAt: Timestamp,
+  endsAt: Timestamp.optional(),
   timezone: z.string().min(1),
   headcount: z.number().int().positive(),
   budget: Minor,
   currency: Currency,
   supplyNeeds: z.array(z.string().min(1)),
   maximumCancellationLoss: Minor,
+}).refine((brief) => !brief.endsAt || Date.parse(brief.endsAt) > Date.parse(brief.startsAt), {
+  path: ['endsAt'], message: 'End time must be after start time.',
 })
 export type Brief = z.infer<typeof Brief>
 

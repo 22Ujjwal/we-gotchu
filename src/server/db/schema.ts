@@ -1,3 +1,4 @@
+import type { PlanningRecord } from '../planning/repository'
 import type { ResearchCheckpoint } from '../research-checkpoint'
 import { bigint, bigserial, boolean, check, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
@@ -153,4 +154,12 @@ export const stripeEvents = pgTable('stripe_events', {
   receivedAt: ts('received_at').notNull(),
 })
 
-export const schema = { events, runs, researchResults, plans, approvals, payments, attempts, progressEntries, stripeEvents }
+export const planningConversations = pgTable('planning_conversations', {
+  id: text('id').primaryKey(),
+  customerId: text('customer_id').notNull(),
+  createRequestId: text('create_request_id').notNull(),
+  revision: integer('revision').notNull().default(0),
+  data: jsonb('data').$type<PlanningRecord>().notNull(),
+}, (t) => [unique('planning_customer_create_unique').on(t.customerId, t.createRequestId)])
+
+export const schema = { planningConversations, events, runs, researchResults, plans, approvals, payments, attempts, progressEntries, stripeEvents }
