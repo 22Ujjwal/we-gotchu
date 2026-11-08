@@ -1,3 +1,5 @@
+import { Navigate } from '@tanstack/react-router'
+import { localPreview } from '#/lib/local-preview'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useRef } from 'react'
 import { FeatureIcon, GoldSeal, Ticket } from '#/components/hostwell/icons'
@@ -38,6 +40,10 @@ function parseDate(s: string) {
 }
 
 function PartyPage() {
+  return localPreview ? <PreviewPartyPage /> : <Navigate to="/" />
+}
+
+function PreviewPartyPage() {
   const { brief, addOns, selected, bookedVenueId } = useHostwell()
   const receipt = useRef<HTMLDialogElement>(null)
   const venue = bookedVenueId ? findVenue(bookedVenueId) : undefined

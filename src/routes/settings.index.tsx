@@ -1,3 +1,5 @@
+import { Navigate } from '@tanstack/react-router'
+import { localPreview } from '#/lib/local-preview'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ArrowUp } from '#/components/hostwell/icons'
@@ -18,6 +20,10 @@ export const Route = createFileRoute('/settings/')({ component: SettingsPage })
 const suggestions = ['Cheaper candles', 'Closer to U-Bahn', 'More venues']
 
 function SettingsPage() {
+  return localPreview ? <PreviewSettingsPage /> : <Navigate to="/" />
+}
+
+function PreviewSettingsPage() {
   const { brief } = useHostwell()
   const navigate = useNavigate()
   const featured = 1
