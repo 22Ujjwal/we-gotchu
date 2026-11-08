@@ -1,3 +1,4 @@
+import { createConfiguredResearch } from '../../agent/configured'
 import type { Event, Mode, ResearchInput, ResearchResult, Run } from '../../contracts'
 import type { Store } from '../store'
 import { createStripeAdapter, type StripeLike } from '../payments/stripe'
@@ -96,8 +97,8 @@ export function getDeps(): Deps {
     store,
     stripe: overrides.stripe ?? createStripeAdapter(secretKey),
     now: overrides.now ?? (() => new Date()),
-    // Simulated until Tony's research module is wired in via configureDeps({ research }).
-    research: overrides.research ?? simulatedResearchPort,
+    // Simulation requires an explicit mode; missing real credentials never select fake results.
+    research: overrides.research ?? (process.env.RESEARCH_MODE === 'simulated' ? simulatedResearchPort : createConfiguredResearch(store)),
     requireCustomerId:
       overrides.requireCustomerId ?? (async () => (await import('../auth')).requireCustomerId()),
     // The scripted agent drives execution and cancellation until Naive sessions are wired.

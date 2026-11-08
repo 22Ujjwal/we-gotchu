@@ -305,6 +305,7 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
         await deps.research.cancelResearch(run.naiveSessionId)
       } catch (err) {
         console.warn('[cancel] research session cancel failed', err)
+        await deps.store.appendProgress(eventId, 'system', 'Research stop could not be confirmed. No new research will be scheduled; provider reconciliation is needed.')
       }
     }
     await deps.store.setRunState(run.runId, ['running', 'awaiting_input'], 'canceled')
