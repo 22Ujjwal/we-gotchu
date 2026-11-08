@@ -223,3 +223,87 @@ describe('interrupted payment delivery', () => {
     expect(stripe.refundCalls).toHaveLength(1)
   })
 })
+
+
+describe('refund reconciliation', () => {
+  async function pendingRefund() {
+    const ctx = await awaitingPayment()
+    await cancel(ctx.deps, ctx.eventId)
+    const paid = signed('checkout.session.completed', ctx.session)
+    await handleStripeWebhook(ctx.deps, paid.payload, paid.header)
+    return { ...ctx, refundId: ctx.store.payments.get(ctx.payment.paymentId)!.refundId! }
+  }
+
+  it.each([
+    ['refund.updated', 'succeeded', 'succeeded'],
+    ['refund.failed', 'failed', 'failed'],
+    ['refund.updated', 'canceled', 'failed'],
+    ['refund.updated', 'requires_action', 'pending'],
+  ])('reconciles %s with canonical %s status', async (type, status, expected) => {
+    const { deps, store, stripe, payment, refundId } = await pendingRefund()
+    Object.assign(stripe.refunds, { retrieve: async () => ({ id: refundId, status, payment_intent: 'pi_test_1' }) })
+    const delivery = signed(type, { id: refundId, status: 'pending' })
+    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('refund_updated')
+    expect(store.payments.get(payment.paymentId)).toMatchObject({ refundState: expected, refundReason: 'late_or_revoked', state: 'paid' })
+    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('duplicate')
+    expect(stripe.refundCalls).toHaveLength(1)
+  })
+
+  it('uses current Stripe state for an older failure event after success', async () => {
+    const { deps, store, stripe, payment, refundId } = await pendingRefund()
+    Object.assign(stripe.refunds, { retrieve: async () => ({ id: refundId, status: 'succeeded', payment_intent: { id: 'pi_test_1' } }) })
+    for (const status of ['succeeded', 'failed', 'pending']) {
+      const delivery = signed(status === 'failed' ? 'refund.failed' : 'refund.updated', { id: refundId, status })
+      await handleStripeWebhook(deps, delivery.payload, delivery.header)
+    }
+    expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
+  })
+
+  it('retries a stale concurrent refund read instead of regressing success', async () => {
+    const { deps, store, stripe, payment, refundId } = await pendingRefund()
+    let release!: () => void
+    let read!: () => void
+    const started = new Promise<void>(resolve => { read = resolve })
+    const gate = new Promise<void>(resolve => { release = resolve })
+    let reads = 0
+    Object.assign(stripe.refunds, { retrieve: async () => {
+      if (++reads === 1) {
+        read()
+        await gate
+        return { id: refundId, status: 'pending', payment_intent: 'pi_test_1' }
+      }
+      return { id: refundId, status: 'succeeded', payment_intent: 'pi_test_1' }
+    } })
+    const older = signed('refund.updated', { id: refundId })
+    const newer = signed('refund.updated', { id: refundId })
+    const waiting = handleStripeWebhook(deps, older.payload, older.header)
+    const assertion = expect(waiting).rejects.toThrow('Refund changed during reconciliation')
+    await started
+    await handleStripeWebhook(deps, newer.payload, newer.header)
+    release()
+    await assertion
+    expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
+    expect(await handleStripeWebhook(deps, older.payload, older.header)).toBe('refund_updated')
+  })
+
+  it.each(['unknown_refund', 'wrong_intent', 'wrong_refund'])( 'does not change payment for %s', async (kind) => {
+    const { deps, store, stripe, payment, refundId } = await pendingRefund()
+    Object.assign(stripe.refunds, { retrieve: async () => ({ id: kind === 'wrong_refund' ? 're_other' : refundId, status: 'succeeded', payment_intent: kind === 'wrong_intent' ? 'pi_other' : 'pi_test_1' }) })
+    const delivery = signed('refund.updated', { id: kind === 'unknown_refund' ? 're_unknown' : refundId, metadata: { paymentId: payment.paymentId } })
+    await handleStripeWebhook(deps, delivery.payload, delivery.header)
+    expect(store.payments.get(payment.paymentId)?.refundState).toBe('pending')
+  })
+
+  it('retries retrieval failures without acknowledging the event', async () => {
+    const { deps, store, stripe, payment, refundId } = await pendingRefund()
+    let calls = 0
+    Object.assign(stripe.refunds, { retrieve: async () => {
+      if (++calls === 1) throw new Error('Stripe unavailable')
+      return { id: refundId, status: 'succeeded', payment_intent: 'pi_test_1' }
+    } })
+    const delivery = signed('refund.updated', { id: refundId })
+    await expect(handleStripeWebhook(deps, delivery.payload, delivery.header)).rejects.toThrow('Stripe unavailable')
+    await handleStripeWebhook(deps, delivery.payload, delivery.header)
+    expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
+  })
+})

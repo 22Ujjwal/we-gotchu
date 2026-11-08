@@ -79,6 +79,7 @@ export interface Store {
   getApproval(approvalId: string): Promise<Approval | null>
   revokeApprovals(eventId: string, at: Date): Promise<Approval[]>
   getPaymentByCheckoutSession(checkoutSessionId: string): Promise<Payment | null>
+  getPaymentByRefundId(refundId: string): Promise<Payment | null>
   getPaymentByApproval(approvalId: string): Promise<Payment | null>
   /** Paid approvals remain discoverable after revocation for cancellation retries. */
   listPaidApprovalIds(eventId: string): Promise<string[]>
@@ -87,6 +88,8 @@ export interface Store {
   markPaymentExpired(checkoutSessionId: string): Promise<boolean>
   /** Atomically returns the current expired Checkout to plan_ready. Serializes with approval creation and cancellation. Returns the changed event id. */
   repairExpiredCheckout(checkoutSessionId: string): Promise<string | null>
+  /** Updates only the same paid refund and observed state; false means retry with fresh Stripe state. */
+  reconcileRefund(input: { paymentId: string; refundId: string; paymentIntentId: string; expectedState: Payment['refundState']; refundState: Payment['refundState'] }): Promise<boolean>
   setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }): Promise<void>
   /** Records a Stripe event id; returns true only the first time. */
   recordStripeEvent(stripeEventId: string): Promise<boolean>

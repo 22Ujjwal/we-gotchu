@@ -586,6 +586,11 @@ export function createStore(db: Db): Store {
       return row ? toPayment(row) : null
     },
 
+    async getPaymentByRefundId(refundId) {
+      const row = first(await db.select().from(payments).where(eq(payments.refundId, refundId)))
+      return row ? toPayment(row) : null
+    },
+
     async getPaymentByApproval(approvalId) {
       const row = first(await db.select().from(payments).where(eq(payments.approvalId, approvalId)))
       return row ? toPayment(row) : null
@@ -635,6 +640,15 @@ export function createStore(db: Db): Store {
         await tx.update(events).set({ status: 'plan_ready' }).where(eq(events.id, event.id))
         return event.id
       })
+    },
+
+    async reconcileRefund(input) {
+      const rows = await db.update(payments).set({ refundState: input.refundState })
+        .where(and(eq(payments.id, input.paymentId), eq(payments.refundId, input.refundId),
+          eq(payments.paymentIntentId, input.paymentIntentId), eq(payments.state, 'paid'),
+          eq(payments.refundState, input.expectedState)))
+        .returning({ id: payments.id })
+      return rows.length > 0
     },
 
     async setRefund(paymentId, refund) {

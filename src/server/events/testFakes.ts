@@ -216,6 +216,10 @@ export class MemoryStore implements Store {
     const p = [...this.payments.values()].find((x) => x.checkoutSessionId === id)
     return p ? { ...p } : null
   }
+  async getPaymentByRefundId(id: string) {
+    const p = [...this.payments.values()].find((x) => x.refundId === id)
+    return p ? { ...p } : null
+  }
   async getPaymentByApproval(approvalId: string) {
     const p = [...this.payments.values()].find((x) => x.approvalId === approvalId)
     return p ? { ...p } : null
@@ -243,6 +247,12 @@ export class MemoryStore implements Store {
         event.planRevision !== approval.planRevision || current?.approvalId !== approval.approvalId) return null
     event.status = 'plan_ready'
     return event.eventId
+  }
+  async reconcileRefund(input: { paymentId: string; refundId: string; paymentIntentId: string; expectedState: Payment['refundState']; refundState: Payment['refundState'] }) {
+    const p = this.payments.get(input.paymentId)
+    if (!p || p.refundId !== input.refundId || p.paymentIntentId !== input.paymentIntentId || p.state !== 'paid' || p.refundState !== input.expectedState) return false
+    p.refundState = input.refundState
+    return true
   }
   async setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }) {
     Object.assign(this.payments.get(paymentId)!, refund)
@@ -326,6 +336,7 @@ export class FakeStripe implements StripeLike {
     },
   }
   refunds = {
+    retrieve: async (_id: string): Promise<import('../payments/stripe').RefundLike> => { throw new Error('Refund not found') },
     create: async (params: RefundCreateParams, opts: { idempotencyKey: string }) => {
       this.refundCalls.push({ params, idempotencyKey: opts.idempotencyKey })
       return { id: `re_test_${this.refundCalls.length}`, status: 'pending' }

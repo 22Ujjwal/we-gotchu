@@ -533,3 +533,22 @@ it.each(['expired', 'pending', 'paid', 'revoked', 'canceled', 'stale_plan'] as c
     expect(await store.repairExpiredCheckout(checkoutSessionId)).toBeNull()
   },
 )
+
+describe('refund reconciliation storage', () => {
+  it('matches the stored refund and conditionally updates only its observed state', async () => {
+    const { event, run } = await store.createEvent({ customerId: 'cust_refund', brief })
+    const { checkoutSessionId } = await approve(event.eventId, run.runId)
+    const payment = (await store.markPaymentPaid(checkoutSessionId, 'pi_reconcile'))!
+    await store.setRefund(payment.paymentId, { refundId: 're_reconcile', refundState: 'pending', refundReason: 'customer_cancellation' })
+    expect(await store.getPaymentByRefundId('re_unknown')).toBeNull()
+    expect(await store.getPaymentByRefundId('re_reconcile')).toMatchObject({ paymentId: payment.paymentId })
+    const input = { paymentId: payment.paymentId, refundId: 're_reconcile', paymentIntentId: 'pi_reconcile', expectedState: 'pending' as const, refundState: 'succeeded' as const }
+    expect(await store.reconcileRefund({ ...input, refundId: 're_wrong' })).toBe(false)
+    expect(await store.reconcileRefund({ ...input, paymentIntentId: 'pi_wrong' })).toBe(false)
+    expect(await store.reconcileRefund(input)).toBe(true)
+    expect(await store.reconcileRefund({ ...input, refundState: 'pending' })).toBe(false)
+    expect(await store.getPaymentByRefundId('re_reconcile')).toMatchObject({ refundState: 'succeeded', refundReason: 'customer_cancellation' })
+    expect(await store.reconcileRefund({ ...input, expectedState: 'succeeded', refundState: 'failed' })).toBe(true)
+    expect(await store.getPaymentByRefundId('re_reconcile')).toMatchObject({ refundState: 'failed' })
+  })
+})

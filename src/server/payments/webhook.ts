@@ -6,6 +6,7 @@ import type { CheckoutSessionLike, RefundLike } from './stripe'
 // Stripe webhook handling and refunds (contract 0.4, Approval and payment). Server-only.
 
 export type WebhookOutcome =
+  | 'refund_updated'
   | 'paid'
   | 'refunded_late_or_revoked'
   | 'duplicate'
@@ -64,6 +65,21 @@ export async function handleStripeWebhook(deps: Deps, rawBody: string, signature
 }
 
 async function dispatchStripeEvent(deps: Deps, event: { type: string; created: number; data: { object: unknown } }): Promise<WebhookOutcome> {
+  if (event.type === 'refund.updated' || event.type === 'refund.failed') {
+    const incoming = event.data.object as RefundLike
+    if (!incoming || typeof incoming.id !== 'string') return 'mismatch'
+    const payment = await deps.store.getPaymentByRefundId(incoming.id)
+    if (!payment) return 'ignored'
+    // Events can arrive out of order. Read Stripe's current state rather than
+    // applying the delivery's historical snapshot or trusting its metadata.
+    const current = await deps.stripe.refunds.retrieve(incoming.id)
+    const intent = typeof current.payment_intent === 'string' ? current.payment_intent : current.payment_intent?.id
+    if (current.id !== payment.refundId || !intent || intent !== payment.paymentIntentId || payment.state !== 'paid') return 'mismatch'
+    if (!await deps.store.reconcileRefund({ paymentId: payment.paymentId, refundId: current.id, paymentIntentId: intent, expectedState: payment.refundState, refundState: refundState(current) })) {
+      throw new Error('Refund changed during reconciliation; retry delivery')
+    }
+    return 'refund_updated'
+  }
   if (event.type === 'checkout.session.completed') {
     return onCheckoutCompleted(deps, event.data.object as CheckoutSessionLike, new Date(event.created * 1000))
   }
