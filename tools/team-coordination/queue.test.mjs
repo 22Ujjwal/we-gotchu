@@ -51,3 +51,8 @@ test('Markdown renders untrusted source text as inert ASCII and retains provenan
   assert.ok(!/[^\x00-\x7f]/.test(md));
   assert.match(md, /abc/);
 });
+
+test('multiple resolved PR references on one line produce unique queue IDs', () => {
+  const result = buildQueue(snapshot({ documents: [doc('Review PR #16 and PR #17.')], prs: [pr({ state: 'MERGED' }), pr({ number: 17, state: 'CLOSED' })] }));
+  assert.equal(new Set(result.items.map(x => x.id)).size, result.items.length);
+});
