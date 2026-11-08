@@ -107,15 +107,11 @@ body {
   .rise {
     animation: rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
-  /* Brief: each word surfaces from a blur, then each answer is written in. */
+  /* Brief: the next sentence rises in word by word. */
   .brief-word {
     position: relative;
-    animation: brief-surface 650ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-    animation-delay: calc(var(--i) * 60ms + 120ms);
-  }
-  .brief-ink {
-    animation: brief-ink 750ms cubic-bezier(0.6, 0, 0.25, 1) backwards;
-    animation-delay: calc(var(--i) * 60ms + 300ms);
+    animation: brief-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(var(--i) * 45ms + 160ms);
   }
   .confetti > * {
     animation: drift 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -129,20 +125,10 @@ body {
   }
 }
 
-@keyframes brief-surface {
+@keyframes brief-rise {
   from {
     opacity: 0;
-    filter: blur(8px);
-    top: 0.35em;
-  }
-}
-
-@keyframes brief-ink {
-  from {
-    clip-path: inset(-30% 100% -30% 0);
-  }
-  to {
-    clip-path: inset(-30% 0 -30% 0);
+    top: 0.6em;
   }
 }
 

@@ -34,7 +34,7 @@ const canAnimate = () =>
 
 const centre = (r: DOMRect) => [r.left + r.width / 2, r.top + r.height / 2]
 
-/** Each word fades in after the one before it. */
+/** Each word rises in after the one before it. */
 const stagger = (i: number) => ({ '--i': i }) as CSSProperties
 
 function BriefPage() {
@@ -308,7 +308,7 @@ function Blank({
     if (autoFocus) ref.current?.focus()
   }, [autoFocus])
 
-  const className = `blank brief-ink mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`
+  const className = `blank brief-word mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`
   if (onPick) {
     return (
       <button
@@ -363,7 +363,7 @@ function Blank({
           e.currentTarget.closest('form')?.requestSubmit()
         }
       }}
-      className={`blank brief-ink mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
+      className={`blank brief-word mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
     />
   )
 }
