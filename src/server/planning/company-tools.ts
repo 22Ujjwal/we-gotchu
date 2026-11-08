@@ -1,4 +1,5 @@
 import { eventMailSubject } from './customer-notifications'
+import { supplierConversationGuidance } from '../../agent/planning/company'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { inquiryFieldsSchema, planningInquirySchema } from '../../agent/planning/contract'
@@ -95,7 +96,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
     }
     if (tool.name === 'read_selected_event') {
       if (inquiry.revision !== scope.revision) throw new Error('The draft has changed. Do not overwrite it.')
-      return { brief: record.view.brief, requirements: record.view.messages.filter(message => message.role === 'user').map(message => message.text),
+      return { interpretationGuidance: supplierConversationGuidance, brief: record.view.brief, requirements: record.view.messages.filter(message => message.role === 'user').map(message => message.text),
         selections: record.view.selections, inquiry: { recipient: inquiry.recipient, subject: inquiry.subject, text: inquiry.text },
         latestReply: scope.replyId ? inquiry.replies?.at(-1) : undefined,
         supplierReplies: inquiry.replies ?? [],
