@@ -56,7 +56,11 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
         <button type="button" disabled={session.pending} onClick={() => setEditing(null)} className="underline">Close editor</button>
         {session.error?.code === 'stale_brief' && <p>Your edits are retained. Review the latest event before submitting again.</p>}
       </section>}
-      <EventDetails view={session.view} pending={session.pending || !!session.error} onEdit={() => setEditing(session.view!.event.brief)}
+      <EventDetails view={session.view} pending={session.pending || !!session.error} onEdit={() => void act(async () => {
+        const brief = session.view!.event.brief
+        draftFromBrief(brief)
+        setEditing(brief)
+      })}
         onApprove={() => void act(async () => {
           const url = await session.approve()
           if (active.current) onCheckout(url)
