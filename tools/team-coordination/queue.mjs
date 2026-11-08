@@ -95,9 +95,9 @@ export function renderMarkdown(queue) {
       item.priority === 1 ? 'Next step: inspect the failed checks or requested changes before considering this PR for merge.'
         : pr.isDraft ? 'Next step: confirm the remaining work with its owner before requesting review.'
         : 'Next step: review the diff, discussions, and dependencies; confirm the responsible owner agrees before merging.',
-      `[Open PR #${pr.number}](${repositoryURL(queue.repository)}/pull/${pr.number}) | Head: ${plain(pr.headRefOid)}.`, '');
+      `[Open PR #${pr.number}](${repositoryURL(queue.repository)}/pull/${pr.number}) | Head: ${plain(pr.headRefOid?.slice(0, 12) || 'unknown')}.`, '');
   };
-  section('Needs attention', queue.items.filter(x => x.priority <= 1), 'No blockers were detected in the collected sources. This does not prove the team is unblocked.', item => {
+  section('Needs attention', queue.items.filter(x => x.priority <= 1), 'No failed checks or explicit blocker lines were detected. Open review comments are not collected; inspect PR discussions before treating the work as clear.', item => {
     if (item.kind === 'pull-request') return renderPR(item);
     lines.push(`### ${item.kind === 'collection-error' ? 'Refresh could not read a source' : `Reported blocker in ${plain(reportName(item.evidence.path))}`}`, '', plain(item.kind === 'blocker' ? item.evidence.excerpt : item.summary),
       item.kind === 'blocker' ? 'Next step: confirm whether this still blocks progress with the report owner.' : 'Next step: resolve the collection error and refresh before relying on coverage.',
@@ -117,7 +117,7 @@ export function renderMarkdown(queue) {
   }
   section('Handoff follow-ups', [...reports.entries()], 'No handoff follow-ups were detected.', ([path, items]) => {
     const missing = items.some(x => x.kind === 'missing-report');
-    lines.push(`### ${missing ? 'Request an update from' : 'Check references in'} ${plain(reportName(path))}`, '');
+    lines.push(`### ${missing ? 'Missing update in' : 'Check references in'} ${plain(reportName(path))}`, '');
     if (missing) lines.push('The committed report is still a placeholder. Activity elsewhere is unknown.', 'Next step: ask the owner for a current handoff when you need their status.');
     else {
       const numbers = [...new Set(items.flatMap(x => referencedPRs(x.evidence.excerpt, queue.repository)))];
