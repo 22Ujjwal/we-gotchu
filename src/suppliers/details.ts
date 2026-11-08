@@ -101,7 +101,15 @@ function productEvidence(candidate: Candidate, output: unknown, currency: string
     note: `Retailer listing reports ${offer.availability}; this does not confirm event-date availability or delivery.` }
   // Preserve the provider's exact pack statement, without interpreting arbitrary prose as quantities.
   const packs = (product.key_features ?? []).filter(text => /^Includes [1-9][0-9]{0,5} (plates|cups|napkins|pieces)\.?$/.test(text))
-  if (packs.length) candidate.verification.packSize = { status: new Set(packs).size === 1 ? 'known' : 'conflict', sourceUrl,
+  const countsByUnit = new Map<string, Set<number>>()
+  for (const statement of packs) {
+    const [, count, unit] = statement.match(/^Includes ([0-9]+) (plates|cups|napkins|pieces)\.?$/)!
+    const counts = countsByUnit.get(unit) ?? new Set<number>()
+    counts.add(Number(count))
+    countsByUnit.set(unit, counts)
+  }
+  const conflicting = [...countsByUnit.values()].some(counts => counts.size > 1)
+  if (packs.length) candidate.verification.packSize = { status: conflicting ? 'conflict' : 'known', sourceUrl,
     note: `Product key_features: ${[...new Set(packs)].join('; ')}. Listing evidence only; required packs are not calculated.` }
   if (product.disclosure) candidate.affiliateDisclosure = [candidate.affiliateDisclosure, product.disclosure].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join('\n')
 }
