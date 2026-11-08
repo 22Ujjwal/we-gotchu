@@ -1,6 +1,6 @@
 # Research workflow state chart
 
-This chart describes the standalone research flow introduced by PR #18 at commit dac021afdfc555026ab6a0ee319a9c66474dc075.
+This chart describes the standalone research flow introduced by PR #18 at commit dac021afdfc555026ab6a0ee319a9c66474dc075, including the later review fixes.
 It does not describe the customer-facing API, database persistence, bookings, or payments.
 
 ```mermaid
@@ -36,6 +36,9 @@ A complete brief starts discovery, then the model orders candidate IDs from the 
 The result remains partial because discovery alone does not verify the final event cost or supplier terms.
 If ranking fails after candidates are found, the workflow can return the evidence without an ordered recommendation.
 The workflow permits one correction when the ranking output is invalid.
+The correction only counts a model reply that arrives after the corrective message, never the previous turn's output.
+A brief without a valid currency takes the same "More details needed" path as any other missing field.
+Invalid or repeated individual search results are skipped with a warning inside "Finding options", so "no usable options" means none survived.
 
 ## Architecture
 
@@ -79,7 +82,7 @@ The modeled rules held: ranking requires evidence, corrections are limited to on
 These are assumptions encoded in the model and do not independently establish that production code always enforces them.
 
 The chart hides terminal self-loops and merges similar failure paths.
-It does not model individual provider results, invalid identity or currency exceptions, resource cleanup, forced network interruption, persistence, UI behavior, or supplier transactions.
+It does not model individual provider results, invalid identity exceptions, resource cleanup, forced network interruption, persistence, UI behavior, or supplier transactions.
 A cancellation signal models the workflow's abort input; this standalone PR does not establish that a customer cancellation button is connected.
 
 To rerun the model, install the [statechart skill](https://github.com/cursor/plugins/tree/main/pstack/skills/statechart) and make Java 11 or newer and TLC available.
