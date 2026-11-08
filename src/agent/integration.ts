@@ -157,13 +157,18 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'ranking': {
+            const disconnected = 'Research could not reconnect within its retry limit. Saved evidence is retained; revise the brief to retry.'
+            if ((c.readFailures ?? 0) >= 3) {
+              await finish(disconnected)
+              return running
+            }
             let snapshot: Awaited<ReturnType<ResearchSession['poll']>>
             try { snapshot = await bounded(() => session.poll(c!.naiveSessionId!, signal)) }
             catch {
               const readFailures = (c.readFailures ?? 0) + 1
               await save({ readFailures }, readFailures === 1
                 ? 'Research connection interrupted; saved work will resume on the next poll.' : undefined)
-              if (readFailures >= 3) await finish('Research could not reconnect within its retry limit. Saved evidence is retained; revise the brief to retry.')
+              if (readFailures >= 3) await finish(disconnected)
               return running
             }
             if (snapshot.id !== c.naiveSessionId) throw new Error('Session identity mismatch')
