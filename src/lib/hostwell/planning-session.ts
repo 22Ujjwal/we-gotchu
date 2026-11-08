@@ -50,7 +50,7 @@ export function usePlanningSession(id?: string) {
         && ['accepted', 'failed'].includes(next.inquiry.delivery.status)
       if (confirmationClosed || inquiryResolved) { setUncertain(null); setError(null) }
       else if (!keepError) setError(previous => previous?.uncertain ? previous : null)
-      if (next.status === 'working' || next.inquiry?.delivery?.status === 'pending') schedule(2000)
+      if (next.status === 'working' || next.inquiry?.delivery?.status === 'pending' || ['requested', 'preparing'].includes(next.arrangement?.status ?? '')) schedule(2000)
       else if (next.status === 'blocked') schedule(5000)
     } catch (cause) {
       if (!current.active || generation !== current.generation) return
@@ -86,7 +86,7 @@ export function usePlanningSession(id?: string) {
       if (!current.active || generation !== current.generation) return null
       accept(next)
       setUncertain(null)
-      if (id && (next.status === 'working' || next.inquiry?.delivery?.status === 'pending')) schedule(2000)
+      if (id && (next.status === 'working' || next.inquiry?.delivery?.status === 'pending' || ['requested', 'preparing'].includes(next.arrangement?.status ?? ''))) schedule(2000)
       else if (id && next.status === 'blocked') schedule(5000)
       return next
     } catch (cause) {

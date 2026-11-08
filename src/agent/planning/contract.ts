@@ -46,7 +46,14 @@ export const planningBriefSchema = z.object({
 }).strict()
 export const planningCreateSchema = z.object({ requestId, message: text.max(8000), brief: planningBriefSchema.optional() }).strict()
 const version = z.number().int().nonnegative()
+export const arrangementSchema = z.object({
+  id: text, inquiryId: text, requestedAt: z.iso.datetime(),
+  status: z.enum(['requested', 'preparing', 'awaiting_reply', 'needs_attention', 'offer_ready', 'stale']),
+  selections: z.array(planningOptionSchema), detail: text, customerEmail: z.email().max(254).optional(), controlled: z.boolean().optional(),
+}).strict()
+
 export const planningCommandSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('arrange'), requestId, expectedVersion: version, customerEmail: z.email().max(254) }).strict(),
   z.object({ kind: z.literal('release_payment'), requestId, expectedVersion: version, eventId: text }).strict(),
   z.object({ kind: z.literal('prepare_payment'), requestId, expectedVersion: version, offerId: text, offerRevision: z.number().int().positive() }).strict(),
   z.object({ kind: z.literal('prepare_offer'), requestId, expectedVersion: version }).strict(),
@@ -77,10 +84,12 @@ export type PlanningView = {
   proposal: PlanningProposal | null
   selections: PlanningOption[]
   inquiry?: PlanningInquiry
+  arrangement?: z.infer<typeof arrangementSchema>
   offer?: SelectedOffer
   paymentLink?: PlanningPaymentLink
   progress: string | null
   error: string | null
+  canArrange?: boolean
   canSendInquiry?: boolean
   canReviewResearch?: boolean
   activity?: PlanningActivity[]
