@@ -1,4 +1,5 @@
-import type { Attempt, EventView, PlannedAction } from '../../contracts'
+import type { Attempt, EventView, PlannedAction, Mode } from '../../contracts'
+import { formatPaymentAmount, paymentFractionDigits } from '../payment-money'
 
 /** Each kind of purchase gets its own kind of paper. */
 export type ReceiptStyle = 'thermal' | 'notepad' | 'invoice' | 'card'
@@ -20,6 +21,7 @@ export type TimelineEntry = {
 export type ReceiptDoc = {
   id: string
   style: ReceiptStyle
+  mode?: Mode
   /** What it was for, in the customer's words: "Booking the venue". */
   title: string
   supplier: string
@@ -50,9 +52,11 @@ export type Receipts = {
   receipts: Array<ReceiptDoc>
 }
 
-const formatMoney = (minor: number, currency: string) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: currency.toUpperCase() }).format(minor / 100)
-const formatAmount = (minor: number) => (minor / 100).toFixed(2)
+const formatMoney = formatPaymentAmount
+const formatAmount = (minor: number, currency: string) => {
+  const digits = paymentFractionDigits(currency)
+  return (minor / 10 ** digits).toFixed(digits)
+}
 const shortRef = (ref: string | null) => ref ? ref.replace(/^.*_/, '').slice(-6).toUpperCase() : null
 const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
@@ -100,9 +104,13 @@ export function receiptsFromView(view: EventView): Receipts {
   const approvalEntry: TimelineEntry = {
     at: approval.approvedAt,
     lead: 'You approved',
-    text: ` the plan and paid ${formatMoney(approval.approvedTotal, currency)} for ${covered}.`,
+    text: ` the plan for ${formatMoney(approval.approvedTotal, currency)} for ${covered}.`,
     dot: 'approved',
   }
+
+  const paymentEntries: Array<TimelineEntry> = payment?.approvalId === approval.approvalId && payment.state === 'paid'
+    ? [{ at: payment.paidAt ?? null, text: `${payment.mode === 'test' ? 'Sandbox payment received' : payment.mode === 'simulated' ? 'Simulated payment recorded' : 'Payment received'}: ${formatMoney(payment.amount, payment.currency)}.`, dot: 'confirmed' }]
+    : []
 
   let items = 0
   const receipts = approved.map((action): ReceiptDoc => {
@@ -112,24 +120,25 @@ export function receiptsFromView(view: EventView): Receipts {
     const venue = action.kind === 'venue_booking'
     return {
       id: action.actionId,
+      mode: commit?.mode ?? action.mode,
       style: venue ? 'thermal' : items++ % 2 === 0 ? 'notepad' : 'invoice',
       title: venue ? 'Booking the venue' : `Getting ${lowerFirst(action.target)}`,
       supplier: action.supplierName,
       kind: venue ? 'Venue hire' : 'Supplies',
       place: event.brief.location,
       rows: [
-        { label: action.target, amount: formatAmount(total) },
+        { label: action.target, amount: formatAmount(total, currency) },
         // A venue's schedule is the raw start time; show it like the rest of the app.
         { label: venue ? startsAt : action.quantityOrSchedule, amount: 'incl.', muted: true },
       ],
-      amount: formatAmount(total),
+      amount: formatAmount(total, currency),
       total: formatMoney(total, currency),
       currency: currency.toUpperCase(),
       reference: shortRef(commit?.providerReference ?? null),
       issuedAt: commit?.state === 'succeeded' ? commit.updatedAt : null,
       status: cancel?.state === 'succeeded' ? 'refunded'
         : commit?.state === 'succeeded' ? 'paid' : commit?.state === 'failed' ? 'failed' : 'pending',
-      timeline: [...research, approvalEntry, ...attemptEntries(action, commit, cancel)],
+      timeline: [...research, approvalEntry, ...paymentEntries, ...attemptEntries(action, commit, cancel)],
     }
   })
 
@@ -137,21 +146,23 @@ export function receiptsFromView(view: EventView): Receipts {
     const refunded = payment.refundState === 'succeeded'
     receipts.push({
       id: 'payment',
+      mode: payment.mode,
       style: 'card',
       title: 'Paying for it',
       supplier: 'Stripe',
       kind: 'Card payment',
       place: event.brief.location,
       rows: [],
-      amount: formatAmount(payment.amount),
+      amount: formatAmount(payment.amount, payment.currency),
       total: formatMoney(payment.amount, payment.currency),
       currency: payment.currency.toUpperCase(),
       reference: shortRef(payment.paymentIntentId),
-      issuedAt: approval.approvedAt,
+      issuedAt: payment.paidAt ?? null,
       status: refunded ? 'refunded' : 'paid',
       note: covered.replace(/^the /, '').replace(/^./, (c) => c.toUpperCase()),
       timeline: [
         approvalEntry,
+        ...paymentEntries,
         ...(payment.refundState === 'none' ? [] : [{
           at: null,
           text: refunded ? `Refunded ${formatMoney(payment.amount, payment.currency)}`

@@ -23,7 +23,8 @@ test("a receipt's story runs from research to the supplier's confirmation", () =
   expect(venue.timeline.map((e) => `${e.lead ?? ''}${e.text}`)).toEqual([
     'Compared two venues and one supply item.',
     'Plan ready: venue plus three packs of plates.',
-    'You approved the plan and paid $315.00 for the venue + paper plates, 8-pack (simulated).',
+    'You approved the plan for $315.00 for the venue + paper plates, 8-pack (simulated).',
+    'Simulated payment recorded: $315.00.',
     'Harbor Loft (simulated) confirmed the booking',
   ])
   expect(venue.timeline.at(-1)).toMatchObject({ badge: 'confirmed', quote: { text: 'Simulated confirmation.' } })
@@ -48,4 +49,27 @@ test('timeline times only repeat the date when the day changes', () => {
   const at = (iso: string) => ({ at: iso, text: '', dot: 'step' as const })
   expect(timelineTimes([at('2026-11-06T20:14:00Z'), at('2026-11-06T20:16:00Z'), at('2026-11-07T08:40:00Z')], 'Europe/Berlin'))
     .toEqual(['6 Nov 21:14', '21:16', '7 Nov 09:40'])
+})
+
+test('approval alone never claims payment and confirmed payment uses its saved timestamp', () => {
+  const view = structuredClone(bookedEvent)
+  view.payment!.state = 'pending'
+  view.attempts = []
+  expect(receiptsFromView(view).receipts.flatMap(r => r.timeline).every(e => !e.text.includes('paid'))).toBe(true)
+  expect(receiptsFromView(view).receipts.some(r => r.id === 'payment')).toBe(false)
+  view.payment!.state = 'paid'
+  view.payment!.paidAt = '2026-11-08T01:09:00.000Z'
+  const payment = receiptsFromView(view).receipts.find(r => r.id === 'payment')!
+  expect(payment.issuedAt).toBe(view.payment!.paidAt)
+  expect(payment.timeline.at(-1)?.at).toBe(view.payment!.paidAt)
+})
+
+test('JPY receipts preserve the same units as checkout and keep evidence modes', () => {
+  const view = structuredClone(bookedEvent)
+  view.plan!.currency = view.payment!.currency = 'jpy'
+  view.payment!.amount = 20000
+  view.payment!.mode = 'test'
+  const receipts = receiptsFromView(view).receipts
+  expect(receipts.find(r => r.id === 'payment')).toMatchObject({ amount: '20000', total: '¥20,000', mode: 'test' })
+  expect(receipts[0]).toMatchObject({ mode: 'simulated' })
 })

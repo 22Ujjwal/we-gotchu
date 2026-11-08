@@ -5,6 +5,14 @@ The controlled local model and sandbox payment checks have run; their results ar
 The external mail reply check is deferred until a different team-controlled recipient is approved.
 Do not create another self-send to substitute for that check.
 
+## Check configuration without external actions
+
+```sh
+NODE_ENV=development bun --env-file=.env.local tools/local-rehearsal/demo-preflight.mjs
+```
+
+This reports missing configuration names separately for research, controlled mail, recovery and sandbox payment. It never opens the database, calls a provider, or prints values. A passing result only establishes local configuration shape. Verify sign-in, agent identity/outcome attachment, the active tool tunnel, webhook registration, migrations and actual recipient delivery separately. The configured recipient must be explicitly approved and team-controlled; this cannot be established by a presence check.
+
 ## Start the application
 
 Record the branch and full commit, check existing managed processes and port 3000, and reuse only a matching application instance.
@@ -32,8 +40,8 @@ NODE_ENV=development ~/.local/bin/agent-process run --name local-reply-worker --
 ```
 
 The runner calls the existing authenticated local endpoint sequentially, waiting five seconds between responses.
-Each endpoint invocation claims at most one durable reply job and can call the real interpretation model.
-It never sends mail and never opens the database itself.
+Each endpoint invocation considers at most one pending arrangement and up to five durable reply jobs. It can call real interpretation and company agents.
+The application can send acknowledgments, approved controlled inquiries, follow-ups and offer-ready notifications during recovery. Run it only after verifying the saved approvals and the approved controlled recipient. The runner itself uses HTTP and never opens the database.
 The output reports invocation number and claimed job count only.
 A processed count is not proof of successful interpretation; inspect the saved reply status and original evidence afterward.
 A failed or uncertain request stops the runner without retrying it.
