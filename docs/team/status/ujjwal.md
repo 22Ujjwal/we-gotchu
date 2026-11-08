@@ -3,7 +3,7 @@
 Owner: Ujjwal.
 Updated: 2026-11-07T21:34:11-08:00
 Baseline and hosted test commit: `5b180cc8c57c85c876852579cf448f9cbc7c627a`.
-Branch: [fix/webhook-concurrent-delivery](https://github.com/22Ujjwal/we-gotchu/tree/fix/webhook-concurrent-delivery).
+Branch: [fix/payment-retry-guards](https://github.com/22Ujjwal/we-gotchu/tree/fix/payment-retry-guards).
 PR: [#48](https://github.com/22Ujjwal/we-gotchu/pull/48), on branch and not deployed; earlier hosted handoff #43 is merged.
 Availability: backend, DOM harness (#39), and connected journey (#41) merged. Hosted database, sign-in, event persistence, and direct MCP verified. Stripe sandbox delivery is verified; successful research and a full test-payment/refund flow remain pending.
 
@@ -77,3 +77,15 @@ Implementation baseline: `b1518257371f09c4143b2ce4d7a44045e9c61e65`. Main subseq
 Regression first failed with one unexpected refund; after the six-line guard it passes with one execution handoff, zero refunds, one retryable loser, and a harmless duplicate retry. All 376 application tests, 25 coordination tests, typecheck, and production build passed. Independent review found no blockers. Existing sequential late/revoked refund and retry coverage stays green. No real provider payment was performed for this fix.
 
 The interrupted-expiration and research-finalization gaps remain separate follow-ups. Stripe remains sandbox-only in configuration; an explicit code-level live-payment lock is still a separate safeguard proposal.
+
+## Payment retry guards — on branch
+
+Branch: `fix/payment-retry-guards`, based on merged race fix `34ab7f161e2969b8695ed61ff3ff5adc253a6c8f`. PR #48 is merged and production READY at that SHA was verified.
+
+Two separate commits: reject live Stripe standard/restricted keys at adapter construction (no override), and recover interrupted Checkout expiration from persisted expired payment state. Retry recovery checks current payment/approval, plan revision, revocation, cancellation, and paid state. No provider keys or execution mode were changed; no real payment/provider calls were used for these patches.
+
+Known preexisting limit: expiration eligibility reads and event-status update are not one atomic operation, so a new approval racing between them remains a separate concurrency issue. Progress-message recovery after a status write is also outside this small fix. These changes cover interrupted-delivery recovery, not all concurrency cases.
+
+Research-finalization recovery is a third separate commit on this branch. Polling reuses saved terminal results and any persisted plan to finish interrupted status writes, without rerunning providers. It rechecks cancellation and brief revisions; no schema or Tony-owned files change. Existing limits remain: canceled events can retain an inert plan if cancellation races the save, and progress messages can be lost after a successful status write. Status cannot be revived by these retries.
+
+Final combined verification: 397 application tests, 25 coordination tests, typecheck, production build, and diff check pass. Both payment and recovery reviews found no introduced blockers. Earlier isolated runs hit missing DOM dependencies/initialization timeouts; the clean combined install and two-worker run passed without changing timeouts. These three commits are on branch, not yet deployed.
