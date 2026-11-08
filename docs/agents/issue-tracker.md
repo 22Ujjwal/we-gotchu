@@ -18,3 +18,19 @@ Publishing a spec does not create implementation tickets or close human decision
 A pushed branch publishes the local tracker artifact for team review; main changes only after its PR is merged.
 
 Current specification: [Research event options with verified evidence](../../.scratch/specs/agent-research.md).
+
+## Implementation tickets
+
+Approved research implementation tickets live under .scratch/agent-research/issues, one file per slice.
+Each ticket records What to build, Blocked by, Status, and observable acceptance criteria.
+Status: ready-for-agent is the initial triage state, not a claim that external prerequisites are satisfied.
+Start only when the named implementation blockers and external prerequisites are complete.
+Tony owns these research tickets; Ujjwal coordinates shared contracts and storage, and Leo owns frontend rendering.
+The approved research specification remains unchanged.
+
+- [01: Research a complete brief using real sources](../../.scratch/agent-research/issues/01-research-complete-brief.md).
+- [02: Investigate supplier details beyond search listings](../../.scratch/agent-research/issues/02-investigate-supplier-details.md).
+- [03: Recommend options with defensible quantities and costs](../../.scratch/agent-research/issues/03-recommend-options.md).
+- [04: Update research when the customer changes their brief](../../.scratch/agent-research/issues/04-revise-event-brief.md).
+- [05: Expose research progress and cancellation through the application contract](../../.scratch/agent-research/issues/05-progress-and-cancellation.md).
+- [06: Recover interrupted research without duplicating work](../../.scratch/agent-research/issues/06-recover-interrupted-research.md).
