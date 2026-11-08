@@ -19,3 +19,5 @@ Verification: 108 focused tests, typecheck and production build pass. Independen
 Source probe: canonical El Lopo pages are reachable, but the conservative identity matcher does not accept the decorated option name. No source validation was weakened. A missing/failed photo remains independent of research and is covered by labeled local inspiration.
 
 Published draft PRs: #77 integration, #78 photo fallback stacked on #77. No merge. Local automated verification passed; final browser visual check remains pending.
+
+User refinement: show one fallback photo per venue, without carousel controls or an overlay. Keep a small Illustrative photo credit below it. The ordered pool is internal, advancing only if an asset fails; real-photo galleries keep their existing controls. Verified with 85 focused tests, typecheck and build.

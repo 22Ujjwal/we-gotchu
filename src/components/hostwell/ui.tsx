@@ -137,7 +137,7 @@ function PhotoCarousel({
   const [failed, setFailed] = useState<Set<string>>(() => new Set())
   const primary = photos.filter(photo => !failed.has(photo))
   const inspiration = primary.length === 0 && fallback
-  const usable = inspiration ? inspiration.photos.filter(photo => !failed.has(photo)) : primary
+  const usable = inspiration ? inspiration.photos.filter(photo => !failed.has(photo)).slice(0, 1) : primary
   const imageAlt = inspiration ? inspiration.alt : alt
   const n = usable.length
   const index = Math.min(position, n - 1)
@@ -148,6 +148,7 @@ function PhotoCarousel({
   const arrow =
     'absolute top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center bg-white/85 hover:bg-white focus-visible:outline-2 focus-visible:outline-gold'
   return (
+    <>
     <div
       role={n > 1 ? 'group' : undefined}
       aria-roledescription={n > 1 ? 'carousel' : undefined}
@@ -165,7 +166,6 @@ function PhotoCarousel({
         alt={n > 1 ? `${imageAlt}, photo ${index + 1} of ${n}` : imageAlt}
         className="size-full object-cover"
       />
-      {inspiration && <a href={inspiration.href} target="_blank" rel="noreferrer" className="absolute top-3 left-3 right-3 w-fit bg-white/95 px-2 py-1 text-[12px] leading-4 text-ink underline">{inspiration.label}</a>}
       {n > 1 && (
         <>
           <div
@@ -202,6 +202,8 @@ function PhotoCarousel({
         </>
       )}
     </div>
+    {inspiration && <a href={inspiration.href} target="_blank" rel="noreferrer" className="self-start px-3 py-1 text-[12px] leading-4 text-stone underline">{inspiration.label}</a>}
+    </>
   )
 }
 
