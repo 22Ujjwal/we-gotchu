@@ -113,8 +113,8 @@ test('the correction waits for a turn after the corrective message', async () =>
 
 test('product discovery includes the occasion as well as supplies and guest count', async () => {
   const { fetcher, requests } = transport()
-  await createDiscovery({ apiKey: 'test', fetch: fetcher })(input, new AbortController().signal)
-  const search = requests.find(r => r.body.endpoint === '/v1/search')!.body as any
+  await createDiscovery({ apiKey: 'test', fetch: fetcher })(ResearchInput.parse(input), new AbortController().signal)
+  const search = requests.find(r => r.body.endpoint === '/v1/search')!.body as { input: { body: { query: string } } }
   expect(search.input.body.query).toContain(input.brief.eventType)
   expect(search.input.body.query).toContain(String(input.brief.headcount))
   for (const need of input.brief.supplyNeeds) expect(search.input.body.query).toContain(need)
