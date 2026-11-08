@@ -23,7 +23,8 @@ test("a receipt's story runs from research to the supplier's confirmation", () =
   expect(venue.timeline.map((e) => `${e.lead ?? ''}${e.text}`)).toEqual([
     'Compared two venues and one supply item.',
     'Plan ready: venue plus three packs of plates.',
-    'You approved the plan and paid $315.00 for the venue + paper plates, 8-pack (simulated).',
+    'You approved the plan for $315.00 for the venue + paper plates, 8-pack (simulated).',
+    'Simulated payment recorded: $315.00.',
     'Harbor Loft (simulated) confirmed the booking',
   ])
   expect(venue.timeline.at(-1)).toMatchObject({ badge: 'confirmed', quote: { text: 'Simulated confirmation.' } })

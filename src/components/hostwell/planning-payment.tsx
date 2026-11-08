@@ -14,6 +14,14 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
   const matches = view?.plan?.planId === link.planId && view.plan.revision === link.planRevision
   const canApprove = matches && !stale && !view?.event.cancelRequestedAt
     && ['plan_ready', 'awaiting_payment'].includes(view?.event.status ?? '') && view?.payment?.state !== 'paid'
+  const receiptReady = matches && view?.approval?.planId === link.planId
+    && view.payment?.approvalId === view.approval?.approvalId && view.payment?.state === 'paid'
+  const bookingStatus = view && ({
+    executing: 'Simulated booking is in progress.',
+    booked: 'Simulated booking complete.',
+    partially_booked: 'Simulated booking is partially complete.',
+    failed: 'Simulated booking could not be completed.',
+  } as Record<string, string>)[view.event.status]
   const total = view?.plan && formatPaymentAmount(view.plan.total, view.plan.currency)
   return <section aria-label="Sandbox payment" className="flex flex-col gap-4 border border-sand p-5">
     <h2 className="text-[26px] font-light">Sandbox payment</h2>
@@ -21,11 +29,14 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
     {session.error && <p role="alert">{session.error.message}</p>}
     {view && <>
       <p>Supplier execution is simulated. No real reservation or purchase will be made.</p>
-      {view.payment?.state === 'paid' ? <p role="status">{view.payment.mode === 'test' ? `Sandbox payment received: ${total}.` : `Payment received: ${total}.`}</p>
+      {view.payment?.state === 'paid' ? <p role="status">{view.payment.mode === 'test' ? 'Sandbox payment received.' : 'Simulated payment recorded.'}</p>
         : view.payment?.state === 'pending' ? <p role="status">Payment is pending. We wait for the payment provider's confirmation.</p>
           : view.payment?.state === 'expired' ? <p role="status">The previous Checkout expired without a confirmed payment.</p>
             : <p>No payment recorded.</p>}
-      {view.payment?.state === 'paid' && <p>No real booking was made. No further payment action is needed.</p>}
+      {receiptReady && <>
+        {bookingStatus && <p role="status">{bookingStatus}</p>}
+        <a className="underline" href={`/events/${encodeURIComponent(link.eventId)}/receipts`}>View receipts</a>
+      </>}
       {view.payment?.refundState !== undefined && view.payment.refundState !== 'none' && <p>Sandbox refund: {view.payment.refundState}.</p>}
       {canApprove && <>
         <p>Selected plan total: {total}</p>
@@ -39,17 +50,17 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
       {stale && <p role="alert">The offer changed. This payment plan cannot be approved.</p>}
       {view.event.cancelRequestedAt && <p>{view.event.status === 'canceled' ? 'This payment plan was canceled.'
         : 'Cancellation is in progress. Supplier settlement and any refund may still be pending.'}</p>}
-      {(!view.event.cancelRequestedAt || view.event.status === 'canceling') && <button type="button" className="self-start py-2 text-sm underline focus-visible:outline-2 focus-visible:outline-gold disabled:opacity-40" disabled={session.pending || session.loading}
+      {(!view.event.cancelRequestedAt || view.event.status === 'canceling') && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading}
         onClick={() => { void session.cancel().catch(() => undefined) }}>
         {view.event.cancelRequestedAt ? 'Continue cancellation' : 'Cancel sandbox payment plan'}
-      </button>}
+      </Button>}
       {view.event.status === 'canceled' && onRelease && (!view.payment || view.payment.state === 'expired'
         || view.payment.state === 'paid' && view.payment.refundState === 'succeeded')
         && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={onRelease}>
           Update offer after cancellation
         </Button>}
     </>}
-    {(session.error || view?.payment?.state === 'pending') && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
-      onClick={() => void session.refresh()}>Check payment status</Button>}
+    <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
+      onClick={() => void session.refresh()}>Check payment status</Button>
   </section>
 }
