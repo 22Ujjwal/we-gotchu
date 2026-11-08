@@ -1,65 +1,53 @@
 # Ujjwal's status
 
 Owner: Ujjwal.
-Updated: 2026-11-07T19:30:58-08:00
-Baseline: origin/main at `ce2d672408be7defc30fad4d09db47b39ba28054`, integrated by merge commit `1d10df14c3f16ded59f290003985fde325f124d0`.
-Branch and PR: [fix/checkout-cancel-integration](https://github.com/22Ujjwal/we-gotchu/tree/fix/checkout-cancel-integration), [PR #28](https://github.com/22Ujjwal/we-gotchu/pull/28), open against main.
-Availability: backend core merged; this Checkout fix and specification are on branch.
-Tested commit: `429eb73`, which adds a refusal of brief updates after cancellation (409 `invalid_status`) on top of merge commit `1d10df1` (main `ce2d672` plus the original fix `cb29c30`). Later commits change documentation only.
+Updated: 2026-11-07T20:08:53-08:00
+Baseline: main `1d584e9` (through #37).
+Branch and PR: [test/dom-harness](https://github.com/22Ujjwal/we-gotchu/tree/test/dom-harness); DOM setup PR pending publication.
+Availability: DOM test infrastructure on branch; transaction fixes #28 merged; hosting handoff #33 open at last check.
+Tested application baseline: `1d584e9`; new configuration and verification evidence below.
 
 ## Current result
 
-Contracts and fixtures (#16), Clerk authentication (#17), standalone research (#18), the fixture-backed frontend (#19), and backend core (#20) are merged.
-The merged baseline remains TanStack Start with Bun; framework-migration PR #6 is closed without merging.
-Backend core includes authoritative storage, customer event APIs, Stripe handling, guarded MCP tools, simulated supplier adapters, and scripted execution hooks.
+Tony requested the root test prerequisite for the connected event journey in [spec PR #34](https://github.com/22Ujjwal/we-gotchu/pull/34).
+This branch adds jsdom 26, React Testing Library and its DOM peer, user-event, and jest-dom as development dependencies.
+Vitest runs existing `.test.ts` files in Node and `.test.tsx` files in a separate DOM project.
+DOM setup provides matchers, explicit cleanup, reset fetch stubs, restored globals/spies, and real-timer restoration.
+Unexpected fetch calls reject; tests must supply controlled customer API responses.
 
-This branch fixes cancellation completing while Stripe creates Checkout: the approval transaction checks cancellation under the event lock, rejects approve with 409, and requests expiry of the unused session without saving approval or payment.
-A brief update after cancellation was requested is also refused with 409, so a canceled event can no longer return to research.
-It also adds a stronger refund regression: failed request, successful same-key retry, and duplicate delivery without extra refund or supplier work.
-Main already contains the broader payment-handoff retry implementation; this branch preserves it rather than replaying the superseded local refund patch.
-
-The [transaction spec](../../../.scratch/specs/transactions.md) is published through the local tracker with Owner Ujjwal and Label ready-for-agent.
-It follows to-spec's structure and the existing approved fake-Stripe and service/database testing boundaries.
-The transaction brief and contract prose now match server-derived execution keys, cancellation during Checkout creation, and payment-handoff retry behavior.
+A two-case smoke renders the existing gallery unchanged and exercises user interactions and cleanup.
+No screen implementation, styling, API wiring, contract, schema, database migration, or hosted configuration changes are included.
+Tony and Leo own rendered journey cases and API wiring; Leo retains design ownership.
+See [DOM testing guide](../../testing/dom-tests.md) for commands, fixture use, and a controlled-response example.
 
 ## Runtime evidence
 
-At the tested commit:
-
-- Typecheck passed.
-- All 206 application tests across 14 files passed with the standard test command run alone.
-- All 25 standalone coordination tests passed.
-- An earlier concurrent run hit database-initialization hook timeouts in three suites; the standalone rerun passed without changing source, test settings, or timeout limits.
-- Production client/server build passed and left the shared generated route repair unchanged.
-- The cancellation regression failed before the fix by returning a Checkout URL; both focused suites passed afterward (41 tests).
-- The refund regression passed against main's existing retry implementation.
-
-Neon is implemented but hosted migration/runtime remain unverified here.
-Stripe evidence uses controlled test providers; hosted test Checkout, webhook, and refunds remain unverified.
-MCP is implemented but a public HTTPS endpoint and authenticated Naive ping remain unverified.
-Supplier commits and cancellations use simulated adapters. Scripted execution is a labeled fallback.
-Local Clerk keys are present; the handoff records temporary accountless development keys. A claimed shared Clerk application and its access list remain unconfirmed. Deployed sign-in has not been verified.
-No public app or MCP URL is verified here. Vercel build artifacts exist, but this checkout has no linked Vercel project. An authenticated deployed MCP call and real Naive ping remain pending.
-No cloud deployment, live supplier transaction, or provider account setup is claimed.
+- Original config ignored the new `.test.tsx` smoke (no test files found).
+- With the DOM project, both gallery cases passed; typecheck passed. jsdom 26 was selected to preserve compatibility with existing local Node 24.9 and CI Node 22.
+- All 25 coordination tests passed.
+- Complete application suite passed with `bun run test --maxWorkers 2`: 270 tests across 19 files, including the two DOM cases. `NITRO_PRESET=vercel bun run build`, final typecheck, and frozen-lockfile install passed; generated routes remained unchanged.
+- Baseline standard run hit existing PGlite 10-second initialization timeouts in `store.test.ts` and `recovery.test.ts`.
+- The default run after setup also timed out during PGlite initialization in `brief-revision`, `checkpoint`, `integration`, `store`, and `recovery`. No timeout values or backend implementation were changed. The complete two-worker rerun passed without extending timeouts.
 
 ## Contracts and dependencies
 
-Contract version: 0.4. This branch changes no public schema and adds no migration.
-Tony and Leo consume the same event/action inputs and existing responses; the new 409 closes a canceled-event race.
-The exact generated route repair from [#26](https://github.com/22Ujjwal/we-gotchu/pull/26) is now merged on main and integrated here. No independent route repair was generated.
-Deployment configuration [#21](https://github.com/22Ujjwal/we-gotchu/pull/21) is now merged and integrated here.
-Tony's research [#24](https://github.com/22Ujjwal/we-gotchu/pull/24), supplier evidence [#25](https://github.com/22Ujjwal/we-gotchu/pull/25), and coordination tooling #23 are now merged and integrated here. Their hosted application path still requires verification.
-Root CI [#27](https://github.com/22Ujjwal/we-gotchu/pull/27) is merged; its standalone coordination checks are included in local integration verification.
-Leo's merged frontend still needs verification against real event, progress, and Checkout responses.
-No teammate approval is inferred from tests, merges, or this status file.
+Shared contract version remains 0.4. No new public schemas or fields.
+Consumers should adopt this root manifest/lockfile/configuration before adding `.test.tsx` journey tests and run `bun install --frozen-lockfile`.
+`bun run test` includes both projects; `bun run test --project dom` runs screen tests only.
+Use complete EventView fixtures and explicit test responses. A pending refund fixture is not proof of completed refund, and a completed research result need not contain a bookable Plan.
 
 ## Next step and blockers
 
-PR #28 is published after review with no introduced blockers. Prerequisite PRs #21 and #23 through #27 are now merged by the team; #28 remains open. Verify its combined code and CI before integration.
-Configure DATABASE_URL, a test-mode STRIPE_SECRET_KEY, NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL in the ignored .env.local; all five were missing in the latest check. The MCP bearer and Clerk keys were present. Apply both database migrations before deploying real research.
-After authorized migration and deployment, configure the Stripe webhook and verify authenticated Naive ping and the hosted test-payment flow.
-Real execution and cancellation session starters remain unwired: AGENT_MODE=naive selects placeholder hooks. Keep the working scripted fallback explicitly labeled until real starters are implemented and verified.
-The real research integration intentionally returns partial evidence with unknown final costs and no bookable Plan. A payment/booking rehearsal needs verified costs and terms or the explicitly labeled simulated research path. Coordinate frontend API wiring, Checkout return URLs, continuous research polling, and mode labels with Leo.
+Publish and merge the DOM setup PR; Tony/Leo can proceed with controlled-response integration without hosted credentials.
+Real hosted journey testing remains blocked separately by shared Clerk claim/access and login verification, Neon configuration/migrations, and research provider setup. Stripe credentials and webhook setup are additionally required for Checkout/payment testing.
 
-The original local fixes and handoff are preserved in stash `8de106d6fd9a61ca772b059646c753759c0188b3`; no stash was dropped. The original deployment branch remains at its previous commit.
-Hacking ends at 11:00 AM Pacific on November 8, 2026. Prioritize one verified event flow with explicit live, test, and simulated labels.
+## Hosted evidence (separate handoff)
+
+The last verified production deployment was Git main `6f2597989a1b738293f18972312d4d7ddd2f5db9`, deployment `dpl_6DF759cX1FR8Hff39C2hhfC7vYDm`.
+App: https://we-gotchu.vercel.app
+MCP: https://we-gotchu.vercel.app/api/mcp
+App and sign-in pages returned 200; authenticated MCP initialize/list/ping passed and unauthenticated POST returned 401. Browser GET to MCP returns 405 by design.
+Those checks do not establish completed Clerk sign-in, database migrations, research completion, or Naive-to-MCP connectivity.
+Production configuration last checked contained Clerk development keys, MCP bearer, and APP_URL; no database, Stripe, Naive, or Monid configuration.
+The claimed shared Clerk application and access list remain unconfirmed. No teammate approval is inferred.
+Hosting follow-up and detailed evidence: [PR #33](https://github.com/22Ujjwal/we-gotchu/pull/33).
