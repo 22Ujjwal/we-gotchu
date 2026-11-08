@@ -43,14 +43,17 @@ export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 
   useEffect(() => { done.current = onDone }, [onDone])
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    if (reducedMotion && !preview) { setPercent(100); return }
     let start: number | undefined
     let frame = 0
     const tick = (now: number) => {
       start ??= now
       const elapsed = Math.max(0, now - start)
-      // Connected screens wait for their real route state to finish.
-      setPercent(Math.min(100, Math.floor(100 * elapsed / duration)))
-      if (elapsed < duration + 650) frame = requestAnimationFrame(tick)
+      // The paper loop is decorative; only real research updates change the heading.
+      const cycleElapsed = preview ? elapsed : elapsed % (duration + 2000)
+      setPercent(Math.min(100, Math.floor(100 * cycleElapsed / duration)))
+      if (!preview || elapsed < duration + 650) frame = requestAnimationFrame(tick)
       else done.current?.()
     }
     frame = requestAnimationFrame(tick)
