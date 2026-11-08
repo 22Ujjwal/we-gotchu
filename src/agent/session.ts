@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { Candidate, ResearchInput } from '../contracts'
-import { requestJson } from './http'
+import { ProviderHttpError, requestJson } from './http'
 import { Ranking } from './research'
 
 export const SessionSnapshot = z.object({
@@ -48,11 +48,18 @@ export function createResearchSession(options: { apiKey: string; model: string; 
     },
     async cancel(id, signal) {
       const result = z.object({ id: z.literal(id), status: z.literal('cancelled') })
-      result.parse(await call(`${path(id)}/cancel`, signal, {}))
+      try { result.parse(await call(`${path(id)}/cancel`, signal, {})) }
+      catch (error) {
+        if (!(error instanceof ProviderHttpError && error.status === 409 && error.code === 'session_terminal')) throw error
+      }
     },
     async deleteAgent(id, signal) {
-      z.object({ id: z.literal(id), deleted: z.literal(true) }).parse(
-        await call(`/agents/${encodeURIComponent(id)}`, signal, undefined, undefined, 'DELETE'))
+      try {
+        z.object({ id: z.literal(id), deleted: z.literal(true) }).parse(
+          await call(`/agents/${encodeURIComponent(id)}`, signal, undefined, undefined, 'DELETE'))
+      } catch (error) {
+        if (!(error instanceof ProviderHttpError && error.status === 404 && error.code === 'not_found')) throw error
+      }
     },
   }
 }

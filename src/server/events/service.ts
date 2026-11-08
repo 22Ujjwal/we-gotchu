@@ -95,7 +95,7 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
     const step = await deps.research.advanceResearch({ event, run: claimed })
     if (step.status !== 'done') return
     lastSequence = step.lastSequence
-    const published = await deps.store.publishResearchResult(step.result, claimed.advancingUntil)
+    const published = await deps.store.publishResearchResult(step.result, claimed.advancingUntil, step.lastSequence)
     if (!published.ok) {
       console.warn('[research] result not stored', published.reason)
       return
@@ -167,9 +167,9 @@ export async function updateBrief(
     throw new ApiError(409, 'already_approved', 'The plan is already approved; cancel before changing the brief.')
   }
   const prev = res.previousRun
-  if (prev?.naiveSessionId) {
+  if (prev) {
     try {
-      await deps.research.cancelResearch(prev.naiveSessionId)
+      await deps.research.cancelResearch(prev)
     } catch (err) {
       console.warn('[research] cancel of previous session failed')
     }
@@ -300,9 +300,9 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
 
   const run = await deps.store.getCurrentRun(eventId, 'research')
   if (run && (run.state === 'running' || run.state === 'awaiting_input')) {
-    if (run.naiveSessionId) {
+    {
       try {
-        await deps.research.cancelResearch(run.naiveSessionId)
+        await deps.research.cancelResearch(run)
       } catch (err) {
         console.warn('[cancel] research session cancel failed')
         await deps.store.appendProgress(eventId, 'system', 'Research stop could not be confirmed. No new research will be scheduled; provider reconciliation is needed.')

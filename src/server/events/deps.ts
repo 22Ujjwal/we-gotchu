@@ -18,7 +18,7 @@ export interface ResearchPort {
     event: Event
     run: Run
   }): Promise<{ status: 'running' } | { status: 'done'; result: ResearchResult; lastSequence: number }>
-  cancelResearch(naiveSessionId: string): Promise<void>
+  cancelResearch(run: Run): Promise<void>
 }
 
 export type PaymentConfirmed = { eventId: string; approvalId: string; paymentId: string }

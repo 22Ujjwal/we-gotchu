@@ -1,4 +1,5 @@
-import { ResearchInput } from '../contracts'
+import { cleanupResearchResources } from './cleanup'
+import { CONTRACT_VERSION, ResearchInput } from '../contracts'
 import type { ResearchPort } from '../server/events/deps'
 import type { Store } from '../server/store'
 import type { ResearchCheckpoint } from './checkpoint'
@@ -31,8 +32,11 @@ export function createResearchIntegration(options: {
     candidates: c.evidence?.candidates ?? [], sourceChecks: c.evidence?.sourceChecks ?? [],
     warnings: c.evidence?.warnings ?? [],
   })
-  const validate = (c: ResearchCheckpoint, recommend: ResearchProviders['recommend'], discover = async () => evidenceOf(c)) =>
-    researchEvent(c.input, { discover, recommend }, { timeoutMs: stepMs })
+  const validate = async (c: ResearchCheckpoint, recommend: ResearchProviders['recommend'], discover = async () => evidenceOf(c)) =>
+    {
+      const result = await researchEvent(c.input, { discover, recommend }, { timeoutMs: stepMs })
+      return { ...result, warnings: [...new Set(result.warnings)] }
+    }
   const supportedOrder: ResearchProviders['recommend'] = async (_input, candidates) => ({ candidateIds: candidates.map(c => c.candidateId) })
 
   return {
@@ -46,9 +50,20 @@ export function createResearchIntegration(options: {
       })
       return { naiveSessionId: null }
     },
-    async advanceResearch({ run }) {
+    async advanceResearch({ event, run }) {
       let c = await checkpoints.read(run.runId)
-      if (!c) throw new Error('Research checkpoint is missing')
+      if (!c) {
+        const result = await researchEvent({ contractVersion: CONTRACT_VERSION, eventId: run.eventId,
+          runId: run.runId, briefRevision: run.briefRevision, brief: event.brief }, {
+          discover: async () => ({ candidates: [], sourceChecks: [] }), recommend: async () => null,
+        }, { timeoutMs: stepMs })
+        return { status: 'done', lastSequence: run.lastSequence,
+          result: { ...result, outcome: 'failed', warnings: [
+            'This older run has no research checkpoint and cannot resume. Submit a revised brief to restart.',
+            ...(run.naiveSessionId && !run.naiveSessionId.startsWith('sim_session_')
+              ? ['An earlier hosted session may need provider reconciliation.'] : []),
+          ] } }
+      }
       const leaseMs = new Date(run.advancingUntil ?? 0).getTime() - Date.now() - 100
       if (leaseMs <= 0) return running
       const signal = AbortSignal.timeout(Math.min(stepMs, leaseMs))
@@ -73,24 +88,21 @@ export function createResearchIntegration(options: {
         finally { signal.removeEventListener('abort', abort) }
       }
       const discard = async (sessionId: string | null, agentId: string | null) => {
-        const cleanupSignal = AbortSignal.timeout(3000)
-        let confirmed = true
-        if (sessionId) await session.cancel(sessionId, cleanupSignal).catch(() => { confirmed = false })
-        if (agentId) await session.deleteAgent(agentId, cleanupSignal).catch(() => { confirmed = false })
-        await checkpoints.recordCleanup(run.runId, { sessionId, agentId, confirmed })
-        if (!confirmed) await options.store.appendProgress(run.eventId, 'system',
+        const cleanup = await cleanupResearchResources({ runId: run.runId, sessionId, agentId,
+          timeoutMs: 3000, checkpoints, session })
+        if (!cleanup.confirmed) await options.store.appendProgress(run.eventId, 'system',
           'An earlier research operation needs provider cleanup. No supplier transaction was canceled.')
       }
       try {
         // This no-op save verifies the current lease and cancellation before any provider call.
         await save({})
-        if (!['done', 'cleanup', 'delete_agent'].includes(c.stage) && Date.now() >= Date.parse(c.expiresAt)) {
+        if (!['done', 'cleanup', 'delete_agent', 'uncertain'].includes(c.stage) && Date.now() >= Date.parse(c.expiresAt)) {
           await finish('Research reached its time limit; retry with a revised brief.')
           return running
         }
         switch (c.stage) {
           case 'discovery': {
-            await save({ stage: 'uncertain' }, 'Looking for supplier evidence.')
+            await save({}, 'Looking for supplier evidence.')
             const result = await bounded(() => researchEvent(c!.input, {
               discover: options.providers.discover, recommend: supportedOrder,
             }, { timeoutMs: stepMs, signal }))
@@ -101,7 +113,7 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'enrichment': {
-            await save({ stage: 'uncertain' }, 'Investigating supplier details.')
+            await save({}, 'Investigating supplier details.')
             const enriched = await bounded(() => options.providers.enrich!(c!.input, evidenceOf(c!), signal))
             const result = await validate(c, supportedOrder, async () => enriched)
             await save({ evidence: result, stage: result.candidates.length ? 'agent' : 'done',
@@ -166,21 +178,18 @@ export function createResearchIntegration(options: {
             await finish('A research operation has an uncertain outcome. It was not retried; provider reconciliation is needed.')
             return running
           case 'cleanup': {
-            let warning: string | undefined
-            if (c.sessionId && !c.sessionStopped) {
-              try { await bounded(() => session.cancel(c!.sessionId!, signal)) }
-              catch { warning = 'Research session cleanup could not be confirmed; reconciliation is needed.' }
-            }
-            await save({ stage: 'delete_agent', result: warning ? { ...c.result!, warnings: [...c.result!.warnings, warning] } : c.result })
+            await cleanupResearchResources({ runId: run.runId, sessionId: c.sessionId,
+              agentId: c.agentId, sessionStopped: c.sessionStopped, sessionOnly: true,
+              timeoutMs: Math.min(stepMs, leaseMs), checkpoints, session })
+            await save({ stage: 'delete_agent' })
             return running
           }
           case 'delete_agent': {
-            let warning: string | undefined
-            if (c.agentId) {
-              try { await bounded(() => session.deleteAgent(c!.agentId!, signal)) }
-              catch { warning = 'Research definition cleanup could not be confirmed; reconciliation is needed.' }
-            }
-            await save({ stage: 'done', result: warning ? { ...c.result!, warnings: [...c.result!.warnings, warning] } : c.result })
+            const cleanup = await cleanupResearchResources({ runId: run.runId, sessionId: c.sessionId,
+              agentId: c.agentId, sessionStopped: c.sessionStopped,
+              timeoutMs: Math.min(stepMs, leaseMs), checkpoints, session })
+            const warning = cleanup.confirmed ? undefined : 'Research cleanup could not be confirmed; reconciliation is needed.'
+            await save({ stage: 'done', result: warning ? { ...c.result!, warnings: [...new Set([...c.result!.warnings, warning])] } : c.result })
             return running
           }
           case 'done':
@@ -195,21 +204,21 @@ export function createResearchIntegration(options: {
         return running
       }
     },
-    async cancelResearch(sessionId) {
-      // This only stops hosted research. Supplier transactions are outside this port.
-      const checkpoint = await checkpoints.readBySession(sessionId)
-      const signal = AbortSignal.timeout(stepMs)
-      let confirmed = false
-      try {
-        const snapshot = await session.poll(sessionId, signal)
-        if (!['completed', 'failed', 'cancelled'].includes(snapshot.status)) await session.cancel(sessionId, signal)
-        if (checkpoint?.agentId) await session.deleteAgent(checkpoint.agentId, signal)
-        confirmed = true
-      } finally {
-        if (checkpoint) await checkpoints.recordCleanup(checkpoint.input.runId, {
-          sessionId, agentId: checkpoint.agentId, confirmed,
-        })
+    async cancelResearch(run) {
+      // Run identity exists before either provider resource, including on a replaced brief.
+      const checkpoint = await checkpoints.read(run.runId)
+      if (!checkpoint) {
+        if (run.naiveSessionId && !run.naiveSessionId.startsWith('sim_session_')) {
+          await session.cancel(run.naiveSessionId, AbortSignal.timeout(stepMs))
+          await options.store.appendProgress(run.eventId, 'system',
+            'The older research session stopped. Its missing checkpoint may require definition cleanup.')
+        }
+        return
       }
+      const cleanup = await cleanupResearchResources({ runId: run.runId,
+        sessionId: checkpoint.sessionId, agentId: checkpoint.agentId,
+        sessionStopped: checkpoint.sessionStopped, timeoutMs: stepMs, checkpoints, session })
+      if (!cleanup.confirmed) throw new Error('Research cleanup could not be confirmed')
     },
   }
 }

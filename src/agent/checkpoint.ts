@@ -1,7 +1,7 @@
 import type { ResearchInput, ResearchResult, Run } from '../contracts'
 
 // Private server state, deliberately excluded from EventView and model prompts.
-export type ResearchCleanup = { agentId: string | null; sessionId: string | null; confirmed: boolean }
+export type ResearchCleanup = { agentId: string | null; sessionId: string | null; confirmed: boolean; sessionStopped?: boolean; agentDeleted?: boolean }
 export type ResearchCheckpoint = {
   cleanup?: ResearchCleanup | null
   sessionStopped?: boolean

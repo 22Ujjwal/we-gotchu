@@ -64,7 +64,7 @@ export interface Store {
    * (awaiting_input -> needs_input, failed -> failed, canceled -> canceled; success/partial leave
    * the status for the caller to set after Plan derivation).
    */
-  publishResearchResult(result: ResearchResult, lease?: string | null): Promise<{ ok: true } | Fail<'stale_brief' | 'run_not_active' | 'duplicate' | 'not_found'>>
+  publishResearchResult(result: ResearchResult, lease?: string | null, lastSequence?: number): Promise<{ ok: true } | Fail<'stale_brief' | 'run_not_active' | 'duplicate' | 'not_found'>>
   getResearchResult(runId: string): Promise<ResearchResult | null>
   /** Stores a plan; unique on (eventId, revision). Sets Event.planRevision. */
   savePlan(plan: Plan): Promise<void>

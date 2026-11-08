@@ -14,9 +14,21 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
           eq(runs.briefRevision, input.briefRevision), eq(runs.state, 'running'), isNull(runs.researchCheckpoint)))
     },
     async recordCleanup(runId, cleanup) {
-      await db.update(runs).set({
-        researchCheckpoint: sql`jsonb_set(${runs.researchCheckpoint}, '{cleanup}', ${JSON.stringify(cleanup)}::jsonb)`,
-      }).where(eq(runs.id, runId))
+      await db.transaction(async tx => {
+        const [row] = await tx.select({ checkpoint: runs.researchCheckpoint }).from(runs)
+          .where(eq(runs.id, runId)).for('update')
+        if (!row?.checkpoint) return
+        const old = row.checkpoint.cleanup
+        const sessionStopped = cleanup.sessionStopped === true || cleanup.confirmed ||
+          (old?.sessionId === cleanup.sessionId && (old.sessionStopped === true || old.confirmed))
+        const agentDeleted = cleanup.agentDeleted === true || cleanup.confirmed ||
+          (old?.agentId === cleanup.agentId && (old.agentDeleted === true || old.confirmed))
+        const confirmed = sessionStopped && agentDeleted
+        await tx.update(runs).set({
+          researchCheckpoint: sql`jsonb_set(${runs.researchCheckpoint}, '{cleanup}',
+            ${JSON.stringify({ ...cleanup, sessionStopped, agentDeleted, confirmed })}::jsonb)`,
+        }).where(eq(runs.id, runId))
+      })
     },
     async readBySession(sessionId) {
       const [row] = await db.select({ checkpoint: runs.researchCheckpoint }).from(runs).where(eq(runs.naiveSessionId, sessionId))

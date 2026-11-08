@@ -23,3 +23,20 @@ test('bounded session lifecycle uses the documented REST paths and does not wait
   expect(calls[3][1].headers).toMatchObject({ 'Idempotency-Key': 'run:correction:1' })
   expect(calls.map(([, init]) => init.body).join('')).not.toContain('secret')
 })
+
+test('terminal cancellation and already absent definitions are confirmed without masking other failures', async () => {
+  const replies = [
+    [409, 'session_terminal'], [404, 'not_found'], [409, 'other_conflict'], [403, 'forbidden'],
+  ] as const
+  let next = 0
+  const fetcher = vi.fn(async () => {
+    const [status, code] = replies[next++]
+    return new Response(JSON.stringify({ error: { code, message: 'private diagnostic' } }), { status })
+  })
+  const session = createResearchSession({ apiKey: 'secret', model: 'model', fetch: fetcher as typeof fetch })
+  const signal = AbortSignal.timeout(1000)
+  await expect(session.cancel('session', signal)).resolves.toBeUndefined()
+  await expect(session.deleteAgent('agent', signal)).resolves.toBeUndefined()
+  await expect(session.cancel('session', signal)).rejects.toThrow('HTTP 409')
+  await expect(session.deleteAgent('agent', signal)).rejects.toThrow('HTTP 403')
+})

@@ -390,7 +390,7 @@ export function createStore(db: Db): Store {
       return rows.length > 0
     },
 
-    async publishResearchResult(input, lease) {
+    async publishResearchResult(input, lease, lastSequence = 0) {
       const result = ResearchResult.parse(input)
       const nextStatus = EVENT_STATUS_FOR_OUTCOME[result.outcome]
       type R = 'stale_brief' | 'run_not_active' | 'duplicate' | 'not_found'
@@ -408,7 +408,8 @@ export function createStore(db: Db): Store {
           //    the same brief revision (equal to the locked event's).
           const [r] = await tx
             .update(runs)
-            .set({ state: RUN_STATE_FOR_OUTCOME[result.outcome], advancingUntil: null })
+            .set({ state: RUN_STATE_FOR_OUTCOME[result.outcome], advancingUntil: null,
+              lastSequence: sql`greatest(${runs.lastSequence}, ${lastSequence})` })
             .where(
               and(
                 eq(runs.id, result.runId),
