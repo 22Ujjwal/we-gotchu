@@ -11,7 +11,22 @@ export function createPlanningFetch(options: {
     const signal = AbortSignal.any(signals)
     for (let attempt = 0; ; attempt++) {
       signal.throwIfAborted()
-      const response = await request(url instanceof Request ? url.clone() : url, { ...init, signal })
+      const started = Date.now()
+      const endpoint = new URL(url instanceof Request ? url.url : String(url))
+      const context = { method: init?.method ?? (url instanceof Request ? url.method : 'GET'), path: endpoint.pathname, attempt: attempt + 1 }
+      let response: Response
+      try {
+        response = await request(url instanceof Request ? url.clone() : url, { ...init, signal })
+      } catch (error) {
+        // Keep failure evidence without logging credentials, request content, or response bodies.
+        console.error('Planning provider request interrupted', { ...context, elapsedMs: Date.now() - started,
+          error: error instanceof Error ? error.name : 'UnknownError', timedOut: signal.aborted })
+        throw error
+      }
+      if (!response.ok) console.error('Planning provider request rejected', { ...context,
+        elapsedMs: Date.now() - started, status: response.status,
+        requestId: response.headers.get('x-request-id') ?? response.headers.get('request-id'),
+        retryAfter: response.headers.get('retry-after') })
       // Only a received 429 proves rejection. Never repeat a timed-out or failed write.
       if (response.status !== 429 || attempt === 2) return response
       const retryAfter = response.headers.get('retry-after')
