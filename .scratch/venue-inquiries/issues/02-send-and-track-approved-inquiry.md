@@ -5,7 +5,7 @@
 **Blocked by:** 01: Prepare an inquiry for the selected venue.
 External prerequisite: a verified sending inbox and an agreed email integration owned in coordination with Ujjwal.
 
-**Status:** ready-for-agent
+**Status:** application boundary implemented locally; real transport integration and browser verification pending
 
 - [ ] Verify sending capability and provider receipt semantics before enabling the send action.
 - [ ] The customer approves the exact recipient and current draft; approval authorizes an inquiry, not a booking or purchase.
@@ -32,3 +32,14 @@ Ujjwal owns the isolated supplier-mail transport, inbound handling, provider ref
 Agree on the send and inbound interfaces before implementing in parallel.
 Coordinate shared schema, migration, runtime, and dependency changes before editing.
 See [the ownership and verification handoff](../../../docs/research/stage-three-team-handoff.md).
+
+## Application-side checkpoint
+
+The local `feat/planning-inquiry-drafts` branch adds exact-draft approval, persisted send intent and accepted, failed or uncertain results.
+`src/server/planning/supplier-mail.ts` defines the actual exported transport boundary.
+`PlanningDeps.mail` is optional and not wired into the runtime until Ujjwal's adapter is verified.
+Controlled tests cover exact payloads, duplicate requests, uncertain sends, rejected-message replacement and reloaded pending-status reads.
+The customer UI only enables approval when the backend advertises the transport capability.
+
+No live send, delivery, browser approval or provider reconciliation has been verified in this checkpoint.
+Ujjwal's transport handoff is the prerequisite for the controlled-inbox integration run.

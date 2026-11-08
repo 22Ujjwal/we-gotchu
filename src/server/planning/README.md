@@ -77,4 +77,33 @@ Changing the recipient removes the old source attribution.
 New customer messages and venue changes mark the saved draft stale.
 The customer must explicitly replace an outdated draft.
 Revision conflicts retain local editor text instead of silently adopting another tab's baseline.
-Email sending, inbound interpretation and supplier commitments belong to later integration slices.
+The approved-send boundary is described below.
+The real mail adapter, inbound interpretation and supplier commitments are not connected yet.
+
+## Approved inquiry sends
+
+`SupplierMailTransport` in `supplier-mail.ts` is the transport interface for Ujjwal's adapter.
+Inject it as `PlanningDeps.mail`; the runtime currently leaves it unset.
+The HTTP projection advertises `canSendInquiry` only when that dependency is present.
+
+The `send_inquiry` command includes the inquiry ID, expected draft revision, conversation version and request ID.
+The server loads the approved recipient, subject and text from the saved draft rather than accepting replacement fields in the send request.
+It saves approval and pending status before calling `sendInquiry` once.
+The adapter receives `requestId`, `conversationId`, `inquiryId`, `draftRevision`, `to`, `subject` and `text`.
+
+Accepted results require `messageId`, nullable `threadId` and ISO `acceptedAt`.
+Failed results require `code` and `reason`; the customer sees a generic rejection message.
+Uncertain results require `operationId` and may include message and thread IDs.
+A malformed response, thrown error or timeout remains uncertain and is never automatically resent.
+The server can retry database settlement without retrying the provider write.
+A pending send left by a crashed request becomes uncertain after its saved deadline on a subsequent read.
+
+The editor locks the approved message once a send has been attempted.
+The customer can explicitly replace a rejected inquiry; its previous draft and send result remain in the record's inquiry history.
+An uncertain send cannot be replaced automatically.
+Reloaded pending sends trigger read-only status checks until the application records an outcome.
+Provider acceptance is not delivery or a supplier reply.
+
+The next integration step is to inject the verified real adapter and run an approved controlled-inbox send.
+Read-only provider reconciliation, inbound correlation, reply interpretation and offer display remain separate incomplete work.
+No real provider send occurred during controlled implementation verification.
