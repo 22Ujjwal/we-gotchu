@@ -124,3 +124,139 @@ test('consumer fixtures validate without claiming live supplier evidence', () =>
     expect(fixture.candidates.every(c => c.evidenceMode === 'simulated')).toBe(true)
   }
 })
+
+test('a new integration instance continues from durable evidence and session checkpoints', async () => {
+  const { deps, discover, session } = setup()
+  const started = await createEvent(deps, researchBriefFixture)
+  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  const noDiscovery = vi.fn(async () => { throw new Error('Discovery must not repeat') })
+  deps.research = createResearchIntegration({ store, providers: { discover: noDiscovery, session } })
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.outcome).toBe('partial')
+  expect(discover).toHaveBeenCalledTimes(1)
+  expect(noDiscovery).not.toHaveBeenCalled()
+  expect(session.start).toHaveBeenCalledTimes(1)
+})
+
+test('enrichment receives saved evidence once before hosted ranking', async () => {
+  const { deps, discover, session } = setup()
+  const enrich = vi.fn(async (_input, evidence) => ({ ...evidence, warnings: ['Detail check did not confirm availability.'] }))
+  deps.research = createResearchIntegration({ store, providers: { discover, session, enrich } })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await finish(deps, started.event.eventId)
+  expect(enrich).toHaveBeenCalledTimes(1)
+  expect(enrich.mock.calls[0][1].candidates).toEqual(discoveryFixture.candidates)
+  expect(completed.researchResult!.warnings).toContain('Detail check did not confirm availability.')
+  expect(session.start).toHaveBeenCalledTimes(1)
+})
+
+test('uncertain session creation is not retried and retains evidence for reconciliation', async () => {
+  const { deps, session } = setup({ start: vi.fn(async () => { throw new Error('private transport diagnostic') }) })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.outcome).toBe('partial')
+  expect(completed.researchResult!.warnings.join(' ')).toContain('uncertain outcome')
+  expect(JSON.stringify(completed)).not.toContain('private transport diagnostic')
+  expect(session.start).toHaveBeenCalledTimes(1)
+})
+
+test('a revised brief rejects an in-flight provider result', async () => {
+  let accept: (value: Awaited<ReturnType<ResearchSession['poll']>>) => void = () => {}
+  let entered: () => void = () => {}
+  const waiting = new Promise<void>(resolve => { entered = resolve })
+  const { deps } = setup({ poll: vi.fn(() => { entered(); return new Promise<Awaited<ReturnType<ResearchSession['poll']>>>(resolve => { accept = resolve }) }) })
+  const started = await createEvent(deps, researchBriefFixture)
+  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  const pending = getEventView(deps, started.event.eventId)
+  await waiting
+  await store.updateBrief({ eventId: started.event.eventId, expectedBriefRevision: 1,
+    brief: { ...researchBriefFixture, location: 'New location' } })
+  accept({ id: 'session', status: 'idle', stop_reason: 'end_turn', last_seq: 10,
+    structured_output: { candidateIds: discoveryFixture.candidates.map(c => c.candidateId) } })
+  const view = await pending
+  expect(view.event.briefRevision).toBe(2)
+  expect(view.researchResult).toBeNull()
+  expect(await store.getResearchResult(started.run!.runId)).toBeNull()
+})
+
+test('cancellation reports an unconfirmed provider stop and schedules no new research', async () => {
+  const { deps, session } = setup({ start: vi.fn(async () => 'cancel-session'),
+    poll: vi.fn(async () => ({ id: 'cancel-session', status: 'running', last_seq: 0 })),
+    cancel: vi.fn(async () => { throw new Error('private failure') }) })
+  const started = await createEvent(deps, researchBriefFixture)
+  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  const canceled = await cancel(deps, started.event.eventId)
+  expect(canceled.run!.state).toBe('canceled')
+  expect(canceled.progress.some(p => p.message.includes('stop could not be confirmed'))).toBe(true)
+  const calls = vi.mocked(session.poll).mock.calls.length
+  await getEventView(deps, started.event.eventId)
+  expect(session.poll).toHaveBeenCalledTimes(calls)
+  expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: false, sessionId: 'cancel-session' })
+})
+
+test('a terminal hosted session needs no cancel call', async () => {
+  const { deps, session } = setup({ poll: vi.fn(async () => ({ id: 'session', status: 'completed', stop_reason: 'end_turn', last_seq: 7,
+    structured_output: { candidateIds: discoveryFixture.candidates.map(c => c.candidateId) } })) })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.outcome).toBe('partial')
+  expect(session.cancel).not.toHaveBeenCalled()
+})
+
+test('repeated malformed ranking stops after one correction with supported evidence only', async () => {
+  let sequence = 10
+  const { deps, session } = setup({ poll: vi.fn(async () => ({ id: 'session', status: 'idle', stop_reason: 'end_turn',
+    last_seq: sequence++, structured_output: { candidateIds: ['invented'] } })) })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.recommendations).toEqual([])
+  expect(completed.researchResult!.candidates).toEqual(discoveryFixture.candidates)
+  expect(session.correct).toHaveBeenCalledTimes(1)
+})
+
+test('an expired run stops scheduling provider work', async () => {
+  const { deps, discover, session } = setup()
+  const started = await createEvent(deps, researchBriefFixture)
+  const run = (await store.claimRunAdvance(started.run!.runId, new Date(), 30000))!
+  const checkpoint = (await store.researchCheckpoints!.read(run.runId))!
+  await store.researchCheckpoints!.save(run, checkpoint.version, { ...checkpoint, expiresAt: '2026-01-01T00:00:00.000Z' })
+  await store.releaseRunAdvance(run.runId, 0, run.advancingUntil)
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.outcome).toBe('failed')
+  expect(discover).not.toHaveBeenCalled()
+  expect(session.createAgent).not.toHaveBeenCalled()
+})
+
+test('real REST adapters work through application polling with controlled HTTP responses', async () => {
+  const { createDiscovery } = await import('../suppliers/discovery')
+  const { createResearchSession } = await import('./session')
+  const requests: string[] = []
+  const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const path = String(url)
+    requests.push(path)
+    const body = init?.body ? JSON.parse(String(init.body)) : {}
+    let reply: unknown
+    if (path === 'https://api.monid.ai/v1/run') reply = { runId: 'monid-controlled', status: 'COMPLETED',
+      providerResponse: { httpStatus: 200 }, output: body.provider === 'litescrape'
+        ? { local_results: [{ title: 'Controlled venue', place_id: 'venue', website: 'https://example.com/venue' }] }
+        : { products: [{ id: 'plates', title: 'Controlled plates', offers: [{ url: 'https://example.com/plates' }] }] } }
+    else if (path.endsWith('/agents')) reply = { id: 'http-agent' }
+    else if (path.endsWith('/sessions')) reply = { id: 'http-session' }
+    else if (path.endsWith('/cancel') || init?.method === 'DELETE') reply = {}
+    else reply = { id: 'http-session', status: 'idle', stop_reason: 'end_turn', last_seq: 12,
+      structured_output: { candidateIds: ['venue:venue', 'supply:plates'] } }
+    return new Response(JSON.stringify(reply))
+  }) as typeof fetch
+  const research = createResearchIntegration({ store, providers: {
+    discover: createDiscovery({ apiKey: 'controlled-secret', fetch: fetcher }),
+    session: createResearchSession({ apiKey: 'controlled-secret', model: 'controlled-model', fetch: fetcher }),
+  } })
+  const { deps } = makeDeps({ store, research, now: () => new Date() })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.recommendations.map(r => r.candidateId)).toEqual(['venue:venue', 'supply:plates'])
+  expect(completed.researchResult!.outcome).toBe('partial')
+  expect(JSON.stringify(completed)).not.toContain('controlled-secret')
+  expect(requests.filter(path => path === 'https://api.monid.ai/v1/run')).toHaveLength(2)
+  expect(requests.filter(path => path.endsWith('/sessions'))).toHaveLength(1)
+})

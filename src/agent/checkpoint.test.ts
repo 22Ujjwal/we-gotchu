@@ -45,3 +45,17 @@ test('an older lease cannot save state or clear the newer lease', async () => {
   await store.releaseRunAdvance(run.runId, 99, run.advancingUntil)
   expect(await store.getRun(run.runId)).toMatchObject({ advancingUntil: newer.advancingUntil, lastSequence: 0 })
 })
+
+test('result publication rejects an older lease and a canceled event', async () => {
+  for (const action of ['lease', 'cancel']) {
+    const { event, run } = await setup()
+    if (action === 'lease') await store.claimRunAdvance(run.runId, new Date(Date.now() + 31000), 30000)
+    else await store.requestCancel(event.eventId, new Date())
+    const result = { contractVersion: CONTRACT_VERSION, eventId: event.eventId, runId: run.runId,
+      briefRevision: 1, outcome: 'partial' as const, candidates: [], sourceChecks: [], missing: [],
+      recommendations: [], budgetFit: 'unknown' as const, budgetBasis: 'Unknown costs.', currency: 'USD',
+      warnings: [], superseded: false, createdAt: new Date().toISOString() }
+    expect(await store.publishResearchResult(result, run.advancingUntil)).toMatchObject({ ok: false })
+    expect(await store.getResearchResult(run.runId)).toBeNull()
+  }
+})

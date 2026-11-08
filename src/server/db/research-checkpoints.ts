@@ -13,6 +13,15 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
         .where(and(eq(runs.id, input.runId), eq(runs.eventId, input.eventId),
           eq(runs.briefRevision, input.briefRevision), eq(runs.state, 'running'), isNull(runs.researchCheckpoint)))
     },
+    async recordCleanup(runId, cleanup) {
+      await db.update(runs).set({
+        researchCheckpoint: sql`jsonb_set(${runs.researchCheckpoint}, '{cleanup}', ${JSON.stringify(cleanup)}::jsonb)`,
+      }).where(eq(runs.id, runId))
+    },
+    async readBySession(sessionId) {
+      const [row] = await db.select({ checkpoint: runs.researchCheckpoint }).from(runs).where(eq(runs.naiveSessionId, sessionId))
+      return row?.checkpoint ?? null
+    },
     async read(runId) {
       const [row] = await db.select({ checkpoint: runs.researchCheckpoint }).from(runs).where(eq(runs.id, runId))
       return row?.checkpoint ?? null
@@ -29,7 +38,7 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
             isNull(events.cancelRequestedAt))).returning()
           if (!event) throw new RejectedCheckpoint()
           const [saved] = await tx.update(runs).set({
-            researchCheckpoint: { ...checkpoint, version: expectedVersion + 1 },
+            researchCheckpoint: sql`jsonb_set(${JSON.stringify({ ...checkpoint, version: expectedVersion + 1 })}::jsonb, '{cleanup}', coalesce(${runs.researchCheckpoint}->'cleanup', 'null'::jsonb))`,
             naiveSessionId: checkpoint.sessionId,
             lastSequence: sql`greatest(${runs.lastSequence}, ${checkpoint.lastSequence})`,
             correctionsUsed: checkpoint.correctionsUsed,

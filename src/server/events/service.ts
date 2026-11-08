@@ -70,7 +70,7 @@ async function startRun(deps: Deps, event: Event, run: Run): Promise<void> {
     await deps.store.appendProgress(event.eventId, 'system', `Research started (brief revision ${run.briefRevision}).`)
   } catch (err) {
     // Uncertain outcome: record it on the run so it is reconciled, not silently retried.
-    console.error('[research] startResearch failed', err)
+    console.error('[research] startResearch failed')
     await deps.store.setRunState(run.runId, ['running'], 'unknown')
     await deps.store.appendProgress(event.eventId, 'system', 'Research could not be started; the outcome is unknown.')
     throw new ApiError(502, 'research_start_failed', 'Research could not be started. Try again shortly.')
@@ -127,7 +127,7 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
       await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
     }
   } catch (err) {
-    console.error('[research] advance failed', err)
+    console.error('[research] advance failed')
   } finally {
     await deps.store.releaseRunAdvance(run.runId, lastSequence, claimed.advancingUntil)
   }
@@ -171,7 +171,7 @@ export async function updateBrief(
     try {
       await deps.research.cancelResearch(prev.naiveSessionId)
     } catch (err) {
-      console.warn('[research] cancel of previous session failed', err)
+      console.warn('[research] cancel of previous session failed')
     }
   }
   await deps.store.setEventStatus(eventId, ['needs_input', 'researched', 'plan_ready', 'failed'], 'researching')
@@ -304,7 +304,7 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
       try {
         await deps.research.cancelResearch(run.naiveSessionId)
       } catch (err) {
-        console.warn('[cancel] research session cancel failed', err)
+        console.warn('[cancel] research session cancel failed')
         await deps.store.appendProgress(eventId, 'system', 'Research stop could not be confirmed. No new research will be scheduled; provider reconciliation is needed.')
       }
     }

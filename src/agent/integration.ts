@@ -74,8 +74,12 @@ export function createResearchIntegration(options: {
       }
       const discard = async (sessionId: string | null, agentId: string | null) => {
         const cleanupSignal = AbortSignal.timeout(3000)
-        if (sessionId) await session.cancel(sessionId, cleanupSignal).catch(() => undefined)
-        if (agentId) await session.deleteAgent(agentId, cleanupSignal).catch(() => undefined)
+        let confirmed = true
+        if (sessionId) await session.cancel(sessionId, cleanupSignal).catch(() => { confirmed = false })
+        if (agentId) await session.deleteAgent(agentId, cleanupSignal).catch(() => { confirmed = false })
+        await checkpoints.recordCleanup(run.runId, { sessionId, agentId, confirmed })
+        if (!confirmed) await options.store.appendProgress(run.eventId, 'system',
+          'An earlier research operation needs provider cleanup. No supplier transaction was canceled.')
       }
       try {
         // This no-op save verifies the current lease and cancellation before any provider call.
@@ -123,7 +127,7 @@ export function createResearchIntegration(options: {
             if (snapshot.id !== c.sessionId) throw new Error('Session identity mismatch')
             if (snapshot.last_seq < c.lastSequence) return running
             const advanced = snapshot.last_seq > c.lastSequence
-            await save({ lastSequence: snapshot.last_seq }, advanced ? 'Research comparison progress saved.' : undefined)
+            await save({ lastSequence: snapshot.last_seq, sessionStopped: ['completed', 'failed', 'cancelled'].includes(snapshot.status) }, advanced ? 'Research comparison progress saved.' : undefined)
             if ((snapshot.consumed_micro_usd ?? 0) > 500_000) {
               await finish('Research reached its usage limit; only retrieved evidence is shown.')
               return running
@@ -163,7 +167,7 @@ export function createResearchIntegration(options: {
             return running
           case 'cleanup': {
             let warning: string | undefined
-            if (c.sessionId) {
+            if (c.sessionId && !c.sessionStopped) {
               try { await bounded(() => session.cancel(c!.sessionId!, signal)) }
               catch { warning = 'Research session cleanup could not be confirmed; reconciliation is needed.' }
             }
@@ -184,14 +188,28 @@ export function createResearchIntegration(options: {
         }
       } catch (error) {
         if (error instanceof LostLease) return running
-        try { await finish('A research step failed. Saved evidence is retained; retry with a revised brief.') }
+        try { await finish(c.stage === 'uncertain'
+          ? 'A provider operation has an uncertain outcome. It was not retried; reconciliation is needed.'
+          : 'A research step failed. Saved evidence is retained; retry with a revised brief.') }
         catch (saveError) { if (!(saveError instanceof LostLease)) throw saveError }
         return running
       }
     },
     async cancelResearch(sessionId) {
       // This only stops hosted research. Supplier transactions are outside this port.
-      await session.cancel(sessionId, AbortSignal.timeout(stepMs))
+      const checkpoint = await checkpoints.readBySession(sessionId)
+      const signal = AbortSignal.timeout(stepMs)
+      let confirmed = false
+      try {
+        const snapshot = await session.poll(sessionId, signal)
+        if (!['completed', 'failed', 'cancelled'].includes(snapshot.status)) await session.cancel(sessionId, signal)
+        if (checkpoint?.agentId) await session.deleteAgent(checkpoint.agentId, signal)
+        confirmed = true
+      } finally {
+        if (checkpoint) await checkpoints.recordCleanup(checkpoint.input.runId, {
+          sessionId, agentId: checkpoint.agentId, confirmed,
+        })
+      }
     },
   }
 }
