@@ -1,0 +1,7 @@
+{
+  "name": "agent-research-proof",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test *.test.mjs", "proof": "bun --env-file=../../.env.local run proof.mjs" },
+  "dependencies": { "@usenaive-sdk/managed-agents": "0.12.3" }
+}
