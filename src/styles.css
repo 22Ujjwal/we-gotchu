@@ -45,18 +45,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Inline "mad-lib" field (contentEditable span). */
+/* Inline brief fields use native inputs for reliable focus and text entry. */
 .blank {
   caret-color: var(--color-ink);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-.blank:empty::before {
-  content: attr(data-placeholder);
-  color: var(--color-faint);
-}
-.blank:empty:not([data-placeholder])::before {
-  content: "\00a0\00a0\00a0";
 }
 
 .gold-frame {
