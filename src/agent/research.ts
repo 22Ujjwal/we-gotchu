@@ -23,6 +23,18 @@ export type ResearchOptions = {
 export const Ranking = z.object({ candidateIds: z.array(z.string().min(1)).min(1) }).strict()
 const MAX_CANDIDATES = 12
 
+// Detail prose is evidence for the reader, not input to the ordering model.
+// Retain discovery names for relevance; this does not certify them as injection-free.
+export function rankingCandidates(candidates: Candidate[]): Candidate[] {
+  return candidates.map(candidate => ({
+    ...candidate,
+    verification: Object.fromEntries(Object.entries(candidate.verification).map(([field, value]) => [field, { status: value.status }])),
+    cancellationTerms: { known: candidate.cancellationTerms.known },
+    affiliateDisclosure: undefined,
+    whyChosenOrRejected: 'Candidate retrieved for the brief; unverified requirements remain unknown.',
+  }))
+}
+
 export async function researchEvent(
   rawInput: unknown,
   providers: ResearchProviders,
@@ -120,7 +132,7 @@ export async function researchEvent(
     progress('recommending')
     let ranking: z.infer<typeof Ranking> | undefined
     for (let turn = 0; turn < 2; turn++) {
-      const output = Ranking.safeParse(await bounded(() => providers.recommend(input, candidates, signal, turn === 1)))
+      const output = Ranking.safeParse(await bounded(() => providers.recommend(input, rankingCandidates(candidates), signal, turn === 1)))
       if (output.success && output.data.candidateIds.every(id => ids.has(id)) &&
           new Set(output.data.candidateIds).size === output.data.candidateIds.length) {
         ranking = output.data
