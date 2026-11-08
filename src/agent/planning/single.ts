@@ -18,7 +18,10 @@ When a relevant venue page lacks an event-date quote or availability, stop that 
 Use retrieved search excerpts as evidence when a page cannot be fetched, making that limitation explicit. Do not describe a snippet or review as a verified supplier quote.
 After repeated source failures, return the useful evidence already available and the specific gap. Do not switch through many data tools just to exhaust the research budget.
 Finish this turn with submit_output even when some facts remain unknown. A useful partial proposal is better than an unfinished exhaustive search.
-Keep the summary short: recommend the next decision, explain known supply quantities and prices, and name the venue fact that still needs confirmation.`,
+Keep the summary short: recommend the next decision, explain known supply quantities and prices, and name the venue fact that still needs confirmation.
+When taxes, mandatory fees, delivery or a required venue quote are unknown, say the known subtotal is below the budget, never that the pairing or event is within budget. Include this limitation in the summary, not only the cards.
+Every quote must be an exact excerpt of the retrieved source, with no added explanation or calculated example inside the quote. Put your arithmetic in the fact value with basis estimate and quote the published unit price that supports it.
+Avoid absolute claims such as the only suitable venue or cheapest option unless the evidence establishes them. Do not ask about unrequested catering when the budget explicitly covers venue and supplies only. Ask about choosing a venue or confirming its quote instead.`,
     output_schema: planningOutputSchema,
     structured_output_required: true,
   }
