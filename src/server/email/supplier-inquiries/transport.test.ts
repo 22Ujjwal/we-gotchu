@@ -36,17 +36,13 @@ function setup() {
 }
 
 describe('supplier inquiry send recovery', () => {
-  it('persists intent before sending exact approved fields and retains references', async () => {
+  it('persists the approved send and reuses its recorded result after restart', async () => {
     const s = setup()
-    expect(await s.create().sendInquiry(input)).toEqual({ operationId: 'op-1', provider: 'agentmail', status: 'accepted', messageId: 'message-1', threadId: 'thread-1', acceptedAt: '2026-11-08T12:00:00.000Z' })
+    const first = await s.create().sendInquiry(input)
+    expect(first).toEqual({ operationId: 'op-1', provider: 'agentmail', status: 'accepted', messageId: 'message-1', threadId: 'thread-1', acceptedAt: '2026-11-08T12:00:00.000Z' })
     expect(s.sends).toEqual([{ body: { to: 'venue@example.com', subject: 'Approved subject', text: 'Exact approved text.\nNo booking.' }, key: expect.stringMatching(/^[A-Za-z0-9._~-]{1,256}$/) }])
     expect(s.rows.get('op-1')?.input).toEqual(input)
     expect(s.rows.get('op-1')?.result.status).toBe('accepted')
-  })
-
-  it('replays a recorded result after restart without sending again', async () => {
-    const s = setup()
-    const first = await s.create().sendInquiry(input)
     expect(await s.create().sendInquiry({ ...input })).toEqual(first)
     expect(s.sends).toHaveLength(1)
   })
