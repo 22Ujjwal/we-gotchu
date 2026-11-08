@@ -67,6 +67,33 @@ it('bounds body read time and sanitizes malformed JSON', async () => {
   const malformed = new Request(endpoint, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: '{broken' })
   expect((await s.handler(malformed)).status).toBe(400)
 })
+it.each(['timeout', 'size'] as const)('returns a bounded %s rejection even when stream cleanup never settles', async reason => {
+  const s = setup()
+  const boundary = createAgentHttpBoundary({ ...s.opts, bodyTimeoutMs: 10 })
+  let cleanupStarted = false
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      if (reason === 'size') controller.enqueue(new Uint8Array(40_000))
+    },
+    cancel() {
+      cleanupStarted = true
+      return new Promise<void>(() => {})
+    },
+  })
+  const request = new Request(endpoint, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body, duplex: 'half' } as RequestInit)
+  let deadline: ReturnType<typeof setTimeout> | undefined
+  try {
+    const result = await Promise.race([
+      boundary(request, async () => { throw new Error('handler must not run') }).then(response => response.status),
+      new Promise<string>(resolve => { deadline = setTimeout(() => resolve('still_waiting'), 100) }),
+    ])
+    expect(result).toBe(reason === 'timeout' ? 408 : 413)
+    expect(cleanupStarted).toBe(true)
+    expect(s.calls()).toBe(0)
+  } finally {
+    clearTimeout(deadline)
+  }
+})
 it('denies unsupported envelope fields and unavailable financial tools', async () => {
   const s = setup()
   expect((await s.handler(req({ name: 'arrange_get_event', arguments: { conversationId: 'p-1' }, customerId: 'bob' }))).status).toBe(400)

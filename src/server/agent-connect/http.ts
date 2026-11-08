@@ -49,7 +49,9 @@ async function boundedBody(request: Request, timeoutMs: number): Promise<string>
     ])
   } finally {
     clearTimeout(timer)
-    await reader.cancel().catch(() => {})
+    // A custom/network source can stall cancellation too. Cleanup must not delay
+    // the size/timeout rejection or turn a bounded request into an unbounded one.
+    void reader.cancel().catch(() => {})
   }
 }
 
