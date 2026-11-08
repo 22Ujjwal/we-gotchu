@@ -2,6 +2,7 @@ import { useUser } from '@clerk/tanstack-react-start'
 import { useEffect, useRef, useState } from 'react'
 import type { Brief } from '../../contracts'
 import { briefFromDraft, draftFromBrief } from '../../lib/hostwell/brief-adapter'
+import { EventApiError } from '../../lib/hostwell/event-api'
 import { useEventSession } from '../../lib/hostwell/use-event-session'
 import { BriefForm } from './brief-form'
 import { EventDetails } from './event-details'
@@ -24,7 +25,7 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
   eventId: string; identity: string | null; onCheckout: (url: string) => void;
 }) {
   const session = useEventSession({ eventId, identity })
-  const [editing, setEditing] = useState<{ brief: Brief; revision: number } | null>(null)
+  const [editing, setEditing] = useState<{ brief: Brief; revision: number; conflicted?: boolean } | null>(null)
   const [actionError, setActionError] = useState('')
   const errorRef = useRef<HTMLParagraphElement>(null)
   const active = useRef(true)
@@ -50,11 +51,32 @@ function EventSessionPage({ eventId, identity, onCheckout }: {
           const baseline = briefFromDraft(draftFromBrief(editing.brief))
           const changes = Object.fromEntries(Object.entries(next).filter(([key, value]) =>
             JSON.stringify(value) !== JSON.stringify(baseline[key as keyof Brief]))) as Partial<Brief>
-          await session.update(changes, editing.revision)
+          if (Object.keys(changes).length === 0) { setEditing(null); return }
+          try { await session.update(changes, editing.revision) }
+          catch (cause) {
+            if (active.current && cause instanceof EventApiError && cause.code === 'stale_brief') {
+              setEditing(current => current && { ...current, conflicted: true })
+            }
+            throw cause
+          }
           if (active.current) setEditing(null)
         }} />
         <button type="button" disabled={session.pending} onClick={() => setEditing(null)} className="underline">Close editor</button>
-        {session.error?.code === 'stale_brief' && <p>Your edits are retained. Review the latest event before submitting again.</p>}
+        {editing.conflicted && <>
+          <p>Your edits are retained. Review the latest saved answers below. Applying your edits will replace only the fields you changed.</p>
+          <details><summary>Latest saved answers</summary>
+            <dl>{Object.entries(session.view.event.brief).map(([field, value]) => <div key={field}>
+              <dt>{field.replace(/([A-Z])/g, ' $1').toLowerCase()}</dt>
+              <dd>{Array.isArray(value) ? value.join(', ') || 'None' : String(value)}</dd>
+            </div>)}</dl>
+            <p>Budget and cancellation loss are shown in minor currency units.</p>
+          </details>
+          <button type="button" className="underline"
+            disabled={session.pending || session.loading || session.view.event.briefRevision <= editing.revision}
+            onClick={() => setEditing({ ...editing, revision: session.view!.event.briefRevision, conflicted: false })}>
+            Apply my edits to the latest revision
+          </button>
+        </>}
       </section>}
       <EventDetails view={session.view} pending={session.pending || !!session.error} onEdit={() => void act(async () => {
         if (editing) return

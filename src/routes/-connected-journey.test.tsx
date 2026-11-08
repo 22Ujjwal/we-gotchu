@@ -314,9 +314,9 @@ test('conflicting edits keep the typed answers while current server state is res
   fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
   await flush()
   await advance()
-  expect(screen.getByText('Someone else saved Berkeley')).toBeVisible()
+  expect(screen.getByText('Someone else saved Berkeley', { selector: 'span' })).toBeVisible()
   expect(screen.getByLabelText('Area')).toHaveValue('My unsent Oakland answer')
-  expect(screen.getByText('Your edits are retained. Review the latest event before submitting again.')).toBeVisible()
+  expect(screen.getByText('Your edits are retained. Review the latest saved answers below. Applying your edits will replace only the fields you changed.')).toBeVisible()
   expect(screen.getAllByRole('alert').some(alert => alert.textContent?.includes('brief changed'))).toBe(true)
 })
 
