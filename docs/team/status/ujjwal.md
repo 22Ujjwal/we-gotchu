@@ -1,8 +1,8 @@
 # Ujjwal's status
 
-## Local event-operations work — not published
+## Event-operations draft — not merged or deployed to production
 
-Branch: `feat/event-operations`, baseline `86be4d5fedee457c74cc60febca3c62c7332a0a8`. User requires sequential tested milestones and explicit permission before any remote push. Nothing from this branch is pushed, merged, or deployed. Tony's schema, migrations, database client, package manifest and lockfile remain untouched; conversation/frontend integration stays with Tony/Leo.
+Branch: `feat/event-operations`, baseline `86be4d5fedee457c74cc60febca3c62c7332a0a8`. [Draft PR #52](https://github.com/22Ujjwal/we-gotchu/pull/52) is pushed with explicit user authorization. Do not merge until tested with Tony’s integration. User requires sequential tested milestones and atomic commits. No production deployment is requested. Tony's schema, migrations, database client, package manifest and lockfile remain untouched; conversation/frontend integration stays with Tony/Leo.
 
 Milestone 1: pure recovery preview committed locally as `d08d4fe`. It identifies affected actions and their dependents, preserves unrelated work, flags uncertain/existing commitments for reconciliation, revises the research brief without mutating the event, and preserves candidate evidence provenance. Unknown cancellation charges stay unknown; fresh approval is required. All 436 application tests and typecheck pass, including 18 new recovery tests. Independent review is clean after fixing provenance loss.
 
@@ -12,7 +12,9 @@ Milestone 2: invitation preparation and explicit Luma creation adapter committed
 
 Milestone 3: recurring brief generation committed locally as `ed1ae7d`, with 485 application tests and typecheck passing. Weekly/monthly dates preserve local wall time; ambiguous/nonexistent times are reported, month-end dates skipped, and pause/skips/count/horizon honored. Every occurrence requires research and approval. Independent review clean. No background scheduler is deployed.
 
-Milestone 4: `bun scripts/event-operations-demo.ts` runs an offline simulated walkthrough. Verified recovery approval requirement, future invitation state and three 18:00 Los Angeles dinners across the March 2027 DST transition. Final Vercel build and 25 coordination tests pass. Frozen files and existing transaction/agent/frontend files have no diff. The next integration needs Tony's storage handback, authorized conversation/UI wiring, durable job claims, provider access, and recovery hold semantics. Whole-branch review on `2dbd772` found no important blockers for the local milestone; no remote push is authorized. Remaining hosted functionality is explicitly pending, not completed by these modules.
+Milestone 4: `bun scripts/event-operations-demo.ts` runs an offline simulated walkthrough. Verified recovery approval requirement, future invitation state and three 18:00 Los Angeles dinners across the March 2027 DST transition. Final Vercel build and 25 coordination tests pass. Frozen files and existing transaction/agent/frontend files have no diff. The next integration needs Tony's storage handback, authorized conversation/UI wiring, durable job claims, provider access, and recovery hold semantics. Whole-branch review on `2dbd772` found no important blockers for the local milestone; the later user instruction authorized this draft push only, not merge. Remaining hosted functionality is explicitly pending, not completed by these modules.
+
+Vercel checked before the draft push: production branch `main`, deployment protection configured (`all_except_custom_domains`), no Preview-scoped environment variables. The branch push triggered a separate preview build; CI and preview were pending at PR creation. No migration runs in the build and the new modules are not wired to production routes. Preview build success alone will not establish authenticated integration readiness.
 
 ## Latest checkpoint — sandbox payment/refund verified
 

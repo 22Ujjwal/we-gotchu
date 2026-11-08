@@ -1,6 +1,6 @@
 # Event operations integration handoff
 
-Owner: Ujjwal. Availability: local branch `feat/event-operations`, not pushed, merged, or deployed. Implemented milestones and verification are recorded in the owner status. This file describes interfaces, not permission to change Tony's integration.
+Owner: Ujjwal. Availability: [draft PR #52](https://github.com/22Ujjwal/we-gotchu/pull/52), branch `feat/event-operations`; pushed with user permission, not merged or deployed to production. Hold merge until coordinated testing with Tony’s work. Implemented milestones and verification are recorded in the owner status. This file describes interfaces, not permission to change Tony's integration.
 
 Run `bun scripts/event-operations-demo.ts` for a deterministic offline example. It uses a fixed clock and simulated fixtures, prints recovery/invitation/recurrence outputs, and performs no provider or database calls. Production routes do not import these modules yet.
 
