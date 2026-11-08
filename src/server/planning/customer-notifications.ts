@@ -1,3 +1,4 @@
+import { formatPaymentAmount } from '../../lib/payment-money'
 import { calculateOfferCosts } from '../../agent/planning/offer-contract'
 import { createHash } from 'node:crypto'
 import { SendRejected, type MailProvider } from '../email/supplier-inquiries/types'
@@ -48,7 +49,7 @@ export function arrangementAcknowledgment(record: PlanningRecord) {
 
 function offerReadyEmail(record: PlanningRecord, total: number, appUrl: string) {
   const offer = record.view.offer!
-  const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(total / 100)
+  const money = formatPaymentAmount(total, offer.currency)
   return {
     subject: 'Your arrangement is ready to review',
     text: [
@@ -56,7 +57,7 @@ function offerReadyEmail(record: PlanningRecord, total: number, appUrl: string) 
       ...offer.lines.map(line => `${line.option.name}: ${line.quantityDescription}. Cancellation: ${line.cancellationTerms}`),
       `Complete quoted total: ${money}.`,
       ...offer.lines.filter(line => (line.deposit.amount ?? 0) > 0).map(line =>
-        `Deposit for ${line.option.name}: ${line.deposit.amount! / 100} ${offer.currency.toUpperCase()}, ${line.deposit.treatment} in the quoted price.`),
+        `Deposit for ${line.option.name}: ${formatPaymentAmount(line.deposit.amount!, offer.currency)}, ${line.deposit.treatment} in the quoted price.`),
       `Review your offer: ${appUrl.replace(/\/$/, '')}/planning/${encodeURIComponent(record.id)}`,
       'Nothing has been booked or charged. Approve the offer on the website before proceeding to sandbox payment.',
     ].join('\n\n'),

@@ -1,3 +1,4 @@
+import { formatPaymentAmount } from '../../lib/payment-money'
 import type { Store } from '../store'
 import type { MailProvider } from '../email/supplier-inquiries/types'
 import type { PlanningRecord, PlanningRepository } from './repository'
@@ -17,7 +18,7 @@ export async function notifyPlanningPayment(store: Store, repository: PlanningRe
   const link = record?.view.paymentLink
   if (!record || !link || link.eventId !== event.eventId || link.offerId !== binding.offerId
     || link.offerRevision !== binding.revision) return
-  const amount = new Intl.NumberFormat('en-US', { style: 'currency', currency: payment.currency }).format(payment.amount / 100)
+  const amount = formatPaymentAmount(payment.amount, payment.currency)
   const simulated = plan.mode === 'simulated'
   let paidRecord: PlanningRecord | undefined
   if (simulated && payment.mode === 'test' && record.view.arrangement?.controlled) {
