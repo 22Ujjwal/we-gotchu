@@ -2,7 +2,7 @@ import { cleanupResearchResources } from './cleanup'
 import { CONTRACT_VERSION, ResearchInput } from '../contracts'
 import type { ResearchPort } from '../server/events/deps'
 import type { Store } from '../server/store'
-import type { ResearchCheckpoint } from './checkpoint'
+import type { ResearchCheckpoint } from '../server/research-checkpoint'
 import { researchEvent, type Discovery, type ResearchProviders } from './research'
 import { RESEARCH_BUDGET_MICRO_USD, type ResearchSession } from './session'
 
@@ -15,7 +15,7 @@ export type IntegrationProviders = {
 class LostLease extends Error {}
 
 export function createResearchIntegration(options: {
-  store: Store
+  store: Pick<Store, 'researchCheckpoints' | 'appendProgress'>
   providers: IntegrationProviders
   stepTimeoutMs?: number
   runTimeoutMs?: number
@@ -45,7 +45,7 @@ export function createResearchIntegration(options: {
       ResearchInput.omit({ brief: true }).parse(input)
       await checkpoints.initialize({
         version: 0, input, stage: 'discovery', evidence: null, result: null,
-        agentId: null, sessionId: null, lastSequence: 0, correctionsUsed: 0,
+        agentId: null, naiveSessionId: null, lastSequence: 0, correctionsUsed: 0,
         correctionAfter: null, expiresAt: new Date(Date.now() + runMs).toISOString(),
       })
       return { naiveSessionId: null }
@@ -130,13 +130,13 @@ export function createResearchIntegration(options: {
           case 'session': {
             await save({ stage: 'uncertain' })
             const sessionId = await bounded(() => session.start(c!.input, c!.evidence!.candidates, c!.agentId!, signal))
-            try { await save({ sessionId, stage: 'ranking' }, 'Comparing the retrieved candidates.') }
+            try { await save({ naiveSessionId: sessionId, stage: 'ranking' }, 'Comparing the retrieved candidates.') }
             catch (error) { await discard(sessionId, c.agentId); throw error }
             return running
           }
           case 'ranking': {
-            const snapshot = await bounded(() => session.poll(c!.sessionId!, signal))
-            if (snapshot.id !== c.sessionId) throw new Error('Session identity mismatch')
+            const snapshot = await bounded(() => session.poll(c!.naiveSessionId!, signal))
+            if (snapshot.id !== c.naiveSessionId) throw new Error('Session identity mismatch')
             if (snapshot.last_seq < c.lastSequence) return running
             const advanced = snapshot.last_seq > c.lastSequence
             await save({ lastSequence: snapshot.last_seq, sessionStopped: ['completed', 'failed', 'cancelled'].includes(snapshot.status) }, advanced ? 'Research comparison progress saved.' : undefined)
@@ -170,7 +170,7 @@ export function createResearchIntegration(options: {
           }
           case 'correcting': {
             await save({ stage: 'uncertain', correctionsUsed: 1 })
-            const accepted = await bounded(() => session.correct(c!.sessionId!, c!.input.runId, signal))
+            const accepted = await bounded(() => session.correct(c!.naiveSessionId!, c!.input.runId, signal))
             await save({ correctionAfter: Math.max(accepted, c.lastSequence), stage: 'ranking' }, 'Checking the recommendation format once more.')
             return running
           }
@@ -178,14 +178,14 @@ export function createResearchIntegration(options: {
             await finish('A research operation has an uncertain outcome. It was not retried; provider reconciliation is needed.')
             return running
           case 'cleanup': {
-            await cleanupResearchResources({ runId: run.runId, sessionId: c.sessionId,
+            await cleanupResearchResources({ runId: run.runId, sessionId: c.naiveSessionId,
               agentId: c.agentId, sessionStopped: c.sessionStopped, sessionOnly: true,
               timeoutMs: Math.min(stepMs, leaseMs), checkpoints, session })
             await save({ stage: 'delete_agent' })
             return running
           }
           case 'delete_agent': {
-            const cleanup = await cleanupResearchResources({ runId: run.runId, sessionId: c.sessionId,
+            const cleanup = await cleanupResearchResources({ runId: run.runId, sessionId: c.naiveSessionId,
               agentId: c.agentId, sessionStopped: c.sessionStopped,
               timeoutMs: Math.min(stepMs, leaseMs), checkpoints, session })
             const warning = cleanup.confirmed ? undefined : 'Research cleanup could not be confirmed; reconciliation is needed.'
@@ -216,7 +216,7 @@ export function createResearchIntegration(options: {
         return
       }
       const cleanup = await cleanupResearchResources({ runId: run.runId,
-        sessionId: checkpoint.sessionId, agentId: checkpoint.agentId,
+        sessionId: checkpoint.naiveSessionId, agentId: checkpoint.agentId,
         sessionStopped: checkpoint.sessionStopped, timeoutMs: stepMs, checkpoints, session })
       if (!cleanup.confirmed) throw new Error('Research cleanup could not be confirmed')
     },

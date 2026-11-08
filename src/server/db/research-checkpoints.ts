@@ -1,5 +1,5 @@
 import { and, eq, gt, isNull, sql } from 'drizzle-orm'
-import type { ResearchCheckpointStore } from '../../agent/checkpoint'
+import type { ResearchCheckpointStore } from '../research-checkpoint'
 import type { Db } from './store-impl'
 import { events, progressEntries, runs } from './schema'
 
@@ -30,13 +30,12 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
         }).where(eq(runs.id, runId))
       })
     },
-    async readBySession(sessionId) {
-      const [row] = await db.select({ checkpoint: runs.researchCheckpoint }).from(runs).where(eq(runs.naiveSessionId, sessionId))
-      return row?.checkpoint ?? null
-    },
     async read(runId) {
-      const [row] = await db.select({ checkpoint: runs.researchCheckpoint }).from(runs).where(eq(runs.id, runId))
-      return row?.checkpoint ?? null
+      const [row] = await db.select().from(runs).where(eq(runs.id, runId))
+      if (!row?.researchCheckpoint) return null
+      // The indexed Run columns remain authoritative for provider identity and cursors.
+      return { ...row.researchCheckpoint, naiveSessionId: row.naiveSessionId,
+        lastSequence: row.lastSequence, correctionsUsed: row.correctionsUsed }
     },
     async save(run, expectedVersion, checkpoint, message) {
       if (!run.advancingUntil || checkpoint.input.runId !== run.runId ||
@@ -51,7 +50,7 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
           if (!event) throw new RejectedCheckpoint()
           const [saved] = await tx.update(runs).set({
             researchCheckpoint: sql`jsonb_set(${JSON.stringify({ ...checkpoint, version: expectedVersion + 1 })}::jsonb, '{cleanup}', coalesce(${runs.researchCheckpoint}->'cleanup', 'null'::jsonb))`,
-            naiveSessionId: checkpoint.sessionId,
+            naiveSessionId: checkpoint.naiveSessionId,
             lastSequence: sql`greatest(${runs.lastSequence}, ${checkpoint.lastSequence})`,
             correctionsUsed: checkpoint.correctionsUsed,
           }).where(and(eq(runs.id, run.runId), eq(runs.state, 'running'),

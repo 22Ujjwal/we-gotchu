@@ -1,4 +1,4 @@
-import type { ResearchCheckpointStore, ResearchCleanup } from './checkpoint'
+import type { ResearchCheckpointStore, ResearchCleanup } from '../server/research-checkpoint'
 import type { ResearchSession } from './session'
 
 // Confirmations are per resource: a late session can arrive after its definition was deleted.

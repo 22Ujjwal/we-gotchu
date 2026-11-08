@@ -1,4 +1,4 @@
-import type { ResearchCheckpointStore } from '../agent/checkpoint'
+import type { ResearchCheckpointStore } from './research-checkpoint'
 import type {
   Approval,
   Attempt,

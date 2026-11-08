@@ -1,4 +1,4 @@
-import type { ResearchCheckpoint } from '../../agent/checkpoint'
+import type { ResearchCheckpoint } from '../research-checkpoint'
 import { bigint, bigserial, boolean, check, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import type { Attempt, Brief, Plan, ResearchResult } from '../../contracts'
