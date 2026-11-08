@@ -6,7 +6,7 @@ import { createDetailEnricher, type DetailOptions } from './details'
 import type { ResearchOptions } from '../agent/research'
 
 const input = { contractVersion: CONTRACT_VERSION, eventId: 'evt', runId: 'run', briefRevision: 1, brief: planReadyEvent.event.brief }
-const offerUrl = 'https://buy.trychannel3.com/plates-merchant-offer?aid=discovery'
+const offerUrl = 'https://buy.trychannel3.com/plates-merchant-offer?o=offer-id&aid=discovery'
 const product = {
   id: 'plates', title: 'Paper plates', key_features: ['Includes 20 plates'],
   offers: [{ url: offerUrl.replace('discovery', 'detail'), domain: 'shop.example.com', price: { price: 11.02, currency: 'USD' }, availability: 'InStock' }],
@@ -83,6 +83,7 @@ test('failed or absent detail stays explicit while discovery candidates still re
 
 test.each([
   { ...product, id: 'other' },
+  { ...product, offers: [{ ...product.offers[0], url: offerUrl.replace('o=offer-id', 'o=other-variant') }] },
   { ...product, offers: [{ ...product.offers[0], url: 'https://buy.trychannel3.com/other-merchant-offer' }] },
   { ...product, offers: [{ ...product.offers[0], price: { price: 11, currency: 'EUR' } }] },
 ])('mismatched product, offer or currency cannot supply a listing price', async detail => {

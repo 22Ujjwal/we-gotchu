@@ -77,7 +77,10 @@ function productEvidence(candidate: Candidate, output: unknown, currency: string
   const matching = offers.filter(offer => {
     const url = publicUrl(offer.url)
     const merchant = publicUrl(`https://${offer.domain}`)
-    return url && merchant && merchant.pathname === '/' && !merchant.search && originals.some(original => sameOffer(url, original)) &&
+    return url && merchant && merchant.pathname === '/' && !merchant.search && originals.some(original => sameOffer(url, original) &&
+        (url.hostname === 'buy.trychannel3.com'
+          ? url.searchParams.get('o') === original.searchParams.get('o')
+          : url.search === original.search)) &&
       (url.hostname === 'buy.trychannel3.com' ? url.pathname.startsWith(`/${product.id}-`) : sameSite(url, merchant))
   })
   const offer = matching.length === 1 ? matching[0] : undefined
