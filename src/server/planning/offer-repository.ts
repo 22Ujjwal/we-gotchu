@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { events, plans, planningConversations, runs, schema } from '../db/schema'
+import { approvals, payments, events, plans, planningConversations, runs, schema } from '../db/schema'
 import { ApiError } from '../events/errors'
 import { buildSelectedOfferPlan, selectedOfferSchema, type SelectedOffer } from './offer'
 import type { PlanningRecord } from './repository'
@@ -34,6 +34,30 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
         const data = { ...record, revision: row.revision + 1,
           requests: request ? { ...record.requests, [request.id]: request.fingerprint } : record.requests,
           view: { ...record.view, version: record.view.version + 1, offer } }
+        await tx.update(planningConversations).set({ revision: data.revision, data }).where(eq(planningConversations.id, conversationId))
+        return data
+      })
+    },
+    async release(customerId: string, conversationId: string, expectedVersion: number, eventId: string,
+      request?: { id: string; fingerprint: string }): Promise<PlanningRecord> {
+      return db.transaction(async tx => {
+        // Approval and execution also lock the event before the conversation.
+        const [event] = await tx.select().from(events).where(and(eq(events.id, eventId), eq(events.customerId, customerId))).for('update')
+        const [row] = await tx.select().from(planningConversations).where(and(eq(planningConversations.id, conversationId),
+          eq(planningConversations.customerId, customerId))).for('update')
+        if (!event || !row) throw new ApiError(404, 'not_found', 'Payment plan not found.')
+        const record = row.data
+        const link = record.view.paymentLink
+        if (record.view.version !== expectedVersion || link?.eventId !== eventId || record.pending) throw stale()
+        if (event.status !== 'canceled') throw new ApiError(409, 'cancellation_required', 'Cancel the existing payment plan before replacing it.')
+        const related = await tx.select({ payment: payments }).from(payments).innerJoin(approvals, eq(approvals.id, payments.approvalId))
+          .where(eq(approvals.eventId, eventId)).for('update', { of: payments })
+        if (related.some(({ payment }) => payment.state === 'pending' || payment.state === 'paid' && payment.refundState !== 'succeeded')) {
+          throw new ApiError(409, 'payment_unsettled', 'Wait for payment cancellation or refund confirmation before replacing this plan.')
+        }
+        const data = { ...record, revision: row.revision + 1, paymentHistory: [...(record.paymentHistory ?? []), link],
+          requests: request ? { ...record.requests, [request.id]: request.fingerprint } : record.requests,
+          view: { ...record.view, version: record.view.version + 1, paymentLink: undefined } }
         await tx.update(planningConversations).set({ revision: data.revision, data }).where(eq(planningConversations.id, conversationId))
         return data
       })
