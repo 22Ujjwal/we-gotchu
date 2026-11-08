@@ -582,6 +582,13 @@ export function createStore(db: Db): Store {
       return row ? toPayment(row) : null
     },
 
+    async listPaidApprovalIds(eventId) {
+      const rows = await db.select({ id: approvals.id }).from(approvals)
+        .innerJoin(payments, eq(payments.approvalId, approvals.id))
+        .where(and(eq(approvals.eventId, eventId), eq(payments.state, 'paid')))
+      return rows.map(row => row.id)
+    },
+
     async markPaymentPaid(checkoutSessionId, paymentIntentId) {
       const [row] = await db
         .update(payments)
@@ -607,6 +614,11 @@ export function createStore(db: Db): Store {
         .where(eq(payments.id, paymentId))
     },
 
+    async hasStripeEvent(stripeEventId) {
+      const [row] = await db.select({ id: stripeEvents.id }).from(stripeEvents).where(eq(stripeEvents.id, stripeEventId))
+      return Boolean(row)
+    },
+
     async recordStripeEvent(stripeEventId) {
       const rows = await db
         .insert(stripeEvents)
@@ -614,6 +626,23 @@ export function createStore(db: Db): Store {
         .onConflictDoNothing({ target: stripeEvents.id })
         .returning({ id: stripeEvents.id })
       return rows.length > 0
+    },
+
+    async claimCommit(input, now) {
+      return db.transaction(async (tx) => {
+        // The event lock orders cancellation against the durable start of a commitment.
+        const [event] = await tx.select().from(events).where(eq(events.id, input.eventId)).for('update')
+        const [prior] = await tx.select().from(attempts).where(eq(attempts.executionKey, input.executionKey))
+        if (prior) return { attempt: toAttempt(prior), replayed: true }
+        if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status)) return null
+        const [approval] = await tx.select().from(approvals).where(eq(approvals.id, input.approvalId)).for('update')
+        if (!approval || approval.eventId !== input.eventId || approval.revokedAt || approval.expiresAt <= now ||
+            approval.planRevision !== event.planRevision || !approval.actionIds.includes(input.actionId)) return null
+        const [payment] = await tx.select().from(payments).where(eq(payments.approvalId, approval.id)).for('update')
+        if (!payment || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
+            payment.currency !== approval.currency || (input.mode === 'live' && payment.mode !== 'live')) return null
+        return createStore(tx as unknown as Db).insertAttempt(input)
+      })
     },
 
     async insertAttempt(input) {

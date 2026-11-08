@@ -77,14 +77,19 @@ export interface Store {
   revokeApprovals(eventId: string, at: Date): Promise<Approval[]>
   getPaymentByCheckoutSession(checkoutSessionId: string): Promise<Payment | null>
   getPaymentByApproval(approvalId: string): Promise<Payment | null>
+  /** Paid approvals remain discoverable after revocation for cancellation retries. */
+  listPaidApprovalIds(eventId: string): Promise<string[]>
   /** Conditional pending -> paid. Returns null if it was not pending. */
   markPaymentPaid(checkoutSessionId: string, paymentIntentId: string): Promise<Payment | null>
   markPaymentExpired(checkoutSessionId: string): Promise<boolean>
   setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }): Promise<void>
   /** Records a Stripe event id; returns true only the first time. */
   recordStripeEvent(stripeEventId: string): Promise<boolean>
+  hasStripeEvent(stripeEventId: string): Promise<boolean>
 
   // Attempts
+  /** Atomically authorize and claim a commitment, serialized with cancellation. */
+  claimCommit(attempt: Attempt, now: Date): Promise<{ attempt: Attempt; replayed: boolean } | null>
   /** Inserts with a unique executionKey. On conflict returns the existing attempt with replayed true. */
   insertAttempt(attempt: Attempt): Promise<{ attempt: Attempt; replayed: boolean }>
   /** Conditional transition: applies only when the row is in `from`. Returns the updated row or null. */

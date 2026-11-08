@@ -3,6 +3,7 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
+import { HostwellProvider } from '#/lib/hostwell/store'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -16,10 +17,20 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'hostwell',
       },
     ],
     links: [
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossOrigin: 'anonymous',
+      },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600;700&family=Momo+Signature&display=swap',
+      },
       {
         rel: 'stylesheet',
         href: appCss,
@@ -37,7 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ClerkProvider>
-          {children}
+          <HostwellProvider>{children}</HostwellProvider>
           <TanStackDevtools
             config={{
               position: 'bottom-right',

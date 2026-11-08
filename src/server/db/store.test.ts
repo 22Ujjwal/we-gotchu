@@ -402,3 +402,35 @@ describe('progress', () => {
     await expect(store.appendProgress('evt_missing', 'agent', 'x')).rejects.toThrow()
   })
 })
+
+describe('authorized commitment claim', () => {
+  it('serializes cancellation and claim so cancellation cannot finish over an unseen commitment', async () => {
+    const { event, run } = await store.createEvent({ customerId: 'cancel-race', brief })
+    const approval = await approve(event.eventId, run.runId)
+    await store.markPaymentPaid(approval.checkoutSessionId, 'pi_race')
+    await store.requestCancel(event.eventId, new Date())
+    expect(await store.claimCommit(attemptFor(event.eventId, approval.approvalId), new Date())).toBeNull()
+    expect(await store.listAttempts(event.eventId)).toEqual([])
+  })
+
+  it('records a winning claim before cancellation and replays it without starting a second attempt', async () => {
+    const { event, run } = await store.createEvent({ customerId: 'claim-race', brief })
+    const approval = await approve(event.eventId, run.runId)
+    await store.markPaymentPaid(approval.checkoutSessionId, 'pi_claim')
+    const attempt = attemptFor(event.eventId, approval.approvalId)
+    expect(await store.claimCommit(attempt, new Date())).toMatchObject({ replayed: false })
+    await store.requestCancel(event.eventId, new Date())
+    expect(await store.claimCommit(attempt, new Date())).toMatchObject({ replayed: true })
+    expect(await store.listAttempts(event.eventId)).toHaveLength(1)
+  })
+})
+
+
+it('finds paid approvals after revocation for a cancellation retry', async () => {
+  const { event, run } = await store.createEvent({ customerId: 'refund-retry', brief })
+  const approval = await approve(event.eventId, run.runId)
+  await store.markPaymentPaid(approval.checkoutSessionId, 'pi_refund_retry')
+  await store.revokeApprovals(event.eventId, new Date())
+  expect(await store.listPaidApprovalIds(event.eventId)).toEqual([approval.approvalId])
+  expect(await store.listPaidApprovalIds('another-event')).toEqual([])
+})

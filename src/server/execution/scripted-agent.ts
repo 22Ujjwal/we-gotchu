@@ -1,6 +1,6 @@
 import { getExecutionDeps } from '../runtime'
 import type { Hooks } from '../events/deps'
-import { cancelAction, executeAction } from './execute'
+import { cancelAction, executeAction, settleCancellation } from './execute'
 
 // Labeled fallback from the demo plan: a scripted agent that calls the same
 // guarded execution functions a Naive session would call through MCP, in order,
@@ -36,5 +36,6 @@ export const scriptedAgentHooks: Hooks = {
         reason: `${LABEL} Canceling ${attempt.actionId} at the customer's request.`,
       })
     }
+    await settleCancellation(deps, eventId)
   },
 }

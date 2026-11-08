@@ -57,6 +57,7 @@ export async function handleStripeWebhook(deps: Deps, rawBody: string, signature
   // lets Stripe's retry run again. Every step below is idempotent on its own
   // (conditional payment update, refund idempotency key), so a duplicate
   // delivery that races in does no extra work.
+  if (await deps.store.hasStripeEvent(event.id)) return 'duplicate'
   const outcome = await dispatchStripeEvent(deps, event)
   const fresh = await deps.store.recordStripeEvent(event.id)
   return fresh ? outcome : 'duplicate'
@@ -104,19 +105,36 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
 
   const intentId = paymentIntentId(session)
   if (!intentId) return 'mismatch'
-  const paid = await deps.store.markPaymentPaid(session.id, intentId)
-  if (!paid) return 'already_processed'
-
+  const changed = await deps.store.markPaymentPaid(session.id, intentId)
+  const paid = changed ?? await deps.store.getPaymentByCheckoutSession(session.id)
+  if (!paid || paid.state !== 'paid' || paid.paymentIntentId !== intentId) return 'already_processed'
+  // This durable receipt is written only after the handoff finishes. A paid row
+  // alone is not evidence that execution or a refund was delivered.
+  const receipt = `${paid.paymentId}:paid-handoff`
+  if (await deps.store.hasStripeEvent(receipt)) return 'already_processed'
+  const current = await deps.store.getEvent(approval.eventId)
+  if (!current) throw new Error('Paid event was not found')
   const late = approval.revokedAt !== null || paidAt.getTime() >= new Date(approval.expiresAt).getTime()
-  const moved = !late && (await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'executing'))
+  const started = ['executing', 'booked', 'partially_booked', 'failed'].includes(current.status)
+  const moved = !late && !current.cancelRequestedAt &&
+    (started || await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'executing'))
   if (!moved) {
-    // Revoked, expired, or the event left awaiting_payment (for example, canceled): no supplier work.
-    await refund(deps, paid, paid.amount, 'late_or_revoked')
-    await deps.store.appendProgress(approval.eventId, 'system', 'Payment arrived after the approval ended; a full refund was requested.')
+    // An interrupted handoff may have already committed suppliers before cancel.
+    const attempts = await deps.store.listAttempts(approval.eventId)
+    if (attempts.some(a => a.kind === 'commit' && ['running', 'pending', 'unknown', 'succeeded'].includes(a.state))) {
+      const result = await issueFinalRefund(deps, approval.eventId)
+      if (!result.ok) throw new Error('Payment cancellation is awaiting supplier settlement')
+    } else {
+      await refund(deps, paid, paid.amount, 'late_or_revoked')
+    }
+    await deps.store.recordStripeEvent(receipt)
+    await deps.store.appendProgress(approval.eventId, 'system', 'Payment cancellation refund was requested.')
     return 'refunded_late_or_revoked'
   }
-  await deps.store.appendProgress(approval.eventId, 'system', `Payment confirmed (${paid.mode}).`)
+  if (changed) await deps.store.appendProgress(approval.eventId, 'system', `Payment confirmed (${paid.mode}).`)
+  // Hooks must be idempotent by approval/payment identity because delivery is at least once.
   await onPaymentConfirmed(deps, { eventId: approval.eventId, approvalId: approval.approvalId, paymentId: paid.paymentId })
+  await deps.store.recordStripeEvent(receipt)
   return 'paid'
 }
 
@@ -141,6 +159,9 @@ export async function issueFinalRefund(deps: Deps, eventId: string): Promise<Fin
   if (!payment || payment.state !== 'paid') return { ok: false, reason: 'no_paid_payment' }
 
   const attempts = view.attempts.filter((a) => a.approvalId === payment.approvalId)
+  if (attempts.some(a => a.kind === 'commit' && ['pending', 'running', 'unknown'].includes(a.state))) {
+    return { ok: false, reason: 'commitments_not_canceled' }
+  }
   const commits = attempts.filter((a) => a.kind === 'commit' && a.state === 'succeeded')
   const cancels = new Map(attempts.filter((a) => a.kind === 'cancel' && a.state === 'succeeded').map((a) => [a.actionId, a]))
   if (commits.some((c) => !cancels.has(c.actionId))) return { ok: false, reason: 'commitments_not_canceled' }

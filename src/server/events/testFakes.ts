@@ -231,11 +231,27 @@ export class MemoryStore implements Store {
   async setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }) {
     Object.assign(this.payments.get(paymentId)!, refund)
   }
+  async hasStripeEvent(id: string) { return this.stripeEvents.has(id) }
   async recordStripeEvent(id: string) {
     if (this.stripeEvents.has(id)) return false
     this.stripeEvents.add(id)
     return true
   }
+  async listPaidApprovalIds(eventId: string) {
+    return [...this.approvals.values()].filter(a => a.eventId === eventId &&
+      [...this.payments.values()].some(p => p.approvalId === a.approvalId && p.state === 'paid')).map(a => a.approvalId)
+  }
+
+  async claimCommit(attempt: Attempt, now: Date) {
+    const event = this.events.get(attempt.eventId)
+    const approval = this.approvals.get(attempt.approvalId)
+    const payment = [...this.payments.values()].find(p => p.approvalId === attempt.approvalId)
+    if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status) ||
+        !approval || approval.revokedAt || new Date(approval.expiresAt) <= now || approval.planRevision !== event.planRevision ||
+        !approval.actionIds.includes(attempt.actionId) || !payment || payment.state !== 'paid') return null
+    return this.insertAttempt(attempt)
+  }
+
   async insertAttempt(attempt: Attempt) {
     const existing = [...this.attempts.values()].find((a) => a.executionKey === attempt.executionKey)
     if (existing) return { attempt: existing, replayed: true }

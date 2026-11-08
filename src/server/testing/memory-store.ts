@@ -70,6 +70,21 @@ export class MemoryStore implements Store {
     return structuredClone(this.approvals.find((a) => a.approvalId === approvalId) ?? null)
   }
 
+  async listPaidApprovalIds(eventId: string) {
+    return this.approvals.filter(a => a.eventId === eventId &&
+      this.payments.some(p => p.approvalId === a.approvalId && p.state === 'paid')).map(a => a.approvalId)
+  }
+
+  async claimCommit(attempt: Attempt, now: Date) {
+    const event = this.events.get(attempt.eventId)
+    const approval = this.approvals.find((a) => a.approvalId === attempt.approvalId)
+    const payment = this.payments.find(p => p.approvalId === attempt.approvalId)
+    if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status) ||
+        !approval || approval.revokedAt || new Date(approval.expiresAt) <= now || approval.planRevision !== event.planRevision ||
+        !approval.actionIds.includes(attempt.actionId) || !payment || payment.state !== 'paid') return null
+    return this.insertAttempt(attempt)
+  }
+
   async insertAttempt(attempt: Attempt) {
     const existing = this.attempts.find((a) => a.executionKey === attempt.executionKey)
     if (existing) return { attempt: structuredClone(existing), replayed: true }
@@ -115,6 +130,7 @@ export class MemoryStore implements Store {
   revokeApprovals(): never { throw new Error('not implemented') }
   getPaymentByCheckoutSession(): never { throw new Error('not implemented') }
   getPaymentByApproval(): never { throw new Error('not implemented') }
+  hasStripeEvent(): never { throw new Error('not implemented') }
   markPaymentPaid(): never { throw new Error('not implemented') }
   markPaymentExpired(): never { throw new Error('not implemented') }
   setRefund(): never { throw new Error('not implemented') }
