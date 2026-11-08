@@ -10,7 +10,8 @@ export const selectedOfferSchema = z.object({
   mode: z.enum(['live', 'simulated']), currency: z.string().regex(/^[a-z]{3}$/), brief: Brief,
   missing: z.array(text),
   lines: z.array(z.object({
-    option: planningOptionSchema, sourceReplyId: text,
+    option: planningOptionSchema, sourceReplyId: text.nullable(),
+    sourceQuotes: z.array(text).optional(),
     unitAmount: money.nullable(), units: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
     quantityDescription: text, tax: money.nullable(), delivery: money.nullable(), fees: money.nullable(),
     deposit: z.object({ amount: money.nullable(), treatment: z.enum(['included', 'additional', 'unknown']) }).strict(),
