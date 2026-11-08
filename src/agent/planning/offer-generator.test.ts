@@ -53,6 +53,8 @@ test.each([
   ['The room costs USD 200.50.', 20000, false],
   ['The room costs USD 1,200.', 20000, false],
   ['The room costs USD 200.', 20000, true],
+  ['The room costs USD200.', 20000, true],
+  ['The room costs 200USD.', 20000, true],
   ['The room costs $200.50.', 20050, true],
   ['The room costs 1,200 USD.', 120000, true],
 ])('checks the complete monetary token in %s', async (text, unitAmount, supported) => {

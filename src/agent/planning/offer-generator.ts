@@ -38,6 +38,11 @@ Use a supplier expiry only if stated, otherwise null. maximumCancellationLoss de
     const choice = completion.choices[0]
     if (choice?.finish_reason !== 'stop' || !choice.message.content) throw new Error('Offer extraction did not finish.')
     const extracted = outputSchema.parse(JSON.parse(choice.message.content))
+    const customerText = messages.map(message => message.text)
+    if (!quotesContainAmount(customerText, extracted.brief.budget, extracted.brief.currency)
+      || extracted.brief.maximumCancellationLoss > 0 && !quotesContainAmount(customerText, extracted.brief.maximumCancellationLoss, extracted.brief.currency)) {
+      throw new Error('Customer spending limit is not in the saved request.')
+    }
     const byId = new Map(selections.map(option => [option.id, option]))
     if (extracted.lines.length !== selections.length || new Set(extracted.lines.map(line => line.optionId)).size !== selections.length) {
       throw new Error('Offer extraction changed the selected options.')
@@ -66,8 +71,9 @@ function quotesContainAmount(quotes: string[], amount: number, currency: string)
   const prefix = new RegExp(`(?:\\b${code}|${symbol ?? `\\b${code}`})\\s*$`, 'i')
   const suffix = new RegExp(`^\\s*${code}\\b`, 'i')
   // Compare decimal digits as integers; floating point rounding must not make a different price match.
-  return quotes.some(quote => [...quote.matchAll(/(?<![\w.,-])(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?![\w,]|\.\d)/g)].some(match => {
-    if (!prefix.test(quote.slice(0, match.index)) && !suffix.test(quote.slice(match.index + match[0].length))) return false
+  return quotes.some(quote => [...quote.matchAll(/(?<![\d.,-])(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?![\d,]|\.\d)/g)].some(match => {
+    const after = quote.slice(match.index + match[0].length)
+    if (!(prefix.test(quote.slice(0, match.index)) && !/^\w/.test(after)) && !suffix.test(after)) return false
     const fraction = match[2] ?? ''
     if (fraction.length > digits && /[1-9]/.test(fraction.slice(digits))) return false
     const minor = BigInt(match[1].replaceAll(',', '')) * 10n ** BigInt(digits)
