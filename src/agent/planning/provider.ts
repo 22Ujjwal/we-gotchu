@@ -59,10 +59,21 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
       return { sequence: accepted.accepted_seq }
     },
     async read(input) {
-      const [session, events] = await Promise.all([
-        client.sessions.get(input.sessionId),
-        client.sessions.events(input.sessionId, { after_seq: input.afterSequence, limit: 100 }),
-      ])
+      const session = await client.sessions.get(input.sessionId)
+      const finished = ['idle', 'completed'].includes(session.status)
+      // Re-read saved completions, but never mistake the accepted-message cursor for one.
+      let cursor = finished ? Math.max(0, input.afterSequence - 1)
+        : Math.max(0, Math.min(input.afterSequence, session.last_seq - 1), session.last_seq - 100)
+      const events: Awaited<ReturnType<PlanningClient['sessions']['events']>> = { data: [] }
+      while (true) {
+        const page = await client.sessions.events(input.sessionId, { after_seq: cursor, limit: 100 })
+        const observed = page.data.filter(event => event.seq > cursor && event.seq <= session.last_seq)
+        events.data.push(...observed)
+        const next = Math.max(cursor, ...observed.map(event => event.seq))
+        if (!finished || next >= session.last_seq || page.data.length < 100) break
+        if (next === cursor) throw new Error('Planning event pagination did not advance.')
+        cursor = next
+      }
       const result = { status: 'working' as const, sequence: session.last_seq, proposal: null, error: null, activity: researchActivity([session], events.data),
         progress: events.data.some(event => event.type === 'tool.started')
           ? 'Checking sources for your event.' : 'Working on your event options.' }
@@ -80,10 +91,17 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
       }
       if (session.stop_reason === 'awaiting_delegation') return { ...state, progress: 'Your research team is checking options.' }
       // An accepted follow-up can briefly read the previous turn's idle snapshot.
-      if (session.last_seq <= input.afterSequence || !['idle', 'completed'].includes(session.status)) return state
-      const proposal = planningProposalSchema.safeParse(session.structured_output)
+      if (session.last_seq < input.afterSequence || !['idle', 'completed'].includes(session.status)) return state
+      // The session's output can lag behind its sequence. Use the output committed with completion.
+      const completion = events.data.filter(event => event.type === 'session.idle'
+        && (event.seq > input.afterSequence || event.seq === input.completedSequence))
+        .sort((a, b) => b.seq - a.seq)[0]
+      if (!completion) return state
+      const output = completion.data as { structured_output?: unknown } | null
+      if (output?.structured_output == null && session.status === 'idle' && !session.stop_reason) return state
+      const proposal = planningProposalSchema.safeParse(output?.structured_output)
       if (!proposal.success) return { ...state, status: 'failed', progress: null, error: 'Research finished without a usable proposal. Your saved options are still available.' }
-      return { ...state, status: 'ready', proposal: proposal.data, progress: null }
+      return { ...state, sequence: completion.seq, status: 'ready', proposal: proposal.data, progress: null }
     },
   }
 }

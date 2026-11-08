@@ -9,7 +9,7 @@ function setup() {
     send: vi.fn(async () => ({ accepted_seq: 30 })),
     get: vi.fn(async () => snapshot),
     threads: vi.fn(async () => ({ data: [], has_more: false })),
-    events: vi.fn(async () => ({ data: [] })),
+    events: vi.fn(async () => ({ data: [{ seq: snapshot.last_seq, type: 'session.idle', data: { structured_output: snapshot.structured_output } }] })),
   } }
   return { client, snapshot, agent: createPlanningAgent({ client, agentId: 'agent-1' }) }
 }
@@ -51,4 +51,57 @@ it('keeps a coordinator working while its teammates research', async () => {
   snapshot.status = 'idle'
   snapshot.stop_reason = 'awaiting_delegation'
   expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', proposal: null, progress: 'Your research team is checking options.' })
+})
+
+it('uses the matching completion event instead of a stale session output', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 182
+  const latest = { ...proposal, summary: 'One pack is $4.49 less before delivery.' }
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [{ seq: 182, type: 'session.idle', data: { structured_output: latest } }] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 91 })).toMatchObject({ status: 'ready', sequence: 182, proposal: latest })
+})
+
+it('includes a completion beyond the first event page and rereads it at the saved cursor', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 250
+  const latest = { ...proposal, summary: 'New turn result' }
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [{ seq: 250, type: 'session.idle', data: { structured_output: latest } }] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', proposal: latest })
+  expect(client.sessions.events).toHaveBeenLastCalledWith('session-1', { after_seq: 29, limit: 100 })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 250, completedSequence: 250 })).toMatchObject({ status: 'ready', proposal: latest })
+  expect(client.sessions.events).toHaveBeenLastCalledWith('session-1', { after_seq: 249, limit: 100 })
+})
+
+
+it('uses the newest completion even when bookkeeping events follow it', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 42
+  const latest = { ...proposal, summary: 'A new supplier comparison' }
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [
+    { seq: 31, type: 'session.idle', data: { structured_output: proposal } },
+    { seq: 41, type: 'session.idle', data: { structured_output: latest } },
+    { seq: 42, type: 'usage.updated', data: {} },
+  ] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', sequence: 41, proposal: latest })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 41, completedSequence: 41 })).toMatchObject({ status: 'ready', sequence: 41, proposal: latest })
+})
+
+it('does not report failure for an idle session that has not completed a turn', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 2
+  snapshot.stop_reason = ''
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [{ seq: 2, type: 'session.idle', data: {} }] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', error: null, proposal: null })
+})
+
+it('finds completion across event pages even with more than a page of trailing events', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 260
+  const rows = Array.from({ length: 260 }, (_, i) => ({ seq: i + 1,
+    type: i === 40 ? 'session.idle' : 'usage.updated',
+    data: i === 40 ? { structured_output: proposal } : {},
+  }))
+  vi.mocked(client.sessions.events).mockImplementation(async (_id, query) => ({ data: rows.filter(row => row.seq > query.after_seq).slice(0, query.limit) }))
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', sequence: 41, proposal })
+  expect(client.sessions.events).toHaveBeenCalledTimes(3)
 })
