@@ -498,3 +498,14 @@ test('checking venue replies reads saved state without refreshing research or se
   await userEvent.click(await screen.findByRole('button', { name: 'Check for venue replies' }))
   expect(paths).toEqual(['?saved=1', '?saved=1'])
 })
+
+test('a controlled accepted inquiry does not claim that real email was sent', async () => {
+  http(() => Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+    recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Test inquiry', text: 'Controlled test only.',
+    contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: { status: 'accepted', mode: 'simulated', requestId: 'send',
+      draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'fixture-mail' },
+  } })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByText('Controlled test inquiry. No real email was sent.')).toBeVisible()
+  expect(screen.queryByText(/Email provider accepted your inquiry/)).not.toBeInTheDocument()
+})
