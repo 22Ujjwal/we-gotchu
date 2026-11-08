@@ -132,7 +132,7 @@ test.each([false, true])('linked offer handles signed payment once, changed offe
   const { approve } = await import('../events/service')
   const { handleStripeWebhook } = await import('../payments/webhook')
   const { scriptedAgentHooks } = await import('../execution/scripted-agent')
-  const { configureStore } = await import('../runtime')
+  const { configureStore, getExecutionDeps } = await import('../runtime')
   const { setDepsForTests } = await import('../events/deps')
   await db.offers.save('customer', 'conversation', 0, offer)
   const link = await db.offers.prepare('customer', 'conversation', 'offer', 1, now)
@@ -140,6 +140,7 @@ test.each([false, true])('linked offer handles signed payment once, changed offe
   configureStore(db.store)
   setDepsForTests(deps)
   try {
+    expect(getExecutionDeps().now?.()).toEqual(now)
     const first = await approve(deps, link.eventId, link.planId, 1)
     const repeated = await approve(deps, link.eventId, link.planId, 1)
     expect(repeated.payment.paymentId).toBe(first.payment.paymentId)
