@@ -1,3 +1,14 @@
+## Saved planning adopts Leo's venue layout, 2026-11-08
+
+Local branch: `integrate/leo-main-preserve-local`. Main baseline remains `4f312b9`.
+Commits: `e907561` extracts shared receipt styling; `4d57ee8` connects saved planning to the photo, description, extras and paper estimate layout. No push, PR or deployment for these changes.
+
+The selected page no longer renders the redundant Updated event heading or beige arrangement card. Real selected items feed the receipt. Missing totals, fees and cancellation terms remain unconfirmed; no fixture prices or inferred money amounts are used. Email and the existing guarded arrange action sit beneath the receipt. Follow-up questions remain beside the changes form. Approval, payment and supplier contracts are unchanged.
+
+Verification: 104 focused tests across planning-chat (50), connected-journey (28), photo and planning-image hooks (26); typecheck and production build pass. Planning-chat was rerun after restoring follow-up questions. Native Chrome screenshot confirms the real saved Pearl photo, shared paper receipt and aligned extras. Browser navigation was attempted but no transition was observed in this run; controlled navigation tests pass. No fresh mobile screenshot or successful arrangement submission is claimed.
+
+The saved local event remains uncertain and has no structured brief metadata. Arrange and extras remain disabled by existing guards. No real provider research, supplier contact, booking, purchase or payment occurred. Tony's newer unmerged flow changes remain outside this branch.
+
 ## Latest: Leo main integration, 2026-11-08
 
 Branch: `integrate/leo-main-preserve-local`, local only; no PR or push.
