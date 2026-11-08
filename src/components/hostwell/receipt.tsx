@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
 import { usd } from '#/lib/hostwell/fixture'
 import type { Order } from '#/lib/hostwell/store'
@@ -59,12 +60,7 @@ export function Receipt({
   const greeting = age ? `Happy ${age}, ${firstName}!` : `Enjoy, ${firstName}!`
 
   return (
-    <figure
-      aria-label="Receipt"
-      className="m-0 flex flex-col"
-      style={{ filter: 'drop-shadow(#1F1B161A 0px 10px 18px)' }}
-    >
-      <div className="flex flex-col gap-3 bg-receipt px-7 pt-[30px] pb-[22px] font-mono text-[15px] leading-[21px] text-receipt-ink">
+    <ReceiptFrame label="Receipt">
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-[18px] font-bold tracking-[0.22em]">
             HOSTWELL
@@ -126,15 +122,26 @@ export function Receipt({
             HW20260041
           </span>
         </div>
-      </div>
-      <svg
-        viewBox="0 0 380 12"
-        preserveAspectRatio="none"
-        className="block h-3 w-full"
-        aria-hidden
-      >
-        <path d={zigzag} fill="#FFFEFA" />
-      </svg>
-    </figure>
+    </ReceiptFrame>
   )
 }
+
+/** Shared paper, type and torn edge for demo receipts and saved planning estimates. */
+export function ReceiptFrame({ children, label }: { children: ReactNode; label: string }) {
+  return <figure aria-label={label} className="m-0 flex flex-col"
+    style={{ filter: 'drop-shadow(#1F1B161A 0px 10px 18px)' }}>
+    <div className="flex flex-col gap-3 bg-receipt px-7 pt-[30px] pb-[22px] font-mono text-[15px] leading-[21px] text-receipt-ink">{children}</div>
+    <svg viewBox="0 0 380 12" preserveAspectRatio="none" className="block h-3 w-full" aria-hidden>
+      <path d={zigzag} fill="#FFFEFA" />
+    </svg>
+  </figure>
+}
+export function ReceiptBarcode({ reference }: { reference: string }) {
+  return <div className="flex flex-col items-center gap-1.5 pt-1">
+    <svg width="240" height="44" viewBox="0 0 240 44" aria-hidden>
+      {bars.map(([x, w]) => <rect key={x} x={x} width={w} height="44" fill="#2B2620" />)}
+    </svg>
+    <span className="text-[14px] leading-[18px] tracking-[0.18em] text-receipt-muted">{reference}</span>
+  </div>
+}
+export { Row as ReceiptRow, Rule as ReceiptRule }
