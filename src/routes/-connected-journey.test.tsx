@@ -456,3 +456,48 @@ test('mixed supplier outcomes show an unknown commitment without inventing confi
   expect(commitments.getByText('No supplier confirmation evidence recorded.')).toBeVisible()
   expect(commitments.getByText('Outcome unknown. Do not repeat this supplier action; reconciliation is needed.')).toBeVisible()
 })
+
+test('changing event links rejects a late response from the prior event', async () => {
+  const oldResponse = deferred<Response>()
+  const next = createEventViewFixture('partial', { eventId: 'evt_next' })
+  next.event.brief.location = 'Next event location'
+  controlledHttp(request => {
+    expect(request.method).toBe('GET')
+    const path = new URL(request.url).pathname
+    if (path === '/api/events/evt_ui_1') return oldResponse.promise
+    expect(path).toBe('/api/events/evt_next')
+    return Response.json(next)
+  })
+  const page = render(<ConnectedEventPage eventId="evt_ui_1" />)
+  page.rerender(<ConnectedEventPage eventId="evt_next" />)
+  expect(await screen.findByText('Next event location')).toBeVisible()
+  await act(async () => { oldResponse.resolve(Response.json(createEventViewFixture('partial'))) })
+  expect(screen.getByText('Next event location')).toBeVisible()
+  expect(screen.queryByText('San Francisco, CA')).not.toBeInTheDocument()
+})
+
+test('returning after the research deadline shows the server failure without restarting research', async () => {
+  vi.useFakeTimers()
+  const running = createEventViewFixture('running')
+  const expired = createEventViewFixture('failed')
+  expired.researchResult!.warnings = ['Research reached its time limit; retry with a revised brief.']
+  let returned = false
+  controlledHttp(request => {
+    expect(request.method).toBe('GET')
+    expect(new URL(request.url).pathname).toBe('/api/events/evt_ui_1')
+    return Response.json(returned ? expired : running)
+  })
+  const first = render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  first.unmount()
+  await advance(121000)
+  expect(fetch).toHaveBeenCalledTimes(1)
+  returned = true
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  expect(screen.getByText('Research reached its time limit; retry with a revised brief.')).toBeVisible()
+  expect(screen.getByRole('status')).toHaveTextContent('failed')
+  expect(screen.queryByText(/Cancellation requested at/)).not.toBeInTheDocument()
+  await advance(5000)
+  expect(fetch).toHaveBeenCalledTimes(2)
+})
