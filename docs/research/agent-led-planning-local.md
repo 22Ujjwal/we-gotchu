@@ -1,6 +1,6 @@
 # Local agent-led planning handoff
 
-Status: named team configured; code integrated locally; live team research and browser acceptance pending.
+Status: named team configured; local browser create/reload passed; live proposal blocked in the observed SDK run by specialist tool approvals.
 No push, PR update, merge, Vercel deployment or hosted migration was performed.
 Hosted Naive configuration was updated as explicitly authorized.
 
@@ -92,7 +92,9 @@ git diff --check
 Application tests: 437 passes in 39 files.
 Coordination tests: 25 passes.
 The tests include real rendered components with controlled fetch, real migrated PGlite with a controlled provider, HTTP handlers, same-session continuation, selection persistence, CAS conflicts, close/reopen, and bounded transport retry behavior.
-The browser has not been used to verify this new flow.
+Desktop browser verification at d280337 passed existing Clerk sign-in, one keyboard-submitted create with HTTP201, working progress, and same-URL reload with GET requests only.
+No options arrived within 3 minutes 53 seconds, so selection, source facts and follow-up remain unverified.
+The worker closed its browser tab and stopped its local server after this bounded test.
 The final desktop run should create a real conversation, receive useful options, select a venue, ask for cheaper supplies, reload, and verify the selected venue and same conversation remain.
 It should separately check return after closing the page during hosted research.
 Do not treat controlled tests as proof of these live outcomes.
@@ -138,3 +140,25 @@ No additional research session was started during team configuration.
 The next live run must show thread creation and results from Maya and Sam, a merged Tom proposal, and a same-session customer follow-up.
 While provider requests are unreliable, controlled API/UI testing and planning the first real supplier procurement remain useful independent work.
 Supplier outreach, payment and actual procurement were not implemented or performed here.
+
+## Parallel verification at d280337
+
+The full application suite passed 440 tests in 40 files using `bun run test --maxWorkers 2`.
+The browser conversation is planning_cd922591-eed0-4247-affb-fd5801f3f2e2.
+Its remote research session was not canceled by browser QA; closing localhost does not prove hosted work stopped.
+
+The separate SDK proof ef65f267-94dc-49e7-842d-195dc6af84c7 created session ses_0y7kfxcjg220f3y4kj923vj93z with Tom version 3.
+It remained at sequence 44 with awaiting_delegation until the 240-second observation window expired.
+Parent cancellation was acknowledged.
+A subsequent read of 45 events returned HTTP200 with request ID req_dfvey8vh6sphb6zpbja9bkbsq4.
+Tom listed the intended team, delegated both tasks with wait=true, and parked with two outstanding tasks.
+Sam session ses_7sem92dbne3pav57hgb2n5yvvc and Maya session ses_zv894n0xt1vxj5pscf6tw54f7a both returned idle with stop_reason awaiting_approval.
+Sam's pending tool is monid.monid_inspect for channel3 /v1/search.
+Maya's pending tool is monid.monid_discover for context.dev web scrape markdown.
+Both tool.confirm records contain read_people=true despite the configured tool allow permissions.
+Cancellation was subsequently acknowledged for both SDK-test specialist sessions; the browser conversation was left unchanged.
+This establishes the immediate wait cause in this SDK run, not the platform policy behind it or the browser conversation's cause.
+Do not call this a capacity error or approve unrelated actions automatically.
+The next investigation is the provider's approval semantics and how the app reports blocked specialist work.
+No new research create was submitted to work around the wait.
+Procurement recommendations are recorded separately in procurement-path.md and are not an accepted product-scope change.
