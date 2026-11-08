@@ -60,7 +60,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   for (const option of view?.selections ?? []) options.set(option.id, option)
   const { images: venueImages, canRetry: canRetryPhotos, retry: retryPhotos } = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
   const selected = new Set(view?.selections.map(option => option.id))
-  const proposalText = view?.proposal && [view.proposal.summary, view.proposal.nextQuestion].filter(Boolean).join('\n\n')
   const offer = view?.offer
   const offerStale = !!offer && (view?.inquiry?.status === 'stale'
     || view?.inquiry?.replies?.at(-1)?.id !== offer.replyId
@@ -79,8 +78,16 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     </details>,
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
       : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: `${fact.label}: ${fact.value}` })) }))
-  const answerAlreadyShown = view?.messages.some(message => message.role === 'assistant' && message.text === proposalText)
-  const messageForm = <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
+  const messageForm = <section aria-label={id ? 'Plan changes' : 'Event details'} className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+      {view && view.status !== 'ready' && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center"><p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
+        : view.status === 'blocked' ? "Research is paused for our team's review."
+        : view.status === 'failed' ? 'We could not finish this research. Send a message to try again.'
+          : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
+            : null}</p>
+        {view.status === 'uncertain' && <Button className="px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
+        {view.status === 'blocked' && !(view.canReviewResearch && view.approvals?.length) && <Button className="px-5 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for research updates</Button>}
+      </div>}
+    <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
       <label htmlFor="planning-message" className="text-[18px] font-semibold">{id ? 'Ask for changes' : 'Tell us about your event'}</label>
       <textarea id="planning-message" rows={id ? 2 : 4} maxLength={8000} value={draft} readOnly={session.pending || !!session.uncertain}
         onChange={event => setDraft(event.target.value)}
@@ -90,6 +97,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       <p className="text-[14px] text-stone">Press Enter to send. Use Shift+Enter for a new line.</p>
       <Button type="submit" disabled={!!blocked || !draft.trim()} className="self-start px-8 py-[17px] text-[18px]">{session.pending ? 'Saving...' : id ? 'Send message' : 'Plan my event'}</Button>
     </form>
+  </section>
   if (id && view?.status === 'working' && !view.proposal && !view.inquiry && !view.selections.length && !notice) {
     return <div className="w-full"><ReceiptLoader brief={view.brief} label={view.progress || 'Research in progress'} activity={view.progress || 'Finding options for your event.'} /></div>
   }
@@ -103,14 +111,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       {session.error?.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/planning')}`}>Sign in again</a>}
     </div>}
     {view && <>
-      {view.status !== 'ready' && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center"><p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
-        : view.status === 'blocked' ? "Research is paused for our team's review."
-        : view.status === 'failed' ? 'We could not finish this research. Send a message to try again.'
-          : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
-            : null}</p>
-        {view.status === 'uncertain' && <Button className="px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
-        {view.status === 'blocked' && !(view.canReviewResearch && view.approvals?.length) && <Button className="px-5 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for research updates</Button>}
-      </div>}
       {view.canReviewResearch && !!view.approvals?.length && ['blocked', 'uncertain'].includes(view.status) && <details className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
         <summary className="cursor-pointer underline">Operator review for local testing</summary>
         <p className="my-3">This is an internal research review, not a customer decision. Review the exact request before allowing or declining this one call.</p>
@@ -136,7 +136,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry?.delivery && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
         onClick={() => void session.refreshSaved()}>Check for venue replies</Button>}
-      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && !answerAlreadyShown && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
+      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
         disabled={!!blocked} editBrief={null}
         summary={view.proposal && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
@@ -151,7 +151,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
       {!browsingSettings && <PlanningArrangement images={venueImages} customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
-      {!browsingSettings && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
+      {!browsingSettings && venueCards.length > 0 && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
       {view.inquiry && <div className="mx-auto w-full max-w-[900px]"><PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
         disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} /></div>}
       {view.offer && <PlanningOfferReview offer={view.offer} stale={offerStale} />}
@@ -174,14 +174,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         </Button>}
     </>}
     {(!id || !venueCards.length) && messageForm}
-    {view && <>
-      {view.messages.length > 2 && <details className="mx-auto w-full max-w-[760px]"><summary className="cursor-pointer underline">Conversation history</summary><section aria-label="Conversation" className="flex flex-col gap-4">
-        {view.messages.slice(1).map(message => <div key={message.id} className={`border-l-2 pl-4 ${message.role === 'user' ? 'border-sand' : 'border-gold'}`}>
-          <p className="text-[14px] font-semibold text-stone">{message.role === 'user' ? 'You' : 'Arrange'}</p>
-          <p className="whitespace-pre-wrap text-[18px] leading-7">{message.text}</p>
-        </div>)}
-      </section></details>}
-    </>}
   </div>
 }
 function PlanningOptionCard({ option, selected, disabled, onSelect }: { option: PlanningOption; selected: boolean; disabled: boolean; onSelect: () => void }) {

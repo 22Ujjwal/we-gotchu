@@ -47,6 +47,31 @@ test('ready proposals keep choices visible without routine status, activity or r
   expect(screen.getByRole('button', { name: 'Select Paper plates' })).toBeEnabled()
 })
 
+test.each(['working', 'failed', 'uncertain', 'blocked'] as const)('%s research recovery stays with one changes form below the venue heading', async status => {
+  http(() => Response.json(view({ status })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  const heading = await screen.findByRole('heading', { name: 'Garden room' })
+  const changes = screen.getByRole('region', { name: 'Plan changes' })
+  expect(within(changes).getByRole('status')).toBeVisible()
+  expect(screen.getAllByRole('textbox', { name: 'Ask for changes' })).toHaveLength(1)
+  expect(heading.compareDocumentPosition(changes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  if (status === 'uncertain' || status === 'blocked') {
+    expect(within(changes).getByRole('button', { name: status === 'uncertain' ? 'Check for an update' : 'Check for research updates' })).toBeEnabled()
+  }
+})
+
+test('saved conversation messages stay out of the customer screen while the current proposal remains visible', async () => {
+  const saved = view({ selections: [venue] })
+  saved.messages.push({ id: 'a1', role: 'assistant', text: 'Earlier private research discussion', createdAt: saved.messages[0].createdAt },
+    { id: 'a2', role: 'assistant', text: `${saved.proposal!.summary}\n\n${saved.proposal!.nextQuestion}`, createdAt: saved.messages[0].createdAt })
+  http(() => Response.json(saved))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await screen.findByRole('heading', { name: 'Garden room' })
+  expect(screen.queryByText('Conversation history')).not.toBeInTheDocument()
+  expect(screen.queryByText('Earlier private research discussion')).not.toBeInTheDocument()
+  expect(screen.getByText('Two options for dinner.')).toBeVisible()
+})
+
 test('keyboard intake sends natural language once and opens the saved conversation', async () => {
   const user = userEvent.setup()
   const created = vi.fn()
