@@ -24,3 +24,9 @@ No payment or transaction-plan bridge is part of this ticket.
 A quote or tentative availability is not a supplier commitment.
 Do not silently change customer selections, accept terms, send another message, or initiate a purchase based on the reply.
 Keep UI presentation refinements separate from the minimum clear offer and source display.
+
+## Coordination
+
+Tony owns planning state and customer UI.
+Ujjwal is proposed owner of mail delivery and inbound receipt integration; confirm the handoff before shared edits.
+The team handoff defines the proposed transport boundary and controlled-inbox verification.

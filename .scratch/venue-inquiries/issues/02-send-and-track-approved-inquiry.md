@@ -24,3 +24,9 @@ Keep controlled-recipient evidence labeled as a test; it does not prove a suppli
 Ticket publication is not authorization to email a real supplier.
 A real-supplier proof requires Tony's explicit recipient and message authorization.
 No payment, reservation, purchase, bulk outreach, or automatic follow-up sequence belongs in this ticket.
+
+## Coordination
+
+Tony owns planning state and customer UI.
+Ujjwal is proposed owner of mail delivery and inbound receipt integration; confirm the handoff before shared edits.
+The team handoff defines the proposed transport boundary and controlled-inbox verification.

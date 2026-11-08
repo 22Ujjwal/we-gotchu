@@ -5,7 +5,9 @@ The draft is attached to the same planning conversation and survives reload.
 
 **Blocked by:** Stage two: Keep customer choices through changes and return visits, including resolution of its outstanding review findings.
 
-**Status:** ready-for-agent
+**Status:** preparation-in-progress; runtime implementation awaits stage-two review
+
+Owner: Tony.
 
 - [ ] Start from an actual saved proposal and selected venue, preserving the venue identity and the customer's current event requirements.
 - [ ] Find a published venue contact address and retain its source; if none is found, explain the missing contact instead of inventing an address.
