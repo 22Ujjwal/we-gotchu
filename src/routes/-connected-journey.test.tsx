@@ -153,7 +153,7 @@ test('a ready plan is chosen, approved once and sent to checkout', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Back to settings' }))
 
   fireEvent.click(within(screen.getByRole('region', { name: 'Suggested venues' }))
-    .getAllByRole('button', { name: 'Choose this setting' })[0])
+    .getByRole('button', { name: 'Choose Harbor Loft (simulated)' }))
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Harbor Loft (simulated)')
   const receipt = within(screen.getByRole('figure', { name: 'Receipt' }))
   expect(receipt.queryByText('VAT')).not.toBeInTheDocument()
