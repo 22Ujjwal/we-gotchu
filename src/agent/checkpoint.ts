@@ -4,7 +4,7 @@ import type { ResearchInput, ResearchResult, Run } from '../contracts'
 export type ResearchCheckpoint = {
   version: number
   input: ResearchInput
-  stage: 'discovery' | 'agent' | 'session' | 'ranking' | 'correcting' | 'cleanup' | 'done' | 'uncertain'
+  stage: 'discovery' | 'enrichment' | 'agent' | 'session' | 'ranking' | 'correcting' | 'cleanup' | 'delete_agent' | 'done' | 'uncertain'
   evidence: ResearchResult | null
   result: ResearchResult | null
   agentId: string | null

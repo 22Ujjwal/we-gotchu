@@ -66,7 +66,7 @@ async function startRun(deps: Deps, event: Event, run: Run): Promise<void> {
       runId: run.runId,
       brief: event.brief,
     })
-    await deps.store.setRunSession(run.runId, naiveSessionId)
+    if (naiveSessionId) await deps.store.setRunSession(run.runId, naiveSessionId)
     await deps.store.appendProgress(event.eventId, 'system', `Research started (brief revision ${run.briefRevision}).`)
   } catch (err) {
     // Uncertain outcome: record it on the run so it is reconciled, not silently retried.

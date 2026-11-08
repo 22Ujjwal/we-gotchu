@@ -1,12 +1,12 @@
 import { expect, test, vi } from 'vitest'
-import { CONTRACT_VERSION, planReadyEvent } from '../contracts'
+import { CONTRACT_VERSION, planReadyEvent, type ResearchInput } from '../contracts'
 import { createResearchSession } from './session'
 
 test('bounded session lifecycle uses the documented REST paths and does not wait for completion', async () => {
   const replies = [{ id: 'agent' }, { id: 'session' }, { id: 'session', status: 'idle', stop_reason: 'error', last_seq: 4 }, { accepted_seq: 5 }, {}, {}]
   const fetcher = vi.fn(async () => new Response(JSON.stringify(replies.shift())))
   const session = createResearchSession({ apiKey: 'secret', model: 'model', fetch: fetcher as typeof fetch })
-  const input = { contractVersion: CONTRACT_VERSION, eventId: 'event', runId: 'run', briefRevision: 1, brief: planReadyEvent.event.brief }
+  const input: ResearchInput = { contractVersion: CONTRACT_VERSION, eventId: 'event', runId: 'run', briefRevision: 1, brief: planReadyEvent.event.brief }
   const signal = AbortSignal.timeout(1000)
   expect(await session.createAgent(input, signal)).toBe('agent')
   expect(await session.start(input, [], 'agent', signal)).toBe('session')

@@ -12,7 +12,7 @@ export type { StripeLike }
 
 /** Boundary to Tony's research code (contract 0.4, Research). */
 export interface ResearchPort {
-  startResearch(input: ResearchInput): Promise<{ naiveSessionId: string }>
+  startResearch(input: ResearchInput): Promise<{ naiveSessionId: string | null }>
   advanceResearch(input: {
     event: Event
     run: Run
