@@ -1,5 +1,16 @@
 # Proposed ownership and collaboration contract
 
+## Existing scaffold update
+
+The team has already added a TanStack Start scaffold under src on main.
+Preserve that implementation and its package manager.
+The earlier Next.js choice and apps/web paths below remain proposals, not migration instructions.
+Before editing, the developers must map the role boundaries to the existing src layout and agree on any framework change.
+Frontend owns UI routes and components; transactions owns server endpoints and shared configuration; agent workflow owns supplier and runtime modules.
+Coordinate shared route files through the transaction owner if UI and server code occupy the same file.
+
+## Original draft
+
 Status: draft for agreement by the four teammates.
 Paths below describe the intended repository layout; application files do not exist yet.
 Each implementation task has one owner, one branch, and a declared file set.
