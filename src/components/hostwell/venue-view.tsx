@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { ReactNode } from 'react'
+import type { PhotoFallback } from './ui'
 import { Receipt } from './receipt'
 import { AddOnList, Button, FeatureRow, Guests, Header, MetaLine, Photo } from './ui'
 import { to24h } from '#/lib/hostwell/fixture'
@@ -9,6 +10,7 @@ import type { Order } from '#/lib/hostwell/store'
 export function VenueView({
   venue,
   photoCredit,
+  photoFallback,
   brief,
   order,
   back,
@@ -21,6 +23,7 @@ export function VenueView({
   receipt,
   action,
 }: {
+  photoFallback?: PhotoFallback
   photoCredit?: ReactNode
   venue: Pick<Venue, 'name' | 'neighbourhood' | 'photos' | 'description' | 'detailFeatures'> & Partial<Venue>
   brief: Brief
@@ -59,8 +62,9 @@ export function VenueView({
 
         <div className="flex w-full max-w-[1100px] flex-col items-start gap-8 lg:flex-row lg:gap-14">
           <div className="flex w-full min-w-0 flex-1 flex-col">
-            {venue.photos.length ? <Photo
+            {venue.photos.length || photoFallback ? <Photo
               photos={venue.photos}
+              fallback={photoFallback}
               alt={venue.name}
               className="-mx-5 aspect-[390/260] w-[calc(100%+40px)] lg:mx-0 lg:aspect-[664/400] lg:w-full"
             /> : <p className="border-b border-sand py-5 text-[14px] text-stone">Photo not available</p>}

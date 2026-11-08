@@ -1,3 +1,16 @@
+## Latest: venue photo fallback, 2026-11-08
+
+Branch: `feat/venue-photo-fallbacks`, stacked on tested integration baseline `f933645`.
+Integration draft PR: https://github.com/22Ujjwal/we-gotchu/pull/77.
+Photo fallback draft PR: https://github.com/22Ujjwal/we-gotchu/pull/78. Both pushed; neither merged.
+
+Added 20 licensed indoor reference photos (7.15 MB total), author/source/license credits and stable per-venue photo rotation. Real venue photos take priority. After the first failed or empty fetch, cards and venue details show one illustrative photo with a small credit below it. Broken assets are skipped; late real photos replace inspiration. No research, provider, payment, email or source-security changes.
+
+Commits: `84101d6` assets and plan; `4cb0378` tested gallery integration.
+Evidence: initial 108 focused tests passed; the single-photo refinement passed 85 focused tests, typecheck and build. Independent review timing issue was reproduced and fixed. Final native-browser capture was blocked by missing Chrome window, so visual verification of the final fallback remains pending. Earlier full research walkthrough is recorded in docs/testing/ui-integration-verification.md.
+
+Remaining: verify final gallery visually, coordinate broader integration with Tony, and verify hosted arrangement separately. Existing El Lopo source matching remains conservative. No outreach, bookings or payments performed.
+
 ## Saved planning adopts Leo's venue layout, 2026-11-08
 
 Local branch: `integrate/leo-main-preserve-local`. Main baseline remains `4f312b9`.

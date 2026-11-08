@@ -156,3 +156,29 @@ test('conversation changes and unmount cancel scheduled retries', async () => {
   expect(fetch).toHaveBeenCalledTimes(2)
   expect(vi.mocked(fetch).mock.calls.every(([, init]) => init!.signal!.aborted)).toBe(true)
 })
+
+test('enables local fallback after the first failed fetch without waiting for retries', async () => {
+  const pending = deferred()
+  vi.mocked(fetch).mockReturnValue(pending.promise)
+  const { result, rerender } = renderHook(({ id }) => usePlanningImages(id, [venue], 4), { initialProps: { id: 'plan/a' } })
+  expect(result.current.attempted).toEqual([])
+  await act(async () => pending.resolve(new Response('', { status: 503 })))
+  expect(result.current.attempted).toEqual([venue.id])
+  expect(result.current.images).toEqual({})
+  vi.mocked(fetch).mockReturnValue(new Promise(() => {}))
+  rerender({ id: 'other-plan' })
+  expect(result.current.attempted).toEqual([])
+})
+
+test('waits for the successful response body before enabling inspiration', async () => {
+  let finish!: (value: unknown) => void
+  const reply = response()
+  const json = vi.spyOn(reply, 'json').mockReturnValue(new Promise(resolve => { finish = resolve }))
+  vi.mocked(fetch).mockResolvedValue(reply)
+  const { result } = renderHook(() => usePlanningImages('plan/a', [venue], 4))
+  await waitFor(() => expect(json).toHaveBeenCalledOnce())
+  expect(result.current.attempted).toEqual([])
+  await act(async () => finish(await response().json()))
+  expect(result.current.images[venue.id]).toEqual([photo(1)])
+  expect(result.current.attempted).toEqual([venue.id])
+})
