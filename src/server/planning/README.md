@@ -5,7 +5,8 @@ They do not create transaction events, plans, approvals, or payments.
 The HTTP bodies and returned views use `src/agent/planning/contract.ts`.
 
 - `POST /api/planning` accepts `{ requestId, message }` and returns a view with status 201.
-- `GET /api/planning/$id` loads the owned conversation and reads its existing hosted session once.
+- `GET /api/planning/$id?saved=1` restores the owned saved conversation without contacting the provider.
+- `GET /api/planning/$id` refreshes the owned conversation from its existing hosted session.
 - `POST /api/planning/$id` accepts the shared message or selection command.
 
 Every operation requires the existing customer authentication function.
@@ -107,3 +108,17 @@ Provider acceptance is not delivery or a supplier reply.
 The next integration step is to inject the verified real adapter and run an approved controlled-inbox send.
 Read-only provider reconciliation, inbound correlation, reply interpretation and offer display remain separate incomplete work.
 No real provider send occurred during controlled implementation verification.
+
+## Restore before refresh
+
+The browser first requests the saved view so a provider outage cannot hide an existing plan.
+Working research and pending inquiry sends continue with normal polling after restoration.
+Completed plans can be explicitly refreshed with Check for research updates.
+A failed refresh keeps the restored proposal visible and shows an error.
+Saved-state reads still require the same customer ownership check.
+
+The stage-three browser attempt at `eb8938a` stopped at initial loading with a reported 503.
+A later read-only probe found the saved conversation ready at version 9 and sequence 160, with a proposal, selected venue and no pending write.
+Both provider GETs succeeded during that later probe, so the earlier 503's underlying cause remains unconfirmed.
+The controlled regression reproduced the separate application weakness that provider refresh failure blocked returning saved work.
+This change removes that dependency; it does not claim to fix or explain a provider outage.
