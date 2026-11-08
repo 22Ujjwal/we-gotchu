@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { inquiryFieldsSchema, planningInquirySchema } from '../../agent/planning/contract'
 import type { PlanningRecord, PlanningRepository } from './repository'
 import { supplierOfferInputSchema, validateSupplierOffer } from '../../agent/planning/offer-generator'
+import { calculateOfferCosts, type SelectedOffer } from '../../agent/planning/offer-contract'
 import { replyInterpretationSchema } from '../../agent/planning/reply-contract'
 import { recordSupplierReply } from './replies'
 import { sendVendorNote } from './vendor-coordination'
@@ -54,7 +55,7 @@ const tools = [
   { name: 'record_supplier_reply', description: 'Record your interpretation of the original latest supplier reply. Facts must contain exact excerpts. Distinguish a quote from an explicit booking confirmation. Do this before submitting an offer or confirming a booking.', inputSchema: z.toJSONSchema(replyInput), annotations: { readOnlyHint: false, idempotentHint: true } },
   { name: 'send_vendor_message', description: 'Send your message to the saved authorized supplier. Acknowledge a saved quote, or ask for booking confirmation after verified sandbox payment. No new recipient, real booking or charge.', inputSchema: z.toJSONSchema(vendorInput), annotations: { readOnlyHint: false, idempotentHint: true } },
   { name: 'confirm_vendor_booking', description: 'Record an explicit vendor confirmation after the paid booking request. Requires a saved confirmation interpretation with source facts. Sends the customer a final confirmation.', inputSchema: z.toJSONSchema(readInput), annotations: { readOnlyHint: false, idempotentHint: true } },
-  { name: 'submit_supplier_offer', description: 'Submit supplier terms for the selected options. Amounts are integer currency minor units. Include exact sourceQuotes from the saved supplier conversation. Unknown costs stay null and unresolved terms stay in missing. The application validates and saves the offer and notifies the customer when complete. This does not approve or pay.', inputSchema: z.toJSONSchema(offerInput), annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true } },
+  { name: 'submit_supplier_offer', description: 'Submit supplier terms for the selected options. Amounts are integer currency minor units. Include exact sourceQuotes from the saved supplier conversation. Interpret included or waived costs as zero, not unknown. Calculate derived prices from the cited rates. Genuinely unknown costs stay null and unresolved terms stay in missing. You may correct an incomplete, unapproved offer using the same reply. Inspect readyForReview and missing in the result. The application validates and saves the offer and notifies the customer when complete. This does not approve or pay.', inputSchema: z.toJSONSchema(offerInput), annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true } },
   { name: 'read_selected_event', description: 'Read the selected venue, event requirements and inquiry draft using the access supplied with this task. No research refresh or external action.', inputSchema: z.toJSONSchema(readInput), annotations: { readOnlyHint: true } },
   { name: 'save_venue_inquiry', description: 'Save a concise venue inquiry. For an existing customer-authorized controlled arrangement, the application also sends it to the configured test recipient. This tool cannot create approval or book or pay. Preserve a supplied recipient, or use a published venue email supported by contactSourceUrl and an exact contactQuote; otherwise leave recipient empty.', inputSchema: z.toJSONSchema(saveInput), annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true } },
 ]
@@ -69,6 +70,13 @@ function parseToolCall(name: string, raw: unknown) {
     case 'send_vendor_message': return { name, input: vendorInput.parse(raw) } as const
     default: throw new Error('Unknown company tool.')
   }
+}
+
+function offerResult(offer: SelectedOffer) {
+  const costs = calculateOfferCosts(offer)
+  return { saved: true, offerId: offer.id, revision: offer.revision,
+    readyForReview: costs.ok && !offer.missing.length,
+    missing: [...offer.missing, ...(!costs.ok ? [costs.reason] : [])] }
 }
 
 export function createCompanyTools(repository: PlanningRepository, secret: string, onPrepared?: (record: PlanningRecord) => Promise<void>, followupMail?: { transport: SupplierMailTransport; recipient: string }, offerActions?: { save: ReturnType<typeof createOfferRepository>['save']; onSaved: (record: PlanningRecord) => Promise<void> }, vendorActions?: { verifyPayment: (record: PlanningRecord) => Promise<boolean>; onConfirmed: (record: PlanningRecord) => Promise<void> }, onReply?: (record: PlanningRecord) => Promise<void>) {
@@ -142,15 +150,19 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
         || !record.view.arrangement?.controlled) throw new Error('The selected event cannot accept an offer.')
       const { offer: proposed } = tool.input
       const request = { id: `company-offer:${scope.replyId}`, fingerprint: JSON.stringify(proposed) }
-      if (record.requests[request.id]) {
-        if (record.requests[request.id] !== request.fingerprint) throw new Error('The draft has changed. An offer is already saved for this reply.')
+      const previous = record.requests[request.id]
+      if (previous === request.fingerprint) {
         await offerActions.onSaved(record)
-        return { saved: true, offerId: record.view.offer?.id, revision: record.view.offer?.revision }
+        return offerResult(record.view.offer!)
+      }
+      if (previous && (!record.view.offer || record.view.offer.replyId !== scope.replyId || record.view.offerApproval
+        || !record.view.offer.missing.length && calculateOfferCosts(record.view.offer).ok)) {
+        throw new Error('The draft has changed. A complete or approved offer is already saved for this reply.')
       }
       const offer = validateSupplierOffer(record, proposed)
       const saved = await offerActions.save(record.customerId, record.id, record.view.version, offer, request)
       await offerActions.onSaved(saved)
-      return { saved: true, offerId: offer.id, revision: offer.revision, missing: offer.missing }
+      return offerResult(offer)
     }
     if (scope.paymentId || !scope.replyId && inquiry.delivery) throw new Error('The selected event cannot save an inquiry with this access.')
     const draft = tool.input
@@ -203,7 +215,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
     else if (rpc.method === 'tools/list') result = { tools }
     else if (rpc.method === 'tools/call') {
       try { result = { content: [{ type: 'text', text: JSON.stringify(await call(rpc.params?.name ?? '', rpc.params?.arguments)) }] } }
-      catch (error) { result = { isError: true, content: [{ type: 'text', text: error instanceof z.ZodError ? 'Invalid tool arguments.' : error instanceof Error && /^(Invalid draft|Draft access|The selected|The draft|The event|A recipient|Unknown company)/.test(error.message) ? error.message : 'The operation could not be confirmed. Read the saved state before continuing.' }] } }
+      catch (error) { result = { isError: true, content: [{ type: 'text', text: error instanceof z.ZodError ? 'Invalid tool arguments.' : error instanceof Error && /^(Invalid draft|Draft access|The selected|The draft|The event|A recipient|Unknown company|A current venue|Select the quoted|Customer spending|Offer )/.test(error.message) ? error.message : 'The operation could not be confirmed. Read the saved state before continuing.' }] } }
     } else return Response.json({ jsonrpc: '2.0', id: rpc.id, error: { code: -32601, message: 'Method not found' } })
     return Response.json({ jsonrpc: '2.0', id: rpc.id, result })
   }
