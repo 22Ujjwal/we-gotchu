@@ -30,7 +30,10 @@ function setup(options: { product?: unknown; page?: unknown; failPage?: boolean;
     ] }
     else if (body.endpoint === '/v1/search') output = { products: [{ id: 'plates', title: 'Paper plates', offers: [{ url: offerUrl }] }] }
     else if (body.provider === 'channel3') output = options.product ?? product
-    else output = options.page ?? page
+    else {
+      const target = body.input.queryParams.url
+      output = options.page ?? { ...page, url: target, metadata: { sourceUrl: target, finalUrl: target } }
+    }
     return new Response(JSON.stringify({ runId: `run-${calls.length}`, status: 'COMPLETED', providerResponse: { httpStatus: 200 }, output }))
   }) as typeof fetch
   const recommend = vi.fn(async (_input: ResearchInput, candidates: Candidate[]) => ({ candidateIds: candidates.map((c: any) => c.candidateId) }))
@@ -95,6 +98,7 @@ test('hostile content cannot select tools or follow contact and cross-site links
 
 test.each([
   { ...page, metadata: { ...page.metadata, finalUrl: 'https://evil.example.com/' } },
+  { ...page, url: 'https://venue.example.com/unrelated' },
   { ...page, cache_metadata: { age_ms: 86_400_000 } },
   { ...page, markdown: 'x'.repeat(40_001) },
   { ...page, markdown: 'x'.repeat(260_000) },

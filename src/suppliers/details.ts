@@ -109,6 +109,9 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL): { 
   const urls = [page.url, page.metadata.sourceUrl, page.metadata.finalUrl, ...(page.metadata.canonicalUrl ? [page.metadata.canonicalUrl] : [])]
     .map(publicUrl)
   if (urls.some(url => !url || !sameSite(requested, url))) throw new Error('Page identity mismatch')
+  if (urls.slice(0, 2).some(url => !sameOffer(requested, url!) || requested.search !== url!.search)) {
+    throw new Error('Page request identity mismatch')
+  }
   const final = urls[2]!
   const keywords: Record<string, RegExp> = {
     capacity: /\b(capacity|seated|standing|guests)\b/i,
