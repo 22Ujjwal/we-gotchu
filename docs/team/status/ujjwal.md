@@ -2,42 +2,46 @@
 
 Owner: Ujjwal.
 Responsibility: transactions and integration.
-Updated: 2026-11-07T16:37:09-08:00
+Updated: 2026-11-07T17:05:52-08:00
 Baseline: main at a54e054cc48a15c2b30ae170db662849d1597185 (merged PR #10).
-Branch and PR: docs/status-ujjwal, local only; no PR yet.
-Availability: proposed.
-Tested commit: not tested; no code has been written.
+Branch and PR: docs/status-ujjwal (this file only), PR link below once opened.
+Other work, not yet published: feat/clerk-auth (Clerk code, local only) and docs/backend-decisions (draft doc updates, local only).
+Availability: proposed. The Clerk code exists only in a local clone (commit d47f35a) and is not published.
+Tested commit: d47f35a passed typecheck and build and served the home and sign-in pages in a dev server. The sign-in flow itself was not exercised.
 
 ## Current result
 
-No transaction or integration code exists yet.
-This update records a read-through review of the merged documents and the scaffold, plus the decisions below.
-The merged baseline is TanStack Start with Bun and a single package.json, as set by the foundation task.
+The merged baseline is TanStack Start with Bun and a single package.json.
 [PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) proposed a Next.js workspace migration and was closed without merging.
-The TanStack Start baseline stands.
+On feat/clerk-auth, Clerk is wired in with sign-in and sign-up routes, request middleware, and a server-only requireCustomerId helper in src/server/auth.ts.
+Nothing else in the transaction service exists yet: no schemas, database, payment, or MCP endpoint code.
+
+## Decisions recorded (proposed until the team reviews them)
+
+- Customer authentication uses Clerk; the identity helper is the only dependency of ownership checks on it.
+- There is no separate worker process. Naive's agent session performs long supplier work, and the backend serves short guarded requests only.
+- Naive reaches the backend through an MCP endpoint at a public HTTPS URL, authenticated by a bearer secret held in Naive's vault.
+- Every guarded call carries an approval, action and execution key that the backend verifies against stored data.
+- Purchase tools are allowed on the Naive side; the backend alone enforces approval.
+- A Checkout session expires no later than its approval, and a late payment is refunded automatically with no supplier work.
 
 ## Runtime evidence
 
+- Clerk: simulated development keys only; sign-in flow unverified.
 - Stripe Checkout and refunds: unverified.
 - Supplier card funding and supplier checkout: unverified.
-- Naive-to-backend tool access: unverified; research in progress against the Naive docs.
-- Database, worker and authentication: not started.
+- Naive calling the backend over MCP: unverified; the Naive documentation was read, but no request has been made.
+- Database and MCP endpoint: not started.
 
 ## Contracts and dependencies
 
-Contract version: 0.1 draft, unchanged by this update.
-Gaps found in the 0.1 draft, to be resolved by the first contract PR:
-
-- Action state transitions and cancellation or revocation states need an explicit table.
-- Plan, approval, cancellation quote and Checkout session expiry need a defined ordering.
-- A payment that arrives after approval revocation needs a refund path.
-- The partial-failure policy for a venue success followed by an item failure is undecided.
-- Customer authentication is deferred for the hackathon and will be a minimal placeholder.
-
-Needs from Tony: how Naive will call the guarded tool endpoint, and the exact supplier adapter inputs and outputs.
-Needs from Leo: which summary and progress fields the UI reads.
+Contract version: 0.1 draft is merged; a 0.3 hackathon cut of the 0.2 draft is on docs/backend-decisions and needs review by Tony and Leo.
+Needs from Tony: confirmation that supplier checkout runs inside the Naive session and that the agent can call a public HTTPS endpoint during a run.
+Needs from Leo: confirmation of the summary and progress fields the interface reads, and a review of the Clerk change to src/routes/__root.tsx.
+Needs from the team: sharing and claiming of one Clerk application, and a public URL for the MCP endpoint.
 
 ## Next step and blockers
 
-Next step: first foundation PR with Zod schemas, simulated fixtures, typecheck and test scripts, and CI.
-Blocker: none found after checking; PR #6 is closed.
+Next step: publish the doc update for review, deploy a stub MCP endpoint to a stable public URL (demo plan milestone 1), then the first code PR with Zod schemas, simulated fixtures and a test runner.
+Hacking ends at 11:00 AM on Nov 8, 2026, so the first code PR is limited to those items.
+Blockers: none found after checking.
