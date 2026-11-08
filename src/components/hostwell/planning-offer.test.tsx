@@ -25,3 +25,9 @@ test('shows missing charges and stale offer warnings without a complete total', 
   expect(screen.getByText('The complete total is not confirmed yet.')).toBeVisible()
   expect(screen.getByRole('alert')).toHaveTextContent('changed')
 })
+
+test('shows yen in the same units sent to Checkout', () => {
+  render(<PlanningOfferReview offer={{ ...offer, currency: 'jpy', brief: { ...offer.brief, currency: 'jpy' } }} stale={false} />)
+  expect(screen.getByText('Total: \u00a520,000')).toBeVisible()
+  expect(screen.getByText(/Deposit:.*5,000.*included/)).toBeVisible()
+})
