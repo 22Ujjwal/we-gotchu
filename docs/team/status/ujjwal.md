@@ -1,5 +1,19 @@
 # Ujjwal's status
 
+## Local event-operations work — not published
+
+Branch: `feat/event-operations`, baseline `86be4d5fedee457c74cc60febca3c62c7332a0a8`. User requires sequential tested milestones and explicit permission before any remote push. Nothing from this branch is pushed, merged, or deployed. Tony's schema, migrations, database client, package manifest and lockfile remain untouched; conversation/frontend integration stays with Tony/Leo.
+
+Milestone 1: pure recovery preview committed locally as `d08d4fe`. It identifies affected actions and their dependents, preserves unrelated work, flags uncertain/existing commitments for reconciliation, revises the research brief without mutating the event, and preserves candidate evidence provenance. Unknown cancellation charges stay unknown; fresh approval is required. All 436 application tests and typecheck pass, including 18 new recovery tests. Independent review is clean after fixing provenance loss.
+
+This preview does not pause execution, start research, replace bookings, cancel commitments, or issue refunds. It needs authorized-current-event loading and an agreed atomic recovery hold before customer-facing wiring. See [integration handoff](../event-operations-integration.md) and [design](../../superpowers/specs/2026-11-08-event-operations-design.md).
+
+Milestone 2: invitation preparation and explicit Luma creation adapter committed locally as `d6bff0c`. Fixed host times, publication due/future/expired states, pending venue labeling, private/free Luma payload, and manual Partiful handoff. Dispatch revalidates time and never automatically retries unknown POST outcomes. Luma's id-only receipt is reported without inventing a public link. 461 application tests and typecheck pass; review clean. The earlier in-progress red HTTP408 regression failed as expected; the final full run passed after its correction. No live provider request or publication was performed. Recurrence follows next; durable scheduling and provider access remain pending.
+
+Milestone 3: recurring brief generation committed locally as `ed1ae7d`, with 485 application tests and typecheck passing. Weekly/monthly dates preserve local wall time; ambiguous/nonexistent times are reported, month-end dates skipped, and pause/skips/count/horizon honored. Every occurrence requires research and approval. Independent review clean. No background scheduler is deployed.
+
+Milestone 4: `bun scripts/event-operations-demo.ts` runs an offline simulated walkthrough. Verified recovery approval requirement, future invitation state and three 18:00 Los Angeles dinners across the March 2027 DST transition. Final Vercel build and 25 coordination tests pass. Frozen files and existing transaction/agent/frontend files have no diff. The next integration needs Tony's storage handback, authorized conversation/UI wiring, durable job claims, provider access, and recovery hold semantics. Whole-branch review pending; no remote push is authorized.
+
 ## Latest checkpoint — sandbox payment/refund verified
 
 Owner: Ujjwal. Branch: `fix/refund-expiry-integration`. Baseline: `6001bd202beb42792bf62743dac10e593f9cfee8` (PR #49 merged). This checkpoint supersedes the historical entries below; new atomic-expiration and refund-reconciliation code is on branch, not yet deployed.
