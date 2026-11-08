@@ -54,6 +54,11 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   }
   async function send() {
     if (blocked || !draft.trim()) return
+    if (view?.supplierQuestion && !view.supplierQuestion.answer) {
+      complete(await session.submit({ kind: 'answer_supplier', requestId: crypto.randomUUID(), expectedVersion: view.version,
+        replyId: view.supplierQuestion.replyId, answer: draft.trim() }), true)
+      return
+    }
     complete(await session.submit(id && view ? { kind: 'message', requestId: crypto.randomUUID(), expectedVersion: view.version, message: draft.trim() }
       : { requestId: crypto.randomUUID(), message: draft.trim() }), true)
   }
@@ -64,8 +69,11 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const { images: venueImages, attempted: attemptedImages, canRetry: canRetryPhotos, retry: retryPhotos } = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
   const selected = new Set(view?.selections.map(option => option.id))
   const offer = view?.offer
+  const supplierConfirmed = !!offer && view?.offerApproval?.offerId === offer.id && view.offerApproval.offerRevision === offer.revision
+    && !!view.offerApproval.confirmedReplyId && view.offerApproval.confirmedReplyId === view.inquiry?.replies?.at(-1)?.id
+  const approvalWaiting = !!offer && view?.offerApproval?.offerId === offer.id && view.offerApproval.offerRevision === offer.revision && !supplierConfirmed
   const offerStale = !!offer && (view?.inquiry?.status === 'stale'
-    || view?.inquiry?.replies?.at(-1)?.id !== offer.replyId
+    || view?.inquiry?.replies?.at(-1)?.id !== offer.replyId && !supplierConfirmed
     || offer.contextMessageIds.join('|') !== view?.messages.filter(message => message.role === 'user').map(message => message.id).join('|')
     || offer.lines.map(line => line.option.id).sort().join('|') !== view?.selections.map(option => option.id).sort().join('|')
     || !!offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now())
@@ -75,9 +83,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     photoCredit: (venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[12px] text-stone underline">{image.attribution.text}</a>),
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
       : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: displayFactValue(fact.value).split(/(?<=[.!?])\s/)[0] })) }))
-  const needsAnswer = !!view?.proposal?.nextQuestion
+  const supplierQuestion = view?.supplierQuestion && !view.supplierQuestion.answer ? view.supplierQuestion.text : undefined
+  const needsAnswer = !!supplierQuestion || !!view?.proposal?.nextQuestion
   const messageForm = <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
-      {view?.proposal?.nextQuestion && venueCards.length > 0 && <p className="text-[18px] leading-7">{view.proposal.nextQuestion}</p>}
+      {(supplierQuestion || view?.proposal?.nextQuestion && !view.arrangement) && venueCards.length > 0 && <p className="text-[18px] leading-7">{supplierQuestion || view?.proposal?.nextQuestion}</p>}
       <label htmlFor="planning-message" className={id ? 'sr-only' : 'text-[18px] font-semibold'}>{id ? 'Ask for changes' : 'Tell us about your event'}</label>
       <div className="flex items-end gap-3 border border-line-strong bg-white p-3 shadow-sm focus-within:border-ink">
       <textarea id="planning-message" rows={id ? 2 : 4} maxLength={8000} value={draft} readOnly={session.pending || !!session.uncertain}
@@ -97,7 +106,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     return <div className="w-full"><ReceiptLoader brief={view.brief}
       activity={view.progress || view.activity?.find(item => item.status === 'working')?.detail || 'Starting your research'} /></div>
   }
-  if (view?.arrangement && !notice && !view.offer && !view.paymentLink
+  if (view?.arrangement && !supplierQuestion && !notice && !view.offer && !view.paymentLink
     && ['requested', 'preparing', 'awaiting_reply'].includes(view.arrangement.status)) {
     return <ArrangingView embedded email={view.arrangement.customerEmail}
       message={view.arrangement.status === 'awaiting_reply'
@@ -148,9 +157,9 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       {view.offer && (view.paymentLink ? <details><summary className="cursor-pointer underline">Quoted terms and sources</summary><PlanningOfferReview offer={view.offer} stale={offerStale} /></details>
         : <PlanningOfferReview offer={view.offer} stale={offerStale} />)}
       {view.offer && !view.paymentLink && !offerStale && !view.offer.missing.length && offerCosts?.ok && offerCosts.total > 0
-        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
-          onClick={() => void session.submit({ kind: 'prepare_payment', requestId: crypto.randomUUID(), expectedVersion: view.version,
-            offerId: view.offer!.id, offerRevision: view.offer!.revision })}>Review sandbox payment</Button>}
+        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready' || approvalWaiting}
+          onClick={() => void session.submit({ kind: view.arrangement?.controlled && !supplierConfirmed ? 'approve_offer' : 'prepare_payment', requestId: crypto.randomUUID(), expectedVersion: view.version,
+            offerId: view.offer!.id, offerRevision: view.offer!.revision })}>{approvalWaiting ? 'Waiting for supplier confirmation' : view.arrangement?.controlled && !supplierConfirmed ? 'Approve offer and request confirmation' : 'Review sandbox payment'}</Button>}
     </>}
     {(!id || !venueCards.length && view?.status === 'ready') && messageForm}
   </div>

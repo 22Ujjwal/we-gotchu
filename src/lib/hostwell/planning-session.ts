@@ -7,7 +7,7 @@ const api = createPlanningApi()
 const fastSavedPolls = 60
 const savedFailureLimit = 60
 function awaitsSavedUpdate(view: PlanningView | null) {
-  return ['awaiting_reply', 'offer_ready', 'awaiting_vendor_confirmation'].includes(view?.arrangement?.status ?? '')
+  return ['awaiting_reply', 'offer_ready', 'awaiting_offer_confirmation', 'awaiting_vendor_confirmation'].includes(view?.arrangement?.status ?? '')
     || !!view?.inquiry?.replies?.some(reply => reply.status === 'received' || reply.status === 'processing')
 }
 
