@@ -41,7 +41,7 @@ export interface Store {
     brief: Brief
   }): Promise<{ ok: true; event: Event; run: Run; previousRun: Run | null } | Fail<'not_found' | 'stale_brief' | 'already_approved'>>
   /** Conditional status change: only applies when the current status is in `from`. Returns false otherwise. */
-  setEventStatus(eventId: string, from: readonly EventStatus[], to: EventStatus): Promise<boolean>
+  setEventStatus(eventId: string, from: readonly EventStatus[], to: EventStatus, expectedBriefRevision?: number): Promise<boolean>
   /** Sets cancelRequestedAt once and status canceling; returns null if already canceled. */
   requestCancel(eventId: string, at: Date): Promise<Event | null>
 

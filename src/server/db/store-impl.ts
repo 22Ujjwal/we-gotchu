@@ -304,12 +304,13 @@ export function createStore(db: Db): Store {
       }
     },
 
-    async setEventStatus(eventId, from, to) {
+    async setEventStatus(eventId, from, to, expectedBriefRevision) {
       if (from.length === 0) return false
       const rows = await db
         .update(events)
         .set({ status: to })
-        .where(and(eq(events.id, eventId), inArray(events.status, [...from])))
+        .where(and(eq(events.id, eventId), inArray(events.status, [...from]),
+          expectedBriefRevision === undefined ? undefined : eq(events.briefRevision, expectedBriefRevision)))
         .returning({ id: events.id })
       return rows.length > 0
     },

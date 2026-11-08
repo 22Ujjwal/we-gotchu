@@ -120,11 +120,11 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
     })
     if (built.ok) {
       await deps.store.savePlan(built.plan)
-      await deps.store.setEventStatus(event.eventId, ['researching'], 'plan_ready')
-      await deps.store.appendProgress(event.eventId, 'agent', `Plan ready: total ${built.plan.total} ${built.plan.currency}.`)
+      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'plan_ready', result.briefRevision)
+      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Plan ready: total ${built.plan.total} ${built.plan.currency}.`)
     } else {
-      await deps.store.setEventStatus(event.eventId, ['researching'], 'researched')
-      await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
+      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'researched', result.briefRevision)
+      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
     }
   } catch (err) {
     console.error('[research] advance failed')
