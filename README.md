@@ -24,6 +24,13 @@ No live booking, payment, cancellation, or deployment has been verified.
 
 ## Start here
 
+For a local UI preview without service credentials, run `bun install`, add
+`VITE_LOCAL_PREVIEW=true` to `.env.local`, then run `bun run dev` and open
+http://localhost:3000. This previews the brief and venue flow using fixture data.
+Sign-in, sign-up, API routes, and server functions are unavailable in this mode.
+The flag is ignored by production builds. To use the backend locally, remove the
+flag and configure the credentials listed in `.env.example`.
+
 1. Read the [product baseline](docs/product-spec.md).
 2. Review the [architecture](docs/architecture-draft.md) and [shared contracts](docs/contracts-draft.md).
 3. Pick your [team handoff](docs/team/README.md) and follow the ownership boundaries.
