@@ -144,3 +144,13 @@ Known preexisting limit: expiration eligibility reads and event-status update ar
 Research-finalization recovery is a third separate commit on this branch. Polling reuses saved terminal results and any persisted plan to finish interrupted status writes, without rerunning providers. It rechecks cancellation and brief revisions; no schema or Tony-owned files change. Existing limits remain: canceled events can retain an inert plan if cancellation races the save, and progress messages can be lost after a successful status write. Status cannot be revived by these retries.
 
 Final combined verification: 397 application tests, 25 coordination tests, typecheck, production build, and diff check pass. Both payment and recovery reviews found no introduced blockers. Earlier isolated runs hit missing DOM dependencies/initialization timeouts; the clean combined install and two-worker run passed without changing timeouts. These three commits are on branch, not yet deployed.
+
+## External agent connection — local branch, 2026-11-08
+
+Owner: Ujjwal. Updated: 2026-11-08T08:34:47-08:00. Branch `feat/agent-connect`; no PR, push, merge or deployment. Baseline cached main `b986ab636725029fc6c1b694a1c34494a42a7bca`. Tested implementation `b7edf706d4da3f60492a5905fffff434dcbf38e1`. Older entries above retain their original evidence and do not describe this branch's deployment.
+
+Implemented customer-scoped planning tools and MCP/JSON handler factories, reusing existing planning persistence. Agents can create/poll/refine/toggle saved selections and return a customer review link. No inquiry approval/sending, payment or booking authority. Provider behavior in tests is simulated. No hosted endpoint is mounted.
+
+Verified: 555 application tests, 25 coordination tests, root typecheck and Vercel build; separately 4 official MCP client tests, package typecheck/build and frozen install. No existing planning/frontend/internal MCP/root config/dependency/schema/migration edits. No production configuration or provider calls.
+
+Handoff and exact commits: [agent-connect.md](../agent-connect.md). Interface/configuration/client recipe: [integration README](../../../integrations/arrange-agent-connect/README.md). Needs durable customer enrollment/revocation and admission, coordinated runtime/routes/CI, and hosted/client-specific verification before public availability. Tony's evolving planner contract must be reconciled before integration; his current frontend work is not blocked. Next: independent branch review, then report candidate readiness; keep local pending publication permission.
