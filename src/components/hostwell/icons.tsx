@@ -196,3 +196,34 @@ export function GoldSeal() {
     </svg>
   )
 }
+
+/** A sealed envelope, closed with the gold seal and the arrange mark. */
+export function SealedEnvelope() {
+  return (
+    <svg
+      viewBox="0 0 236 156"
+      aria-hidden
+      className="h-[156px] w-[236px] shrink-0"
+      style={{ filter: 'drop-shadow(#1F1B161F 0px 24px 40px)' }}
+    >
+      <defs>
+        <linearGradient id="envelope-seal-gold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#F0D58C" />
+          <stop offset="0.5" stopColor="#C99A3B" />
+          <stop offset="1" stopColor="#B4852A" />
+        </linearGradient>
+        <filter id="envelope-seal-shadow" x="-30%" y="-30%" width="160%" height="170%">
+          <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#966E1E" floodOpacity="0.35" />
+        </filter>
+      </defs>
+      <rect x="0.5" y="0.5" width="235" height="155" fill="#FFFFFF" stroke="#E3DDD3" />
+      <path d="M1 155 L96 82 M235 155 L140 82" fill="none" stroke="#ECE6DC" />
+      <path d="M1 1 L118 92 L235 1" fill="#FBF8F2" stroke="#E3DDD3" strokeLinejoin="round" />
+      <g transform="translate(88 62) rotate(-8 30 30) scale(0.625)" filter="url(#envelope-seal-shadow)">
+        <polygon points={sealPoints} fill="url(#envelope-seal-gold)" />
+        <path d="M48 28 L68 64 H28 Z" fill="#FFFFFF" />
+        <path d="M48 44 L58 64 H38 Z" fill="#C99A3B" />
+      </g>
+    </svg>
+  )
+}

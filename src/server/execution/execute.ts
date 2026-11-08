@@ -29,6 +29,8 @@ export type ExecutionDeps = {
   adapterTimeoutMs?: number
   /** Called once when every succeeded commitment has a succeeded cancellation (the refund hook). */
   onAllCanceled?: (eventId: string) => Promise<void>
+  /** Called once when the last commitment succeeds and the event becomes booked. Best effort. */
+  onAllBooked?: (eventId: string, approval: Approval) => Promise<void>
 }
 
 export type RefusalReason =
@@ -244,10 +246,23 @@ export function executionStatus(approval: Approval, attempts: Attempt[]): EventS
   return 'executing'
 }
 
-async function settleExecution(store: Store, eventId: string, approval: Approval): Promise<EventStatus | null> {
+async function settleExecution(deps: ExecutionDeps, eventId: string, approval: Approval): Promise<EventStatus | null> {
+  const { store } = deps
   const attempts = await store.listAttempts(eventId)
   const status = executionStatus(approval, attempts)
-  await store.setEventStatus(eventId, EXECUTION_STATUSES, status)
+  if (status === 'booked') {
+    // Only the call that moves the event into booked fires the hook, so it runs once.
+    const becameBooked = await store.setEventStatus(eventId, EXECUTION_STATUSES.filter((s) => s !== 'booked'), 'booked')
+    if (becameBooked && deps.onAllBooked) {
+      try {
+        await deps.onAllBooked(eventId, approval)
+      } catch (err) {
+        console.warn('[execution] all-booked hook failed', eventId, err)
+      }
+    }
+  } else {
+    await store.setEventStatus(eventId, EXECUTION_STATUSES, status)
+  }
   return (await store.getEvent(eventId))?.status ?? null
 }
 
@@ -320,7 +335,7 @@ export async function executeAction(deps: ExecutionDeps, input: { eventId: strin
   const result = await callAdapter(deps, () => adapter.commit(action, claimed.attempt.executionKey))
   const attempt = await recordResult(store, claimed.attempt, 'running', result)
   await store.appendProgress(event.eventId, 'system', describe(action, attempt))
-  const eventStatus = await settleExecution(store, event.eventId, approval)
+  const eventStatus = await settleExecution(deps, event.eventId, approval)
 
   if (attempt.state === 'failed' && attempt.errorReason === 'amount_exceeded') {
     return { ...refuse('amount_exceeded', 'The supplier price is above the approved maximum; nothing was committed.', 'amount_exceeded'), attempt }
@@ -401,7 +416,7 @@ export async function reconcileAction(deps: ExecutionDeps, input: { eventId: str
     eventStatus = await settleCancellation(deps, event.eventId)
   } else {
     const approval = await store.getApproval(attempt.approvalId)
-    eventStatus = approval ? await settleExecution(store, event.eventId, approval) : event.status
+    eventStatus = approval ? await settleExecution(deps, event.eventId, approval) : event.status
     if (event.cancelRequestedAt !== null) eventStatus = await settleCancellation(deps, event.eventId)
   }
   return { ok: true, attempt, replayed: false, eventStatus }

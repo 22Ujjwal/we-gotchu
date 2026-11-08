@@ -1,10 +1,21 @@
-import { Link, Navigate, createFileRoute } from '@tanstack/react-router'
+import { Link, Navigate, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { ArrangingView } from '#/components/hostwell/arranging-view'
 import { PartyView } from '#/components/hostwell/party-view'
 import { Header } from '#/components/hostwell/ui'
+import { to24h } from '#/lib/hostwell/fixture'
 import { buildOrder, findVenue, useHostwell } from '#/lib/hostwell/store'
 import { localPreview } from '#/lib/local-preview'
 
-export const Route = createFileRoute('/party')({ component: PartyPage })
+export const Route = createFileRoute('/party')({
+  // Right after Arrange, the preview first shows the "we're on it" screen.
+  validateSearch: (search: Record<string, unknown>): { arranging?: boolean } =>
+    search.arranging === true || search.arranging === 'true' ? { arranging: true } : {},
+  component: PartyPage,
+})
+
+/** How long the preview pretends suppliers take to confirm. */
+const ARRANGING_MS = 5000
 
 function PartyPage() {
   return localPreview ? <PreviewPartyPage /> : <Navigate to="/" />
@@ -13,6 +24,13 @@ function PartyPage() {
 function PreviewPartyPage() {
   const { brief, addOns, selected, bookedVenueId } = useHostwell()
   const venue = bookedVenueId ? findVenue(bookedVenueId) : undefined
+  const { arranging } = Route.useSearch()
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (!arranging || !venue) return
+    const done = setTimeout(() => navigate({ to: '/party', replace: true }), ARRANGING_MS)
+    return () => clearTimeout(done)
+  }, [arranging, venue, navigate])
 
   if (!venue) {
     return (
@@ -25,6 +43,23 @@ function PreviewPartyPage() {
           </Link>
         </main>
       </div>
+    )
+  }
+
+  if (arranging) {
+    const when = [brief.date, [brief.from, brief.till].filter(Boolean).map(to24h).join('–')]
+      .filter(Boolean)
+      .join(', ')
+    return (
+      <ArrangingView
+        email="you@example.com"
+        items={[
+          { label: 'Venue', title: venue.name, detail: when },
+          ...addOns
+            .filter((a) => selected.has(a.id))
+            .map((a) => ({ label: 'Extras', title: a.label })),
+        ]}
+      />
     )
   }
 

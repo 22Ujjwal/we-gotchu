@@ -1,6 +1,27 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "dev", "runtimeExecutable": "bun", "runtimeArgs": ["--bun", "run", "dev"], "port": 3000 }
+    {
+      "name": "dev",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "--bun",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "ui-preview",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "VITE_LOCAL_PREVIEW=true",
+        "bun",
+        "--bun",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    }
   ]
 }
