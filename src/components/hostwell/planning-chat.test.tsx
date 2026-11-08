@@ -674,3 +674,23 @@ test.each(['pending', 'uncertain', 'accepted', 'failed'] as const)('existing %s 
     expect(within(recovery).getByRole('button', { name: 'Check send status' })).toBeEnabled()
   }
 })
+
+test('uncertain research permits choosing a saved setting without enabling arrangement', async () => {
+  let saved = view({ status: 'uncertain' })
+  const commands: unknown[] = []
+  http(async request => {
+    if (request.method === 'POST') {
+      const command = await request.json()
+      commands.push(command)
+      saved = { ...saved, version: 2, selections: [venue] }
+    }
+    return Response.json(saved)
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  const choose = await screen.findByRole('button', { name: 'Choose Garden room' })
+  expect(choose).toBeEnabled()
+  await userEvent.click(choose)
+  expect(await screen.findByRole('button', { name: 'Back to settings' })).toBeVisible()
+  expect(commands).toEqual([expect.objectContaining({ kind: 'select', optionId: venue.id, expectedVersion: 1 })])
+  expect(screen.getByRole('button', { name: 'Please arrange this' })).toBeDisabled()
+})

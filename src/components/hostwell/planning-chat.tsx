@@ -42,9 +42,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     : session.error?.message
   useEffect(() => { if (notice) alert.current?.focus() }, [notice])
   const { view } = session
-  const blocked = session.pending || session.loading || !!session.uncertain || !!id && !view
-    || view?.inquiry?.delivery?.status === 'pending' || view?.status === 'working' || view?.status === 'uncertain' || view?.status === 'blocked'
+  const selectionBlocked = session.pending || session.loading || !!session.uncertain || !!id && !view
+    || view?.inquiry?.delivery?.status === 'pending' || view?.status === 'working' || view?.status === 'blocked'
     || !!session.error && session.error.status !== 409 && session.error.status !== 400 && session.error.status !== 422
+  const blocked = selectionBlocked || view?.status === 'uncertain'
   const complete = (next: typeof view, message: boolean) => {
     if (!next) return
     if (message) setDraft('')
@@ -136,7 +137,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         onClick={() => void session.refreshSaved()}>Check for venue replies</Button>}
       {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
-        disabled={!!blocked} editBrief={null}
+        disabled={!!selectionBlocked} editBrief={null}
         summary={view.proposal && <ProposalSummary updated={view.messages.filter(message => message.role === 'user').length > 1} summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
         followup={messageForm} onChoose={optionId => {
           setBrowsingSettings(false)
@@ -145,7 +146,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         }} />}
       {canRetryPhotos && <Button className="self-start px-5 py-3" onClick={retryPhotos}>Retry photos</Button>}
       {!view.selections.some(option => option.kind === 'venue') && supplyOptions.length > 0 && <section aria-label="Supplies and sources" className={`mx-auto grid w-full gap-5 ${supplyOptions.length === 1 ? 'max-w-[760px]' : 'max-w-[1000px] md:grid-cols-2'}`}>
-        {supplyOptions.map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
+        {supplyOptions.map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!selectionBlocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
       {!browsingSettings && <PlanningArrangement images={venueImages} customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}

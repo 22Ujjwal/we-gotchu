@@ -289,3 +289,18 @@ it('restores saved work without requiring the hosted research provider', async (
   expect(agent.read).not.toHaveBeenCalled()
   await expect(getPlanning(deps, saved.id)).rejects.toMatchObject({ status: 503 })
 })
+
+it('saves a choice from retained options while a research send is uncertain without sending again', async () => {
+  const initial = await ready()
+  vi.mocked(agent.send).mockImplementation(() => new Promise(() => {}))
+  const uncertain = await commandPlanning({ ...deps, timeoutMs: 5 }, initial.id,
+    { kind: 'message', requestId: 'uncertain-refinement', message: 'Find another room', expectedVersion: initial.version })
+  expect(uncertain.status).toBe('uncertain')
+  const selected = await commandPlanning(deps, initial.id,
+    { kind: 'select', requestId: 'keep-room', optionId: 'venue', expectedVersion: uncertain.version })
+  expect(selected.selections.map(option => option.id)).toEqual(['venue'])
+  expect(selected.status).toBe('uncertain')
+  expect(selected.inquiry).toBeFalsy()
+  expect(agent.send).toHaveBeenCalledTimes(1)
+  expect((await db.repository.get('alice', initial.id))?.view.selections).toEqual(selected.selections)
+})
