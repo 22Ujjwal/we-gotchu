@@ -334,3 +334,20 @@ test('interruption at the retry limit cannot grant another provider read', async
   await finish(eventId)
   expect(session.poll).toHaveBeenCalledTimes(3)
 })
+
+test('interrupted discovery does not duplicate visible progress after restart', async () => {
+  const started = await createEvent(deps, researchBriefFixture)
+  const checkpoints = store.researchCheckpoints!
+  const save = checkpoints.save.bind(checkpoints)
+  vi.spyOn(checkpoints, 'save').mockImplementation(async (run, version, checkpoint, message) => {
+    if (checkpoint.evidence) throw new Error('interrupted before evidence commit')
+    return save(run, version, checkpoint, message)
+  })
+  await getEventView(deps, started.event.eventId)
+  await restart()
+  const completed = await finish(started.event.eventId)
+  const messages = completed.progress.map(entry => entry.message)
+  expect(messages).toEqual([...new Set(messages)])
+  expect(discover).toHaveBeenCalledTimes(2)
+  expect(session.start).toHaveBeenCalledTimes(1)
+})
