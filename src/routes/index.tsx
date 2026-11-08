@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button, Header } from '#/components/hostwell/ui'
 import type { Brief } from '#/lib/hostwell/fixture'
@@ -116,42 +116,23 @@ function Blank({
   autoFocus?: boolean
   onChange: (v: string) => void
 }) {
-  // A contentEditable span (not an <input>) so long answers wrap inside the
-  // sentence like the design. It's uncontrolled: we seed the text once and
-  // report edits upward.
-  const ref = useRef<HTMLSpanElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.textContent = value
-    if (autoFocus) {
-      el.focus()
-      const range = document.createRange()
-      range.selectNodeContents(el)
-      range.collapse(false)
-      getSelection()?.removeAllRanges()
-      getSelection()?.addRange(range)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   return (
-    <span
-      ref={ref}
-      role="textbox"
+    <input
+      type="text"
       aria-label={label}
-      tabIndex={0}
-      contentEditable="plaintext-only"
-      suppressContentEditableWarning
-      data-placeholder={placeholder}
-      onInput={(e) => onChange(e.currentTarget.textContent ?? '')}
+      value={value}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      autoComplete="off"
+      onChange={(e) => onChange(e.currentTarget.value)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
-          e.currentTarget.closest('form')?.requestSubmit()
+          e.currentTarget.form?.requestSubmit()
         }
       }}
-      className={`blank mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
+      style={{ width: `${Math.max((value || placeholder || '').length, 3)}ch` }}
+      className={`blank mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
     />
   )
 }
