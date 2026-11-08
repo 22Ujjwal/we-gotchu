@@ -204,7 +204,9 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'correcting': {
-            await save({ stage: 'uncertain', pendingOperation: pendingOperation('correction'), correctionsUsed: 1 })
+            // Dispatch can resume execution before its response or checkpoint acknowledgement arrives.
+            await save({ stage: 'uncertain', pendingOperation: pendingOperation('correction'),
+              sessionStopped: false, correctionsUsed: 1 })
             const accepted = await bounded(() => session.correct(c!.naiveSessionId!, c!.input.runId, signal))
             await save({ correctionAfter: Math.max(accepted, c.lastSequence), stage: 'ranking', pendingOperation: null,
               sessionStopped: false }, 'Checking the recommendation format once more.')
