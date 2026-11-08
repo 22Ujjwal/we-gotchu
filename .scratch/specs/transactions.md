@@ -81,7 +81,7 @@ Full crash recovery, unrestricted provider coverage, and separate refund or supp
 
 This spec synthesizes the existing product and transaction contracts and the approved local fixes. It is published through the repository's local specification tracker; ready-for-agent is its triage label, not evidence of deployment or team approval.
 
-As of baseline `6001bd202beb42792bf62743dac10e593f9cfee8`, the earlier transaction follow-up and PRs #48/#49 are merged. Atomic expiration repair and refund-update reconciliation are on `fix/refund-expiry-integration`; consult the owner's status for current verification and deployment evidence.
+The earlier transaction follow-up and PRs #48/#49 are merged. Atomic expiration repair and refund-update reconciliation merged in PR #50 and deployed at `86be4d5fedee457c74cc60febca3c62c7332a0a8`; consult the owner's status for verification and deployment evidence.
 
 The latest recorded hosted research run failed; do not describe it as an acceptable partial result. Tony's research correction remains separate. A Stripe sandbox payment and full refund have now been verified with explicitly simulated supplier actions; this is backend/service and hosted webhook evidence, not a full signed-in customer UI rehearsal. Real execution/cancellation session starters remain unwired; selecting naive execution currently chooses placeholder hooks, while the scripted fallback is implemented. Naive-to-MCP ping remains blocked by the local key's missing vault-write permission. These are remaining integration tasks, not capabilities established by this spec.
 
