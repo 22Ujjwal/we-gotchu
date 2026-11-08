@@ -9,14 +9,15 @@ Scope: research-only agent workflow
 ## Problem statement
 
 A customer planning an event must find venues and supplies that fit their requirements and budget.
-Search listings often omit prices, availability, delivery costs, or cancellation terms.
+Search listings alone often omit prices, availability, delivery costs, or cancellation terms that may be available on supplier detail pages or through existing tools.
+The workflow must investigate those sources before treating missing details as unavailable.
 A plausible recommendation can therefore mislead the customer into believing an option meets constraints that have never been checked.
 The team also needs a consistent research result that the frontend can display without interpreting model prose as supplier evidence.
 
 ## Solution
 
 Accept the customer's event brief and return source-backed venue and supply candidates with an explained recommendation.
-Identify missing requirements before searching and distinguish known facts, estimates, and unknown details in the result.
+Identify missing requirements before searching, investigate promising suppliers beyond search listings, and distinguish known facts, estimates, and remaining unknown details in the result.
 Show progress while research runs and return useful partial results when some sources fail.
 This workflow helps the customer compare options; it does not commit to suppliers or create a bookable event plan from incomplete evidence.
 
@@ -39,12 +40,28 @@ This workflow helps the customer compare options; it does not commit to supplier
 15. As a customer, I want to understand why an option ranks well and which constraints remain unchecked, so that I can compare tradeoffs.
 16. As a customer, I want clear progress and an actionable explanation when research fails, so that I know what happens next.
 17. As a customer, I want partial results labeled with their gaps, so that I can use available evidence without mistaking it for complete research.
-18. As a customer, I want simulated recommendations visibly labeled, so that I can distinguish demonstration data from real retrieval.
+18. As a customer, I want recommendations based on actual supplier information, with estimates and unconfirmed details clearly identified, so that I understand what is ready to act on.
 19. As a customer, I want research to avoid contacting suppliers or spending money on bookings, so that researching my brief does not create commitments.
 20. As a frontend developer, I want one versioned result contract, so that I can display candidates and errors consistently.
 21. As an integration developer, I want durable run identity and ordered progress, so that resuming a consumer does not duplicate updates.
 22. As an agent-workflow developer, I want invalid model conclusions rejected, so that valid JSON alone cannot bypass evidence requirements.
 23. As a reviewer, I want recorded checks and provider evidence separated from untested capabilities, so that I can assess readiness honestly.
+
+## Delivery priority
+
+The user-story numbers identify requirements; they are not implementation priority.
+Deliver one complete useful research flow before expanding provider coverage or recovery scenarios.
+
+1. Establish the minimum shared input and result contract with Ujjwal, then run one complete real brief through venue and supply discovery using existing tools.
+2. Investigate promising supplier detail pages for prices, capacity, quantities, delivery, and cancellation terms using suitable APIs, extractors, or browser tools.
+3. Normalize the evidence and return a ranked recommendation with sources, quantity calculations, explicit remaining unknowns, and defensible budget conclusions.
+4. Integrate the result and basic progress with the frontend through the shared application contract.
+5. Broaden provider coverage and harden replay, disconnect, crash recovery, and uncommon failure cases.
+
+Source provenance, essential input validation, credential protection, bounded execution, and rejection of unsupported claims are required in the first working flow.
+Basic tool-failure and malformed-output handling are also part of that flow; the later recovery work extends them.
+The first slice can use one supported location, venue source, and product source, while still responding to the actual brief.
+Full supplier execution remains a later feature.
 
 ## Implementation decisions
 
@@ -56,12 +73,26 @@ This workflow helps the customer compare options; it does not commit to supplier
 - Missing essential requirements return an awaiting-input outcome with specific missing fields before paid searches begin.
 - The result carries contract version, event and brief identity, candidates, ranking reasons, missing information, warnings, and research outcome.
 - Each candidate carries its kind, supplier identity when known, source references, observation time, evidence mode, price provenance, quantity information, and explicit verification status for relevant requirements.
-- Separate retrieval mode from recommendation mode because a synthetic event can use live search results.
+- Make real supplier research the normal customer and judge-demo path.
+- A sample event researched against real sources is a live research demonstration and does not require a fake-data label.
+- Keep synthetic fixtures in tests and record retrieval provenance internally.
+- If a fallback actually uses simulated results, identify that affected step clearly rather than presenting it as real retrieval or completed supplier work.
 - Distinguish a research result from an Event plan and from Booking confirmation or Action approval as defined in the glossary.
 - Use hosted Naive pi for recommendation generation, subject to verified account capabilities.
 - Keep the tested model configurable; the low-cost model used in research is not approved as a quality benchmark.
-- Begin with backend-controlled Monid place and product search endpoints that were inspected and tested, then pass bounded normalized evidence to Naive.
-- This selects the tested REST access path for the first implementation rather than depending on unverified hosted MCP connectivity.
+- Prefer working existing tools, sponsor services, SDKs, and integrations over building equivalent capabilities from scratch.
+- Integration quality and successful customer outcomes take priority over minimizing provider usage or consuming every sponsor offering.
+- Team sponsor credits are available; budget scarcity is not a reason to choose an inadequate tool or model, while execution remains bounded and observable.
+- Use the tested Monid place and product endpoints as initial candidates, not an exclusive provider decision.
+- Before implementing a scraper or other custom provider capability, inspect existing options and record why the selected tool fits or why existing options are insufficient.
+- Evaluate Apify for supplier detail extraction, including its Website Content Crawler and relevant supplier-specific Actors, alongside suitable direct APIs and existing browser tools.
+- Consider other sponsor tools when they fill a concrete gap; do not require an integration that adds no useful capability to the flow.
+- Verify each selected tool on representative supplier pages and record returned fields, missing fields, authentication needs, latency, and observed failure behavior.
+- Prefer the tested REST path when it meets the need; adopt direct MCP only after its authentication and end-to-end behavior are verified.
+- Keep provider selection behind the research adapter boundary so a better-supported tool can replace it without changing customer-facing contracts.
+- Follow discovery with targeted supplier-page investigation rather than returning search snippets as a completed recommendation.
+- Capture which source checks were attempted and why remaining fields are unknown, such as absent content, access failure, or information requiring supplier contact.
+- A generic opening-hours field or price bracket does not establish date-specific availability or a final event quote.
 - Use an explicit endpoint allowlist and bounded result pages; a generic tool-execution capability must not grant access to arbitrary mutations.
 - Source content is untrusted data and cannot alter tool permissions, request credentials, or authorize additional actions.
 - Keep provider credentials server-side and outside prompts, status files, and customer-visible output.
@@ -107,12 +138,15 @@ Acceptance checks include the following:
 10. A failed source produces an explicit partial or failed outcome rather than fabricated candidates.
 11. Replayed progress does not duplicate customer-visible updates, and an idle error is not successful completion.
 12. A stale brief revision cannot overwrite newer results.
-13. Simulated and live evidence remain distinguishable through the output contract.
+13. A sample event can use real retrieval without being mislabeled as fake; truly simulated fallback evidence remains distinguishable and cannot be presented as live supplier evidence.
 14. Untrusted source instructions cannot trigger supplier outreach, purchases, or credential disclosure.
 15. Cancellation stops scheduling new research calls and reports any in-flight outcome without claiming that a supplier transaction was canceled.
+16. When a discovery result lacks terms or prices but the supplier detail source provides them, the workflow investigates that source and preserves the retrieved evidence.
+17. If detail retrieval fails or the source omits a needed field, the result records the gap without inventing a value.
+18. The selected discovery and detail-extraction tools work together on a representative live brief before the integration is called verified.
 
 Keep a small opt-in live smoke test separate from deterministic CI.
-It should exercise bounded Naive output and Monid retrieval, validate result shape and provenance, and clean up evaluation resources.
+It should exercise bounded Naive output and the selected discovery and detail-extraction integrations, validate result shape and provenance, and clean up evaluation resources.
 It must not assert exact search rankings, venue availability, or prices as stable fixtures.
 Real approval resumption, forced-disconnect recovery, and crash recovery need separate evidence before those capabilities are claimed.
 
@@ -128,6 +162,10 @@ Creating implementation tickets and application code is a subsequent step.
 The [readiness report](https://github.com/22Ujjwal/we-gotchu/blob/285abe6736b1062396dfeded5ca8f620680a8f53/docs/research/agent-research-readiness.md) records the authenticated experiments and primary sources.
 Naive search and progress worked, but valid structured output required correction and the resulting recommendation still contained an unsupported budget claim.
 Monid place and product retrieval worked separately; hosted Naive-to-Monid MCP was not tested.
+Apify's [Website Content Crawler](https://apify.com/apify/website-content-crawler) documents extracting website content, including JavaScript-rendered pages.
+Its [Google Maps Scraper](https://apify.com/compass/crawler-google-places) documents business details, supplier website links, and selected pricing fields.
+Those documented capabilities justify evaluation, not a claim that exact event availability, checkout costs, or supplier cancellation terms have already been verified.
+Supplier-specific Apify extraction has not yet been tested for this project.
 
 Implementation must settle the precise shared schemas with Ujjwal and Leo, freshness thresholds by evidence type, default research budgets and timeouts, and the model used for quality evaluation.
 These are bounded implementation choices, not claims that the existing foundation already implements them.
