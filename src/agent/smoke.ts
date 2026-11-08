@@ -43,7 +43,7 @@ console.log(JSON.stringify({ outcome: result?.outcome, candidates: result?.candi
   kinds: result?.candidates.map(c => c.kind), recommendations: result?.recommendations.length,
   budgetFit: result?.budgetFit, sourceChecks: result?.sourceChecks, warnings: result?.warnings }))
 const detailedKinds = new Set(result?.candidates.filter(c => c.sources.some(s => s.stage === 'detail')).map(c => c.kind))
-const listingEvidence = result?.candidates.some(c => c.kind === 'supply' && c.priceProvenance === 'supplier_listing' && c.priceEstimate !== null)
+const listingEvidence = result?.candidates.some(c => c.kind === 'supply' && c.priceProvenance === 'supplier_listing' && c.verification.listingPrice?.status === 'known' && !!c.verification.listingPrice.sourceUrl)
 if (cleanup.length || !detailedKinds.has('venue') || !detailedKinds.has('supply') || !listingEvidence ||
     result?.budgetFit !== 'unknown' || result.candidates.some(c => c.cancellationTerms.known || c.verification.availability?.status !== 'unknown') || !result?.candidates.some(c => c.kind === 'venue') || !result.candidates.some(c => c.kind === 'supply') || !result.recommendations.length) {
   process.exitCode = 1

@@ -52,7 +52,8 @@ test('a brief gains sourced listing price and pack evidence before ranking, with
   const ctx = setup()
   const result = await ctx.run()
   const supply = result.candidates.find(c => c.kind === 'supply')!
-  expect(supply.priceEstimate).toBe(1102)
+  expect(supply.priceEstimate).toBeNull()
+  expect(supply.verification.listingPrice.note).toContain('1102 minor units')
   expect(supply.priceProvenance).toBe('supplier_listing')
   expect(supply.verification.packSize.note).toContain('Includes 20 plates')
   expect(supply.verification.packSize.sourceUrl).toContain('api.trychannel3.com/v1/products/plates')
@@ -89,6 +90,7 @@ test.each([
 ])('mismatched product, offer or currency cannot supply a listing price', async detail => {
   const result = await setup({ product: detail }).run()
   expect(result.candidates.find(c => c.kind === 'supply')!.priceEstimate).toBeNull()
+  expect(result.candidates.find(c => c.kind === 'supply')!.verification.listingPrice?.status).not.toBe('known')
   expect(result.budgetFit).toBe('unknown')
 })
 
@@ -129,7 +131,7 @@ test('a detail deadline preserves partial evidence and allows other candidates t
   const ctx = setup({ stallPage: true, detailOptions: { timeoutMs: 10 } })
   const result = await ctx.run()
   expect(result.sourceChecks.some(c => c.candidateId === 'venue:hall' && c.outcome === 'failed')).toBe(true)
-  expect(result.candidates.find(c => c.kind === 'supply')?.priceEstimate).toBe(1102)
+  expect(result.candidates.find(c => c.kind === 'supply')?.verification.listingPrice.status).toBe('known')
   expect(result.recommendations).toHaveLength(2)
   expect(ctx.calls).toHaveLength(4)
   expect(JSON.stringify(result)).not.toContain('secret timeout')

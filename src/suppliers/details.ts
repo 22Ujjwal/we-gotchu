@@ -92,10 +92,9 @@ function productEvidence(candidate: Candidate, output: unknown, currency: string
       ['usd', 'cad', 'aud', 'gbp', 'eur', 'sek', 'czk', 'ron', 'chf'].includes(currency.toLowerCase())) {
     const minor = Math.round(offer.price.price * 100)
     if (Number.isSafeInteger(minor) && Math.abs(offer.price.price * 100 - minor) < 0.000001) {
-      candidate.priceEstimate = minor
       candidate.priceProvenance = 'supplier_listing'
       candidate.verification.listingPrice = { status: 'known', sourceUrl,
-        note: `Retailer ${offer.domain} lists ${offer.price.price} ${offer.price.currency} for one offered product. Not a delivered total or quote.` }
+        note: `Retailer ${offer.domain} lists ${offer.price.price} ${offer.price.currency} for one offered product, ${minor} minor units. Not a delivered total or quote.` }
     }
   }
   if (offer?.availability) candidate.verification.listingStock = { status: 'known', sourceUrl,
