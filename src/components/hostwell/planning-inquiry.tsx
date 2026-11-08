@@ -77,7 +77,9 @@ export function PlanningInquiryEditor({ inquiry, version, disabled, canSend = fa
       <Button type="submit" className="self-start px-5 py-3" disabled={locked || conflict || !dirty || !draft.subject.trim() || !draft.text.trim()}>Save inquiry draft</Button>
       {saved && !inquiry.delivery && <p role="status">Draft saved. Nothing has been sent.</p>}
     </form>
-    {inquiry.delivery && <p role="status">{inquiry.delivery.status === 'pending' ? 'Submitting your approved inquiry.'
+    {inquiry.delivery && <p role="status">{inquiry.delivery.mode === 'simulated' ? 'Controlled test inquiry. No real email was sent.'
+      : inquiry.replies?.length ? 'A venue reply is saved below. Read its details before making a commitment.'
+      : inquiry.delivery.status === 'pending' ? 'Submitting your approved inquiry.'
       : inquiry.delivery.status === 'accepted' ? 'Email provider accepted your inquiry. Delivery and a venue reply are not confirmed yet.'
         : inquiry.delivery.status === 'failed' ? 'The inquiry was rejected by the email provider. Nothing was confirmed sent.'
           : 'We could not confirm whether this inquiry was sent. We will not send it again automatically. Please contact the planning team to check.'}</p>}

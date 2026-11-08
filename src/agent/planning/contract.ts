@@ -24,7 +24,7 @@ export const inquiryFieldsSchema = z.object({
   text: text.max(60000),
 })
 export const inquiryDeliverySchema = z.object({
-  status: z.enum(['pending', 'accepted', 'failed', 'uncertain']), requestId: text,
+  status: z.enum(['pending', 'accepted', 'failed', 'uncertain']), mode: z.enum(['live', 'simulated']).optional(), requestId: text,
   draftRevision: z.number().int().positive(), approvedAt: z.iso.datetime(), expiresAt: z.number().int(),
   messageId: text.optional(), threadId: text.nullable().optional(), acceptedAt: z.iso.datetime().optional(),
   operationId: text.optional(), error: text.optional(),

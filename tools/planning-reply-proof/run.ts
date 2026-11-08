@@ -47,7 +47,7 @@ try {
         id: `inquiry_${randomUUID()}`, revision: 1, status: 'draft', venue, recipient: 'venue@example.com',
         subject: 'Controlled test only', text: 'Please confirm availability, all-in room price and cancellation for 12 adults on December 12, 2026, noon to 3pm America/Los_Angeles.',
         contactSourceUrl: null, contextMessageIds: [`${id}:brief`], updatedAt: createdAt,
-        delivery: { status: 'accepted', requestId: `${id}:fixture-send`, draftRevision: 1, approvedAt: createdAt,
+        delivery: { status: 'accepted', mode: 'simulated', requestId: `${id}:fixture-send`, draftRevision: 1, approvedAt: createdAt,
           expiresAt: 0, messageId: `${id}:sent`, threadId: `${id}:thread`, acceptedAt: createdAt },
       },
     },
