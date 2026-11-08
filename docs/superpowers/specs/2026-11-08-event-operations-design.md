@@ -34,4 +34,4 @@ Support weekly and monthly-by-day-of-month schedules with local HH:mm time, IANA
 
 ## Runnable result and handoff
 
-A no-network Bun script demonstrates unavailable venue recovery, a prepared fixed-time invite, and upcoming repeated-event briefs using labeled fixtures. A separate integration document tells Tony which exports to call, storage/claim needs, owner checks, revision checks and provider prerequisites. Luma Plus/API access and Partiful automation remain unverified. Publish a draft PR for isolated modules; do not deploy or merge new shared wiring during Tony's freeze.
+A no-network Bun script demonstrates unavailable venue recovery, a prepared fixed-time invite, and upcoming repeated-event briefs using labeled fixtures. A separate integration document tells Tony which exports to call, storage/claim needs, owner checks, revision checks and provider prerequisites. Luma Plus/API access and Partiful automation remain unverified. User update: execute milestones sequentially with tested conventional commits; keep them local until explicit push permission. Do not deploy or merge new shared wiring during Tony's freeze.

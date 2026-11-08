@@ -9,7 +9,7 @@
 
 ## Global Constraints
 
-Preserve all frozen files and ownership boundaries in the spec. No real external writes. New files only under src/server/operations, scripts and docs. Small commits, no coauthor attribution.
+Preserve all frozen files and ownership boundaries in the spec. No real external writes. New files only under src/server/operations, scripts and docs. Small tested conventional commits, no coauthor attribution. User update: implement and test one milestone at a time; no remote push without fresh user permission. Order: recovery, invitations, recurrence, demonstration/handoff.
 
 ## Review Focus
 
@@ -46,4 +46,4 @@ Files: scripts/event-operations-demo.ts, docs/team/event-operations-integration.
 - [ ] Run scenario and verify recovery scope, invitation state, and occurrence times by hand.
 - [ ] Review module boundaries and perform independent whole-branch review.
 - [ ] Run full application/coordination tests, typecheck, build, diff/frozen-file checks; record exact evidence.
-- [ ] Push small commits and draft PR; document pending storage, scheduled dispatch, UI, provider access and Tony's handback.
+- [ ] Keep commits local; document pending storage, scheduled dispatch, UI, provider access and Tony's handback. Request permission before any remote push.
