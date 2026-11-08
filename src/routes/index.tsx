@@ -51,6 +51,13 @@ function ConnectedBriefPage() {
   const navigate = useNavigate()
   const [locked, setLocked] = useState(false)
   const submitting = useRef(false)
+  useEffect(() => {
+    if (isLoaded && !user) window.location.replace('/sign-in?redirect_url=%2F')
+  }, [isLoaded, user])
+  if (!isLoaded || !user) return <div className="flex min-h-screen flex-col">
+    <Header step="brief" />
+    <p role="status" className="m-auto">{isLoaded ? 'Opening sign-in...' : 'Loading...'}</p>
+  </div>
   return (
     <BriefFlow
       disabled={!isLoaded || locked}
