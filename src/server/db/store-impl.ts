@@ -1,3 +1,5 @@
+import { isCurrentPlanningOffer } from '../planning/offer'
+import { ApiError } from '../events/errors'
 import { createResearchCheckpointStore } from './research-checkpoints'
 import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
@@ -16,7 +18,7 @@ import {
   type EventStatus,
 } from '../../contracts'
 import { ApprovalCanceledError, OpenApprovalExistsError, type Store } from '../store'
-import { approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
+import { planningConversations, approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
 
 // Store implementation over Drizzle. Works with any Postgres driver Drizzle
 // supports (Neon serverless Pool in production, PGlite in tests).
@@ -486,6 +488,12 @@ export function createStore(db: Db): Store {
 
     getPlan,
 
+    async validatePlanOffer(plan, now) {
+      if (!plan.planningOffer) return true
+      const [row] = await db.select().from(planningConversations).where(eq(planningConversations.id, plan.planningOffer.conversationId))
+      return isCurrentPlanningOffer(row?.data ?? null, plan, now)
+    },
+
     async findOpenApproval(eventId, planRevision, now) {
       const [row] = await db
         .select({ approval: approvals, payment: payments })
@@ -511,7 +519,7 @@ export function createStore(db: Db): Store {
         // Lock the event so a concurrent updateBrief cannot drop the plan
         // between this check and the insert (updateBrief locks the same row).
         const locked = await tx
-          .select({ cancelRequestedAt: events.cancelRequestedAt })
+          .select({ cancelRequestedAt: events.cancelRequestedAt, plan: plans.data })
           .from(events)
           .innerJoin(plans, eq(plans.eventId, events.id))
           .where(
@@ -525,6 +533,14 @@ export function createStore(db: Db): Store {
           .for('update', { of: events })
         if (locked.length === 0) throw new Error(`createApproval: plan ${approval.planId} revision ${approval.planRevision} is not current`)
         if (locked[0].cancelRequestedAt !== null) throw new ApprovalCanceledError()
+        const currentPlan = locked[0].plan
+        if (currentPlan.planningOffer) {
+          const [conversation] = await tx.select().from(planningConversations)
+            .where(eq(planningConversations.id, currentPlan.planningOffer.conversationId)).for('update')
+          if (!isCurrentPlanningOffer(conversation?.data ?? null, currentPlan, new Date(approval.approvedAt))) {
+            throw new ApiError(409, 'stale_offer', 'The selected offer changed or expired. Review it again.')
+          }
+        }
         // Re-check under the event lock: a concurrent approve may have inserted first.
         const [open] = await tx
           .select({ id: approvals.id })
@@ -686,6 +702,12 @@ export function createStore(db: Db): Store {
         const [payment] = await tx.select().from(payments).where(eq(payments.approvalId, approval.id)).for('update')
         if (!payment || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
             payment.currency !== approval.currency || (input.mode === 'live' && payment.mode !== 'live')) return null
+        const [currentPlan] = await tx.select().from(plans).where(eq(plans.id, approval.planId))
+        if (currentPlan?.data.planningOffer) {
+          const [conversation] = await tx.select().from(planningConversations)
+            .where(eq(planningConversations.id, currentPlan.data.planningOffer.conversationId)).for('update')
+          if (!isCurrentPlanningOffer(conversation?.data ?? null, currentPlan.data, now)) return null
+        }
         return createStore(tx as unknown as Db).insertAttempt(input)
       })
     },

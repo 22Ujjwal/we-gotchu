@@ -223,6 +223,9 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
   if (!plan || plan.planId !== planId || plan.revision !== planRevision || event.planRevision !== planRevision) {
     throw new ApiError(409, 'stale_plan', 'The plan changed since you loaded it. Reload and review it again.')
   }
+  if (plan.planningOffer && !(await deps.store.validatePlanOffer?.(plan, deps.now()))) {
+    throw new ApiError(409, 'stale_offer', 'The selected offer changed or expired. Review it again.')
+  }
   const assessed = assessPlanForApproval(plan)
   if (!assessed.ok) throw new ApiError(422, assessed.errorCode, `The plan cannot be approved: ${assessed.reason}.`)
   if (event.status !== 'plan_ready' && event.status !== 'awaiting_payment') {

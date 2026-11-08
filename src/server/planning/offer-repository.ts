@@ -58,7 +58,7 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
           status: 'plan_ready', planRevision: 1, createdAt: now })
         await tx.insert(runs).values({ id: runId, eventId: link.eventId, phase: 'research', briefRevision: 1,
           idempotencyKey: `${link.eventId}:offer:${offer.id}:${offer.revision}`, state: 'succeeded', createdAt: now })
-        await tx.insert(plans).values({ id: link.planId, eventId: link.eventId, revision: 1, briefRevision: 1, runId, data: built.plan })
+        await tx.insert(plans).values({ id: link.planId, eventId: link.eventId, revision: 1, briefRevision: 1, runId, data: { ...built.plan, planningOffer: { conversationId, offerId, revision: offerRevision, expiresAt: offer.expiresAt } } })
         const data = { ...record, revision: row.revision + 1,
           view: { ...record.view, version: record.view.version + 1, paymentLink: link } }
         await tx.update(planningConversations).set({ revision: data.revision, data }).where(eq(planningConversations.id, conversationId))

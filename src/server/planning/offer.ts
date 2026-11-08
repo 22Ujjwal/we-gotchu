@@ -63,3 +63,22 @@ export function buildSelectedOfferPlan(input: Input): Result {
   })
   return plan.success ? { ok: true, plan: plan.data } : fail('The offer could not be converted to a transaction plan.')
 }
+
+// Approval and execution both recheck the saved offer against the immutable plan.
+export function isCurrentPlanningOffer(record: import('./repository').PlanningRecord | null, plan: Plan, now: Date): boolean {
+  const binding = plan.planningOffer
+  if (!binding) return true
+  if (!record || record.id !== binding.conversationId || record.pending) return false
+  const offer = record.view.offer
+  const inquiry = record.view.inquiry
+  const reply = inquiry?.replies?.at(-1)
+  const link = record.view.paymentLink
+  if (!offer || offer.id !== binding.offerId || offer.revision !== binding.revision || offer.expiresAt !== binding.expiresAt
+    || inquiry?.id !== offer.inquiryId || inquiry.status === 'stale' || reply?.id !== offer.replyId || reply.status !== 'ready'
+    || reply.message.mode !== offer.mode || link?.eventId !== plan.eventId || link.planId !== plan.planId) return false
+  const built = buildSelectedOfferPlan({ offer, selections: record.view.selections,
+    contextMessageIds: record.view.messages.filter(message => message.role === 'user').map(message => message.id),
+    eventId: plan.eventId, runId: plan.runId, briefRevision: plan.briefRevision, planId: plan.planId,
+    planRevision: plan.revision, now: now.getTime() })
+  return built.ok && isDeepStrictEqual(plan, { ...built.plan, planningOffer: binding })
+}
