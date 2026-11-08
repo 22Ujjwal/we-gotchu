@@ -3,9 +3,9 @@
 Owner: Ujjwal.
 Updated: 2026-11-07T19:48:47-08:00
 Baseline: main at `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`, including merged #28, #29, and #30.
-Branch and PR: [chore/hosted-mcp-setup](https://github.com/22Ujjwal/we-gotchu/tree/chore/hosted-mcp-setup); hosting handoff PR pending publication. Transaction fix [#28](https://github.com/22Ujjwal/we-gotchu/pull/28) is merged.
+Branch and PR: [chore/hosted-mcp-setup](https://github.com/22Ujjwal/we-gotchu/tree/chore/hosted-mcp-setup); hosting handoff [PR #33](https://github.com/22Ujjwal/we-gotchu/pull/33) is open. Transaction fix [#28](https://github.com/22Ujjwal/we-gotchu/pull/28) is merged.
 Availability: backend fixes merged; app and direct MCP ping deployed; shared account, database, and payment setup pending.
-Tested application commit: `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`. Hosting branch changes only build configuration, ignore rules, and this handoff.
+Tested application commit: `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`. Hosting branch changes only build configuration, ignore rules, and status documentation.
 
 ## Current result
 
