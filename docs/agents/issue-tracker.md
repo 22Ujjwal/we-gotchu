@@ -68,3 +68,8 @@ Venue images remain independent work.
 - [01: Prepare an inquiry for the selected venue](../../.scratch/venue-inquiries/issues/01-prepare-selected-venue-inquiry.md).
 - [02: Send and track the approved inquiry](../../.scratch/venue-inquiries/issues/02-send-and-track-approved-inquiry.md).
 - [03: Turn a supplier reply into an updated offer](../../.scratch/venue-inquiries/issues/03-turn-supplier-reply-into-offer.md).
+
+## Deferred presentation work
+
+- [Live research paper slips](../../.scratch/specs/live-research-slips.md) preserves Tony's direction for adapting the receipt animation to actual company activity and findings.
+This is a deferred design note, not an active ticket or a blocker for venue inquiries.
