@@ -14,7 +14,7 @@ if (process.env.RESEARCH_LIVE_SMOKE !== '1') {
   console.log(JSON.stringify({ mode: 'dry-run', lead: { name: teamNames.lead, reuseId: connection.agentId }, members: [teamNames.venue, teamNames.supply], vaultId: connection.vaultId, model, startsSessions: false }))
   process.exit(0)
 }
-if (!process.env.NAIVE_API_KEY || !process.env.MONID_API_KEY) throw new Error('Configured keys are required')
+if (!process.env.NAIVE_API_KEY) throw new Error('NAIVE_API_KEY is required')
 let state: Setup
 try { state = JSON.parse(await readFile(path, 'utf8')) }
 catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; state = { members: {} } }
@@ -36,7 +36,6 @@ async function mutate<T>(name: string, action: () => Promise<T>, accept: (value:
   }
 }
 try {
-  await client.vaults.get(connection.vaultId)
   for (const role of ['venue', 'supply'] as const) {
     if (!state.members[role]) {
       const definition = specialistDefinition(role, model)
@@ -44,12 +43,18 @@ try {
         agent => { state.members[role] = { id: agent.id, version: agent.current_version } })
     }
     const member = state.members[role]!
-    if (!member.credentialId) {
-      await mutate(`credential-${role}`, () => client.vaults.credentials.create(connection.vaultId, {
-        kind: 'static_bearer', key: `Arrange Monid ${role}`, value: process.env.MONID_API_KEY!,
-        mcp_server_url: 'https://mcp.monid.ai/v1', agent_id: member.id,
-      }), credential => { member.credentialId = credential.id })
-    }
+    // Preserve the existing Monid credential for a later supported integration.
+    const desired = specialistDefinition(role, model)
+    const current = await client.agents.get(member.id)
+    if (current.system !== desired.system || !isDeepStrictEqual(current.tools, desired.tools)
+      || !isDeepStrictEqual(current.mcp_servers, desired.mcp_servers)) {
+      await mutate(`configure-${role}`, () => client.agents.update(member.id, { ...desired, expected_version: current.current_version }),
+        agent => { member.version = agent.current_version })
+    } else member.version = current.current_version
+    const verified = await client.agents.get(member.id)
+    if (verified.system !== desired.system || !isDeepStrictEqual(verified.tools, desired.tools)
+      || !isDeepStrictEqual(verified.mcp_servers, desired.mcp_servers)) throw new Error(`Research configuration mismatch: ${role}`)
+    await save()
     console.log(JSON.stringify({ role, agentId: member.id, version: member.version, credentialConfigured: !!member.credentialId }))
   }
   const members = [state.members.venue!, state.members.supply!].map(({ id, version }) => ({ id, version }))
