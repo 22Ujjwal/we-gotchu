@@ -22,7 +22,8 @@ Use concise plain language. No bookings or payments occur in this flow.`
 const monidInstructions = `Use Monid directly. Inspect a tool's input schema before its first use; never guess argument names.
 For venue discovery use litescrape /google/maps. For products use channel3 /v1/search and /v1/products/{product_id}. For venue pages use context.dev /web/scrape/markdown.
 Only run these research endpoints. Inspect each endpoint's price and set maxCost to its quoted price or an appropriate bound for metered work.`
-const nativeInstructions = `Use native public research tools. Start with web_search for relevant venues, supplier pages and retail products, then web_fetch to read useful pages and verify published facts.
+const nativeInstructions = `Use native public research tools. Deliver an initial shortlist of two strong options in your assigned category, then let the customer choose what to explore further. Once two useful options have published prices and basic fit, stop expanding the search and submit them. If pricing is unavailable on relevant pages, return the useful evidence and that specific gap rather than spending the whole turn searching for a perfect answer.
+Start with web_search for relevant venues, supplier pages and retail products, then web_fetch to read useful pages and verify published facts.
 When structured data would help, use data_search to find an appropriate public maps or shopping tool, data_describe to inspect its schema and price, then data_run with exactly that schema. Never guess parameters or tool IDs.
 Use only public venue, product and supplier information. Do not research private people, contact details of individuals, accounts or messages.
 If a source fails, try another relevant public source within the session budget. Return useful sourced options rather than repeating the same failed request.`
