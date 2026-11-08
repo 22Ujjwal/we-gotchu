@@ -104,3 +104,35 @@ describe('issueFinalRefund', () => {
     expect(stripe.refundCalls.at(-1)?.idempotencyKey).toBe(`${payment.paymentId}:refund`)
   })
 })
+
+describe('interrupted payment delivery', () => {
+  it('retries an execution handoff after marking the payment paid', async () => {
+    const { deps, session, confirmed } = await awaitingPayment()
+    const { payload, header } = signed('checkout.session.completed', session)
+    const original = deps.hooks.onPaymentConfirmed
+    let calls = 0
+    deps.hooks.onPaymentConfirmed = async args => {
+      if (++calls === 1) throw new Error('execution unavailable')
+      return original(args)
+    }
+    await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('execution unavailable')
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('paid')
+    expect(confirmed).toHaveLength(1)
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+  })
+
+  it('retries a failed refund after marking the payment paid', async () => {
+    const { deps, session, eventId, stripe } = await awaitingPayment()
+    await cancel(deps, eventId)
+    const { payload, header } = signed('checkout.session.completed', session)
+    const original = deps.stripe.refunds.create
+    let calls = 0
+    deps.stripe.refunds.create = async (...args) => {
+      if (++calls === 1) throw new Error('refund unavailable')
+      return original(...args)
+    }
+    await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('refund unavailable')
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('refunded_late_or_revoked')
+    expect(stripe.refundCalls).toHaveLength(1)
+  })
+})
