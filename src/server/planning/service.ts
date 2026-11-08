@@ -61,7 +61,7 @@ function changed(record: PlanningRecord, update: Partial<PlanningView>): Plannin
 // A failed or timed-out write may have reached the provider. Never retry it here.
 async function deliver(deps: PlanningDeps, record: PlanningRecord): Promise<PlanningView> {
   const pending = record.pending!
-  let after: PlanningRecord
+  let acknowledgement: { sessionId: string; sequence: number } | undefined
   try {
     const result = await bounded(async () => {
       const agent = deps.agent()
@@ -79,16 +79,23 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord): Promise<Plan
     if (typeof sessionId !== 'string' || !sessionId || !Number.isSafeInteger(result.sequence) || result.sequence < record.sequence) {
       throw new Error('Invalid provider acknowledgement.')
     }
-    after = {
-      ...record, sessionId, sequence: result.sequence, pending: null,
-      view: changed(record, { status: 'working', error: null, approvals: [] }),
-    }
+    acknowledgement = { sessionId, sequence: result.sequence }
   } catch {
-    after = { ...record, view: changed(record, { status: 'uncertain', progress: null, error: uncertainError }) }
+    // An uncertain provider write retains its original request for reconciliation.
   }
-  // Database failures are not provider failures and must not trigger another send.
-  const saved = await deps.repository.compareAndSet(record, after)
-  return saved?.view ?? (await owned(deps, record.customerId, record.id)).view
+  // Mail can update this record while the provider runs. Retry only local settlement.
+  let current = record
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (current.pending?.requestId !== pending.requestId || current.pending.kind !== pending.kind) return current.view
+    const after: PlanningRecord = acknowledgement
+      ? { ...current, sessionId: acknowledgement.sessionId, sequence: Math.max(current.sequence, acknowledgement.sequence), pending: null,
+          view: changed(current, { status: 'working', error: null, approvals: [] }) }
+      : { ...current, view: changed(current, { status: 'uncertain', progress: null, error: uncertainError }) }
+    const saved = await deps.repository.compareAndSet(current, after)
+    if (saved) return saved.view
+    current = await owned(deps, record.customerId, record.id)
+  }
+  return current.view
 }
 
 async function deliverInquiry(deps: PlanningDeps, reserved: PlanningRecord): Promise<PlanningView> {
