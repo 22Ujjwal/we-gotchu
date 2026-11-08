@@ -137,6 +137,22 @@ describe('updateBrief', () => {
     expect(canceled).toEqual([run!.naiveSessionId])
     await expectApiError(updateBrief(deps, event.eventId, 1, { headcount: 40 }), 409, 'stale_brief')
   })
+
+  it('refuses to revive a canceled event', async () => {
+    let started = 0
+    const research: ResearchPort = {
+      startResearch: async (i) => (started++, { naiveSessionId: `ses_${i.runId}` }),
+      advanceResearch: async () => ({ status: 'running' }),
+      cancelResearch: async () => {},
+    }
+    const { deps } = makeDeps({ research })
+    const { event } = await createEvent(deps, validBrief)
+    await cancel(deps, event.eventId)
+    await expectApiError(updateBrief(deps, event.eventId, 1, { headcount: 30 }), 409, 'invalid_status')
+    const after = await getEventView(deps, event.eventId)
+    expect(after.event).toMatchObject({ status: 'canceled', briefRevision: 1 })
+    expect(started).toBe(1)
+  })
 })
 
 describe('approve', () => {
@@ -174,6 +190,21 @@ describe('approve', () => {
     expect(second.checkoutUrl).toBe(first.checkoutUrl)
     expect(second.approval.approvalId).toBe(first.approval.approvalId)
     expect(stripe.createCalls).toHaveLength(1)
+  })
+
+  it('rejects approval and expires Checkout when cancellation wins during session creation', async () => {
+    const { deps, store, stripe, eventId, view } = await planReady()
+    const create = stripe.checkout.sessions.create
+    stripe.checkout.sessions.create = async (params, opts) => {
+      const session = await create(params, opts)
+      await cancel(deps, eventId)
+      return session
+    }
+    await expectApiError(approve(deps, eventId, view.plan!.planId, 1), 409, 'invalid_status')
+    expect(stripe.expired).toEqual(['cs_test_1'])
+    expect(store.approvals.size).toBe(0)
+    expect(store.payments.size).toBe(0)
+    expect((await getEventView(deps, eventId)).event.status).toBe('canceled')
   })
 })
 

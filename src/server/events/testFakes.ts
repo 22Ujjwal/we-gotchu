@@ -1,5 +1,5 @@
 import type { Approval, Attempt, Brief, Event, EventView, Payment, Plan, ProgressEntry, ResearchResult, Run } from '../../contracts'
-import type { Store } from '../store'
+import { ApprovalCanceledError, type Store } from '../store'
 import { createStripeAdapter, type CheckoutCreateParams, type CheckoutSessionLike, type RefundCreateParams, type StripeLike } from '../payments/stripe'
 import type { Deps, ResearchPort } from './deps'
 import { simulatedResearchPort } from './simulatedResearch'
@@ -85,6 +85,7 @@ export class MemoryStore implements Store {
   async updateBrief({ eventId, expectedBriefRevision, brief }: { eventId: string; expectedBriefRevision: number; brief: Brief }) {
     const event = this.events.get(eventId)
     if (!event) return { ok: false as const, reason: 'not_found' as const }
+    if (event.cancelRequestedAt) return { ok: false as const, reason: 'canceled' as const }
     if (event.briefRevision !== expectedBriefRevision) return { ok: false as const, reason: 'stale_brief' as const }
     const plan = this.plans.get(eventId)
     if (plan && [...this.approvals.values()].some((a) => a.eventId === eventId && a.planRevision === plan.revision)) {
@@ -193,6 +194,7 @@ export class MemoryStore implements Store {
     return { approval: a, payment }
   }
   async createApproval(approval: Approval, payment: Payment) {
+    if (this.events.get(approval.eventId)?.cancelRequestedAt) throw new ApprovalCanceledError()
     this.approvals.set(approval.approvalId, { ...approval })
     this.payments.set(payment.paymentId, { ...payment })
   }

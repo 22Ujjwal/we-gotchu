@@ -1,4 +1,4 @@
-import { OpenApprovalExistsError } from '../store'
+import { ApprovalCanceledError, OpenApprovalExistsError } from '../store'
 import { randomUUID } from 'node:crypto'
 import {
   assessPlanForApproval,
@@ -167,6 +167,7 @@ export async function updateBrief(
   const res = await deps.store.updateBrief({ eventId, expectedBriefRevision, brief })
   if (!res.ok) {
     if (res.reason === 'not_found') throw new ApiError(404, 'not_found', 'Event not found.')
+    if (res.reason === 'canceled') throw new ApiError(409, 'invalid_status', 'The event was canceled; create a new event instead.')
     if (res.reason === 'stale_brief') throw new ApiError(409, 'stale_brief', 'The brief changed since you loaded it. Reload and try again.')
     throw new ApiError(409, 'already_approved', 'The plan is already approved; cancel before changing the brief.')
   }
@@ -268,6 +269,9 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
     await deps.store.createApproval(approval, payment)
   } catch (err) {
     await deps.stripe.checkout.sessions.expire(session.id).catch(() => undefined)
+    if (err instanceof ApprovalCanceledError) {
+      throw new ApiError(409, 'invalid_status', 'Cancellation was requested while Checkout was being created.')
+    }
     if (err instanceof OpenApprovalExistsError) {
       // A concurrent approve won; hand back its Checkout instead of a second one.
       const winner = await deps.store.findOpenApproval(eventId, planRevision, now)

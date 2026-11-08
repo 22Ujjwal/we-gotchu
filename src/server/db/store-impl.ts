@@ -15,7 +15,7 @@ import {
   canTransitionAttempt,
   type EventStatus,
 } from '../../contracts'
-import { OpenApprovalExistsError, type Store } from '../store'
+import { ApprovalCanceledError, OpenApprovalExistsError, type Store } from '../store'
 import { approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
 
 // Store implementation over Drizzle. Works with any Postgres driver Drizzle
@@ -249,6 +249,7 @@ export function createStore(db: Db): Store {
               and(
                 eq(events.id, eventId),
                 eq(events.briefRevision, expectedBriefRevision),
+                isNull(events.cancelRequestedAt),
                 sql`not exists (select 1 from ${approvals} a join ${plans} p on p.id = a.plan_id
                     where a.event_id = ${events.id} and a.plan_revision = ${events.planRevision}
                       and a.revoked_at is null and p.dropped = false)`,
@@ -258,6 +259,7 @@ export function createStore(db: Db): Store {
           if (!e) {
             const current = first(await tx.select().from(events).where(eq(events.id, eventId)))
             if (!current) throw new Abort('not_found')
+            if (current.cancelRequestedAt) throw new Abort('canceled')
             if (current.briefRevision !== expectedBriefRevision) throw new Abort('stale_brief')
             throw new Abort('already_approved')
           }
@@ -299,7 +301,7 @@ export function createStore(db: Db): Store {
           return { ok: true as const, event: toEvent(e), run: toRun(r), previousRun }
         })
       } catch (err) {
-        if (err instanceof Abort) return { ok: false as const, reason: err.reason as 'not_found' | 'stale_brief' | 'already_approved' }
+        if (err instanceof Abort) return { ok: false as const, reason: err.reason as 'not_found' | 'canceled' | 'stale_brief' | 'already_approved' }
         throw err
       }
     },
@@ -509,7 +511,7 @@ export function createStore(db: Db): Store {
         // Lock the event so a concurrent updateBrief cannot drop the plan
         // between this check and the insert (updateBrief locks the same row).
         const locked = await tx
-          .select({ id: events.id })
+          .select({ cancelRequestedAt: events.cancelRequestedAt })
           .from(events)
           .innerJoin(plans, eq(plans.eventId, events.id))
           .where(
@@ -522,6 +524,7 @@ export function createStore(db: Db): Store {
           )
           .for('update', { of: events })
         if (locked.length === 0) throw new Error(`createApproval: plan ${approval.planId} revision ${approval.planRevision} is not current`)
+        if (locked[0].cancelRequestedAt !== null) throw new ApprovalCanceledError()
         // Re-check under the event lock: a concurrent approve may have inserted first.
         const [open] = await tx
           .select({ id: approvals.id })

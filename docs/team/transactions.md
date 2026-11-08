@@ -9,6 +9,7 @@ Hacking ends at 11:00 AM on November 8, 2026, so keep each deliverable minimal.
 Read the [contract draft](../contracts-draft.md), [payment research](../research-index.md), and [ownership rules](ownership.md).
 
 Start with the [foundation task](foundation.md) before the other developers integrate against shared schemas.
+The [transaction specification](../../.scratch/specs/transactions.md) records the approval, payment, cancellation, and integration behavior and its testing boundaries.
 
 ## Hackathon deliverables, in order
 
@@ -24,12 +25,12 @@ Follow the [demo plan](demo-plan.md) and contract 0.4; these come before everyth
 ## Deliverables
 
 Publish versioned Zod schemas and fixtures for the other developers to review.
-Create database records for event revisions, approvals, action attempts, evidence, customer payments, cancellations, supplier recoveries, and customer refunds.
+Persist events and revisions, research runs and results, plans, approvals, payments, attempts, evidence, and progress under contract 0.4. Cancellation and refund state live on the event, payment, and attempt records; separate supplier-recovery and refund records are deferred.
 Enforce a database uniqueness constraint on the action execution key so a duplicate purchase cannot be recorded.
 Implement API ownership checks, revision validation, stable idempotency, and webhook verification.
 There is no separate worker process or job queue; do not add one.
 
-Integrate Clerk (@clerk/tanstack-react-start) for customer authentication, currently on the unmerged local branch feat/clerk-auth.
+Use the Clerk (@clerk/tanstack-react-start) customer authentication merged in PR #17.
 Server code gets the customer id only through requireCustomerId() in src/server/auth.ts, which throws a 401-style error when signed out.
 Ownership checks depend on that function, not on Clerk directly.
 Keep keys in .env.local (gitignored) and document only the variable names VITE_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY.
@@ -42,8 +43,7 @@ Each guarded tool call names the eventId and actionId; the endpoint finds the st
 The endpoint runs the supplier adapter itself and never trusts the model's claim of success.
 Purchase tools are set to allow on the Naive side, so this endpoint is the only approval check.
 Naive's ask confirmation is not used for the hackathon; revisit it if real money is used.
-The official @modelcontextprotocol/sdk is the proposed way to speak the protocol; its compatibility with a TanStack route is unverified.
-If it does not fit in an hour, hand-write the three JSON-RPC methods `initialize`, `tools/list`, and `tools/call`, which is all Naive's own MCP endpoint serves; whether Naive's client accepts plain JSON responses is unverified until milestone 2.
+The implemented endpoint uses JSON-RPC methods `initialize`, `tools/list`, and `tools/call`, with plain JSON responses and notification handling. Whether Naive's client accepts this transport remains unverified until milestone 2.
 Exclude /api/mcp and /api/stripe/webhook from the Clerk sign-in requirement.
 Reconciling an unknown outcome is a plain guarded route or tool that the agent calls.
 Coordinate root configuration and migration changes so other owners do not edit them independently.
@@ -66,9 +66,12 @@ Coordinate with the agent owner on secure payment entry and exact supplier terms
 ## Acceptance
 
 Duplicate commands, webhooks, and repeated MCP tool calls cannot produce duplicate commitments.
-An MCP call with a missing or mismatched approvalId, actionId, or execution key is rejected.
+An MCP call with a missing or mismatched eventId or actionId is rejected; the backend finds the stored approval, validates it, and derives the execution key server-side.
 A stale or revoked approval prevents execution.
+A cancellation recorded before approval persistence rejects approve with 409, requests expiry of the unused Checkout session, and saves no approval or payment for that request.
+A brief update after cancellation was requested returns 409 `invalid_status` and does not restart research.
 A payment arriving after revocation does not trigger supplier purchases.
+Webhook redelivery after an interrupted refund or execution handoff resumes the owed work using stable identities; a saved paid state alone does not prove that handoff completed.
 Unknown outcomes trigger reconciliation rather than automatic retry.
 Partial success remains visible and cannot be rolled back without applicable approval.
 Refunds show provider state and available evidence rather than an assumed immediate completion.

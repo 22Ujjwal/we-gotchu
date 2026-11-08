@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { planReadyEvent, researchResultFixture, type Attempt, type Brief, type ResearchResult } from '../../contracts'
 import { OpenApprovalExistsError, type Store } from '../store'
+import { approve as approveCheckout, cancel } from '../events/service'
+import { makeDeps } from '../events/testFakes'
 import { createTestStore } from './client'
 
 const brief: Brief = planReadyEvent.event.brief
@@ -183,6 +185,13 @@ describe('updateBrief', () => {
     expect((await store.updateBrief({ eventId: event.eventId, expectedBriefRevision: 1, brief })).ok).toBe(true)
   })
 
+  it('refuses once cancellation was requested', async () => {
+    const { event } = await store.createEvent({ customerId: 'cust_1', brief })
+    await store.requestCancel(event.eventId, new Date())
+    expect(await store.updateBrief({ eventId: event.eventId, expectedBriefRevision: 1, brief })).toEqual({ ok: false, reason: 'canceled' })
+    expect(await store.getEvent(event.eventId)).toMatchObject({ briefRevision: 1, status: 'canceling' })
+  })
+
   it('savePlan refuses a plan for a stale brief revision', async () => {
     const { event, run } = await store.createEvent({ customerId: 'cust_1', brief })
     await store.updateBrief({ eventId: event.eventId, expectedBriefRevision: 1, brief })
@@ -285,6 +294,27 @@ describe('publishResearchResult', () => {
 })
 
 describe('approval and payment', () => {
+  it('expires the unused Checkout if cancellation wins during session creation', async () => {
+    const { deps, stripe, customer } = makeDeps({ store })
+    const { event, run } = await store.createEvent({ customerId: customer.id, brief })
+    const plan = planFor(event.eventId, run.runId, 1)
+    await store.savePlan(plan)
+    await store.setEventStatus(event.eventId, ['researching'], 'plan_ready')
+    const create = stripe.checkout.sessions.create
+    stripe.checkout.sessions.create = async (params, opts) => {
+      const session = await create(params, opts)
+      await cancel(deps, event.eventId)
+      return session
+    }
+
+    await expect(approveCheckout(deps, event.eventId, plan.planId, 1)).rejects.toMatchObject({ status: 409, errorCode: 'invalid_status' })
+    expect(stripe.expired).toEqual(['cs_test_1'])
+    const view = await store.getEventView(event.eventId)
+    expect(view?.event.status).toBe('canceled')
+    expect(view?.approval).toBeNull()
+    expect(view?.payment).toBeNull()
+  })
+
   it('refuses a second open approval for the same plan revision (concurrent approve)', async () => {
     const { event, run } = await store.createEvent({ customerId: 'cust_1', brief })
     const { plan } = await approve(event.eventId, run.runId)

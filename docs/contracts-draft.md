@@ -1,13 +1,13 @@
 # Shared contract draft
 
 Version: 0.4 draft (hackathon cut, aligned with the merged [agent research spec](../.scratch/specs/agent-research.md) and its [six tickets](../.scratch/agent-research/issues)).
-Status: proposed, requiring review by Tony and Leo before implementation.
+Status: contract 0.4 schemas and backend core are merged through PRs #16 and #20. Incompatible changes still require review by affected consumers; hosted integration remains unverified.
 The research spec and the [readiness report](research/agent-research-readiness.md) are merged and are the source for the research fields below.
 The report records a live Naive research experiment; supplier execution, booking, payment, and cancellation have not been run.
-The schemas are implemented in the foundation PR; this document is the prose reference and the code is the check.
+The schemas are implemented in the merged foundation PR; this document is the prose reference and the code is the check.
 The transaction owner maintains the shared schemas and fixtures in src/contracts.
 All consumers import the schemas from src/contracts rather than keeping separate copies.
-Ujjwal creates them as part of the [foundation task](team/foundation.md).
+Ujjwal maintains them following the [foundation task](team/foundation.md).
 See [ownership](team/ownership.md) for changes, [architecture](architecture-draft.md) for system boundaries, and the [demo plan](team/demo-plan.md) for build order.
 
 ## Why 0.3
@@ -95,9 +95,9 @@ All routes require a signed-in customer and check that the event belongs to them
 | Route | Input | Result |
 | --- | --- | --- |
 | POST /api/events | Brief | Event in `researching` with a research Run (idempotency key `eventId:research:briefRevision`); 422 with `missing` field names if an essential requirement is absent. |
-| PATCH /api/events/:id/brief | expectedBriefRevision, changed or newly supplied brief fields | New briefRevision with all earlier answers retained, the previous ResearchResult marked superseded, any unapproved Plan dropped, a running research session canceled, and a new research Run (key `eventId:research:newRevision`). 409 if expectedBriefRevision is stale. |
+| PATCH /api/events/:id/brief | expectedBriefRevision, changed or newly supplied brief fields | New briefRevision with all earlier answers retained, the previous ResearchResult marked superseded, any unapproved Plan dropped, a running research session canceled, and a new research Run (key `eventId:research:newRevision`). 409 if expectedBriefRevision is stale, or 409 `invalid_status` once cancellation was requested. |
 | GET /api/events/:id?afterSequence=N | None | Event, current Run, ResearchResult, Plan, approval, payment, attempts, and progress entries after N. |
-| POST /api/events/:id/approve | planId, planRevision | Approval and a Stripe Checkout URL; a repeat for the same revision returns the same URL while unexpired. 422 `budget_not_verified` if budgetFit is not `within` or an action's cancellation terms are unknown. |
+| POST /api/events/:id/approve | planId, planRevision | Approval and a Stripe Checkout URL; a repeat for the same revision returns the same URL while unexpired. 409 `invalid_status` if cancellation wins before approval persistence; the unused Checkout session is expired on a best-effort basis. 422 `budget_not_verified` if budgetFit is not `within` or an action's cancellation terms are unknown. |
 | POST /api/events/:id/cancel | None | Event in `canceling`; the backend cancels a running research session, revokes unstarted work, expires any open Checkout session, and starts the cancellation session when commitments exist. |
 
 Errors return HTTP 401, 403, 404, 409 for a stale plan revision, or 422 for invalid input, with `errorCode` and a readable `message`.
@@ -117,10 +117,14 @@ Both expire at the same instant, proposed as 31 minutes after creation so the St
 The approval stores exactly the plan revision, action ids, and total shown to the customer.
 The Checkout amount equals the approved total with a zero service fee.
 
-The `checkout.session.completed` webhook marks the Payment `paid` only if the session's amount, currency, approvalId metadata, and plan revision match, and the approval is not revoked.
-The backend then starts the execution session for that approval.
-If the approval was revoked first, the payment is refunded automatically with reason `late_or_revoked` and no supplier work starts.
+The approval transaction locks the event and checks the current plan revision and cancellation flag before storing approval and payment together.
+If cancellation was recorded first, approval fails with 409 `invalid_status`; the backend requests expiry of the unused Checkout session and saves neither record. Session expiry is best effort if Stripe is unavailable.
+
+The `checkout.session.completed` webhook records a verified Payment as `paid` when its session identity, amount, currency, approval metadata, plan revision, and provider payment state match, including when the approval has since been revoked.
+Only a current, unexpired, unrevoked approval on an eligible event can start new execution.
+If payment arrives after revocation or expiry with no supplier commitments, the backend requests a full refund with reason `late_or_revoked` and starts no supplier work. Existing commitments require cancellation settlement before the final refund.
 Because canceling expires any open Checkout session, this case should be rare.
+Webhook redelivery resumes an interrupted execution or refund handoff; a paid row alone is not evidence that the handoff finished. A durable completion receipt and stable execution and refund identities prevent a completed delivery from starting fresh work.
 The Checkout success URL only shows a waiting screen; it never marks payment.
 
 ## Research
