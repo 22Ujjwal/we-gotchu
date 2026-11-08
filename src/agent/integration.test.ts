@@ -158,6 +158,8 @@ test('uncertain session creation is not retried and retains evidence for reconci
   expect(completed.researchResult!.warnings.join(' ')).toContain('uncertain outcome')
   expect(JSON.stringify(completed)).not.toContain('private transport diagnostic')
   expect(session.start).toHaveBeenCalledTimes(1)
+  expect(completed.researchResult!.recommendations).toEqual([])
+  expect(completed.researchResult!.warnings.join(' ')).not.toContain('A research provider failed')
 })
 
 test('a revised brief rejects an in-flight provider result', async () => {
