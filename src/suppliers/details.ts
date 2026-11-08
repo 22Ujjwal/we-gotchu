@@ -165,7 +165,7 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
     const ordered = Array.from({ length: Math.max(venues.length, supplies.length) }, (_, i) => [venues[i], supplies[i]])
       .flat().filter((c): c is Candidate => !!c)
     for (const [index, candidate] of ordered.entries()) {
-      const source = candidate.sources.find(s => s.stage === 'discovery')!
+      const source = candidate.sources.find(s => s.stage === 'discovery') ?? candidate.sources[0]
       const tool = candidate.kind === 'supply' ? PRODUCT_TOOL : PAGE_TOOL
       const check = (url: string, outcome: 'ok' | 'failed' | 'absent', reason: string) => {
         result.sourceChecks.push({ candidateId: candidate.candidateId, tool, url, outcome,
@@ -180,7 +180,7 @@ export function createDetailEnricher(options: DetailOptions): NonNullable<Resear
       const trusted = candidate.kind === 'supply'
         ? source.tool === 'monid:channel3/v1/search' && productId && /^[a-zA-Z0-9_-]{1,200}$/.test(productId)
         : source.tool === 'monid:litescrape/google/maps' && original && !/(^|\.)(google\.com|maps\.google\.com)$/.test(original.hostname)
-      if (!original || !trusted) { check(source.url, 'absent', 'No supported supplier detail identity or public HTTPS source.'); continue }
+      if (!original || !trusted || source.stage !== 'discovery' || candidate.evidenceMode !== 'live') { check(source.url, 'absent', 'No supported supplier detail identity or public HTTPS source.'); continue }
       let target = candidate.kind === 'supply' ? new URL(`https://api.trychannel3.com/v1/products/${productId}`) : original
       for (let page = 0; page < (candidate.kind === 'supply' ? 1 : maxPages); page++) {
         if (signal.aborted) { check(target.href, 'absent', 'Detail not attempted because research stopped.'); break }

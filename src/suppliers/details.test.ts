@@ -2,7 +2,8 @@ import { expect, test, vi } from 'vitest'
 import { CONTRACT_VERSION, planReadyEvent, type Candidate, type ResearchInput } from '../contracts'
 import { researchEvent } from '../agent/research'
 import { createDiscovery } from './discovery'
-import { createDetailEnricher } from './details'
+import { createDetailEnricher, type DetailOptions } from './details'
+import type { ResearchOptions } from '../agent/research'
 
 const input = { contractVersion: CONTRACT_VERSION, eventId: 'evt', runId: 'run', briefRevision: 1, brief: planReadyEvent.event.brief }
 const offerUrl = 'https://buy.trychannel3.com/plates-merchant-offer?aid=discovery'
@@ -17,11 +18,14 @@ const page = {
   markdown: 'Capacity up to 50 seated guests.\nCancellation depends on your contract.\n[Packages](https://www.venue.example.com/packages)',
   cache_metadata: { age_ms: 0 },
 }
-function setup(options: { product?: unknown; page?: unknown; failPage?: boolean; extra?: boolean } = {}) {
+function setup(options: { product?: unknown; page?: unknown; failPage?: boolean; extra?: boolean; stallPage?: boolean; detailOptions?: Partial<DetailOptions>; researchOptions?: ResearchOptions } = {}) {
   const calls: any[] = []
   const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body))
     calls.push(body)
+    if (body.provider === 'context.dev' && options.stallPage) {
+      return new Promise<Response>((_, reject) => init!.signal!.addEventListener('abort', () => reject(new Error('secret timeout')), { once: true }))
+    }
     if (body.provider === 'context.dev' && options.failPage) throw new Error('Bearer secret private response')
     let output: unknown
     if (body.endpoint === '/google/maps') output = { local_results: [
@@ -40,8 +44,8 @@ function setup(options: { product?: unknown; page?: unknown; failPage?: boolean;
   const progress: string[] = []
   return { calls, recommend, progress, run: () => researchEvent(input, {
     discover: createDiscovery({ apiKey: 'secret', fetch: fetcher }),
-    enrich: createDetailEnricher({ apiKey: 'secret', fetch: fetcher }), recommend,
-  }, { onProgress: stage => progress.push(stage) }) }
+    enrich: createDetailEnricher({ apiKey: 'secret', fetch: fetcher, ...options.detailOptions }), recommend,
+  }, { onProgress: stage => progress.push(stage), ...options.researchOptions }) }
 }
 
 test('a brief gains sourced listing price and pack evidence before ranking, without becoming a quote', async () => {
@@ -117,4 +121,28 @@ test('conflicting pack statements stay conflicts and do not produce quantity cal
   expect(supply.verification.packSize.status).toBe('conflict')
   expect(supply.quantityInfo).toBeUndefined()
   expect(result.sourceChecks.find(c => c.candidateId === supply.candidateId)?.missingFields).toContain('packSize')
+})
+
+
+test('a detail deadline preserves partial evidence and allows other candidates to be investigated', async () => {
+  const ctx = setup({ stallPage: true, detailOptions: { timeoutMs: 10 } })
+  const result = await ctx.run()
+  expect(result.sourceChecks.some(c => c.candidateId === 'venue:hall' && c.outcome === 'failed')).toBe(true)
+  expect(result.candidates.find(c => c.kind === 'supply')?.priceEstimate).toBe(1102)
+  expect(result.recommendations).toHaveLength(2)
+  expect(ctx.calls).toHaveLength(4)
+  expect(JSON.stringify(result)).not.toContain('secret timeout')
+})
+
+test('cancellation during details prevents later product calls and model ranking', async () => {
+  const controller = new AbortController()
+  const ctx = setup({ stallPage: true, researchOptions: { signal: controller.signal } })
+  const pending = ctx.run()
+  await vi.waitFor(() => expect(ctx.calls.some(c => c.provider === 'context.dev')).toBe(true))
+  controller.abort()
+  const result = await pending
+  expect(result.outcome).toBe('canceled')
+  expect(result.candidates).toHaveLength(2)
+  expect(ctx.calls.some(c => c.endpoint === '/v1/products/{product_id}')).toBe(false)
+  expect(ctx.recommend).not.toHaveBeenCalled()
 })
