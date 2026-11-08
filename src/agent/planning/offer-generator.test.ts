@@ -36,3 +36,14 @@ test('rejects invented options and quotations rather than saving unsupported pay
   await expect(createOfferGenerator(client({ ...extracted, lines: [{ ...extracted.lines[0], optionId: 'invented' }] }), 'model')(record)).rejects.toThrow()
   await expect(createOfferGenerator(client({ ...extracted, lines: [{ ...extracted.lines[0], sourceQuotes: ['Everything is included.'] }] }), 'model')(record)).rejects.toThrow()
 })
+
+test.each([
+  { sourceQuotes: ['U'] },
+  { unitAmount: 25000 },
+  { deposit: { amount: 7500, treatment: 'included' } },
+  { tax: 1500 },
+])('rejects monetary claims absent from the quoted evidence: %j', async change => {
+  await expect(createOfferGenerator(client({ ...extracted,
+    lines: [{ ...extracted.lines[0], ...change }],
+  }), 'model')(record)).rejects.toThrow()
+})
