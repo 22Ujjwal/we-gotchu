@@ -81,3 +81,15 @@ test('rechecks a linked offer before approval and after a customer changes selec
   await expect(db.store.createApproval(approval, payment)).rejects.toMatchObject({ status: 409, errorCode: 'stale_offer' })
   expect(await db.store.getApproval('approval')).toBeNull()
 })
+
+test('prepares a saved offer through the planning command and replays it without another model call', async () => {
+  const { commandPlanning } = await import('./service')
+  let calls = 0
+  const deps = { repository: db.repository, offers: db.offers, requireCustomerId: async () => 'customer',
+    agent: () => { throw new Error('Research must not restart') }, generateOffer: async () => { calls++; return offer } }
+  const command = { kind: 'prepare_offer', requestId: 'prepare', expectedVersion: 0 }
+  const first = await commandPlanning(deps, 'conversation', command)
+  expect(first.offer).toEqual(offer)
+  expect(await commandPlanning(deps, 'conversation', command)).toEqual(first)
+  expect(calls).toBe(1)
+})
