@@ -1,15 +1,16 @@
 import type { AgentPatch } from '@usenaive-sdk/managed-agents'
-import { planningDefinition, planningSystem } from './definition'
+import { planningDefinition } from './definition'
 import { planningOutputSchema } from './provider'
 
 export const teamNames = { lead: 'Tom (Event lead)', venue: 'Maya (Venue researcher)', supply: 'Sam (Supplies researcher)' }
 export function specialistDefinition(role: 'venue' | 'supply', model: string): AgentPatch {
+  const research = planningDefinition(model, 'native')
   const task = role === 'venue'
     ? 'Research venues only. Find useful published rates, capacity and hire terms on supplier pages. Return venue options only. Do not search for supplies.'
     : 'Research supplies only. Compare appropriate products, actual pack contents and published prices. Return supply options only. Do not search for venues.'
   return {
-    ...planningDefinition(model), name: teamNames[role], multiagent: null, handoffs: false,
-    description: task, system: `${planningSystem}\nYour name is ${teamNames[role]}.\n${task}\nYour customer is the event lead who sent your brief. Return sourced options to that lead. Do not ask a customer to repeat information already included in the brief.`,
+    ...research, name: teamNames[role], multiagent: null, handoffs: false,
+    description: task, system: `${research.system}\nYour name is ${teamNames[role]}.\n${task}\nYour customer is the event lead who sent your brief. Return sourced options to that lead. Do not ask a customer to repeat information already included in the brief.`,
     output_schema: planningOutputSchema, structured_output_required: true,
   }
 }
