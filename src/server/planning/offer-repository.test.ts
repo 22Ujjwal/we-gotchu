@@ -93,3 +93,14 @@ test('prepares a saved offer through the planning command and replays it without
   expect(await commandPlanning(deps, 'conversation', command)).toEqual(first)
   expect(calls).toBe(1)
 })
+
+test('customer prepares one payment link through the existing planning command', async () => {
+  const { commandPlanning } = await import('./service')
+  const saved = await db.offers.save('customer', 'conversation', 0, offer)
+  const deps = { repository: db.repository, offers: db.offers, requireCustomerId: async () => 'customer', now: () => now.getTime(),
+    agent: () => { throw new Error('Research must not restart') } }
+  const command = { kind: 'prepare_payment', requestId: 'payment-link', expectedVersion: saved.view.version, offerId: 'offer', offerRevision: 1 }
+  const first = await commandPlanning(deps, 'conversation', command)
+  expect(first.paymentLink).toMatchObject({ offerId: 'offer', offerRevision: 1 })
+  expect(await commandPlanning(deps, 'conversation', command)).toEqual(first)
+})
