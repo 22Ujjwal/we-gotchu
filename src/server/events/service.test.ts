@@ -125,7 +125,7 @@ describe('updateBrief', () => {
     const research: ResearchPort = {
       startResearch: async (i) => ({ naiveSessionId: `ses_${i.runId}` }),
       advanceResearch: async () => ({ status: 'running' }),
-      cancelResearch: async (id) => void canceled.push(id),
+      cancelResearch: async (id) => void canceled.push(id.naiveSessionId!),
     }
     const { deps } = makeDeps({ research })
     const { event, run } = await createEvent(deps, validBrief)
@@ -193,7 +193,7 @@ describe('cancel', () => {
     const research: ResearchPort = {
       startResearch: async (i) => ({ naiveSessionId: `ses_${i.runId}` }),
       advanceResearch: async () => ({ status: 'running' }),
-      cancelResearch: async (id) => void canceled.push(id),
+      cancelResearch: async (id) => void canceled.push(id.naiveSessionId!),
     }
     const { deps } = makeDeps({ research })
     const { event, run } = await createEvent(deps, validBrief)

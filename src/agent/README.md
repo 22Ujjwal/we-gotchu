@@ -23,9 +23,10 @@ The existing Monid CLI was used to inspect the provider schemas before implement
 researchEvent is an asynchronous workflow that may take up to its configured timeout, currently 120 seconds by default.
 It is not a short HTTP request handler and must not be called directly inside an application polling request.
 It provides the agreed test boundary and standalone execution for ticket 01.
-The database-backed startResearch and advanceResearch interface remains integration work with Ujjwal under ticket 05.
-That integration must persist evidence as well as session identity, use the backend's lease and stale-revision rules, and coordinate correction retries.
-No database implementation or shared schema is changed here.
+The database-backed application integration is on PR #24, with bounded per-request stages and private checkpoints.
+See [application integration and verification](INTEGRATION.md) for configuration, cancellation, migration, dependencies, and remaining limits.
+It reuses validation with saved evidence and immediate callbacks; it does not run the standalone hosted polling loop inside an application request.
+Ujjwal's owner review remains pending, and the application path has controlled-provider tests rather than live deployment proof.
 
 createNaiveRanker exposes recommend, checkpoint, and dispose.
 Always call dispose in a finally block, and record any cleanup failures for reconciliation.
@@ -68,5 +69,6 @@ It does not establish that every requested supply category has adequate coverage
 Selected product listing prices are retained as sourced verification notes.
 The total priceEstimate and required quantities remain unknown until ticket03 calculates them.
 Venue excerpts remain unverified and cannot establish event-specific terms.
-The complete UI, database persistence, polling, and crash recovery have not been tested by this slice.
+The standalone slice does not prove the UI, application deployment, or crash recovery.
+PR #24 separately tests database persistence and bounded application polling with controlled providers.
 The GitHub ci check passed on PR #18; still record local verification on each PR.

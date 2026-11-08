@@ -1,3 +1,4 @@
+import type { ResearchCheckpointStore } from './research-checkpoint'
 import type {
   Approval,
   Attempt,
@@ -21,6 +22,8 @@ import type {
 export type Fail<R extends string> = { ok: false; reason: R }
 
 export interface Store {
+  researchCheckpoints?: ResearchCheckpointStore
+
   // Events and research runs
   /** Creates the event (briefRevision 1, status researching) and its research Run with key `eventId:research:1`. */
   createEvent(input: { customerId: string; brief: Brief }): Promise<{ event: Event; run: Run }>
@@ -38,7 +41,7 @@ export interface Store {
     brief: Brief
   }): Promise<{ ok: true; event: Event; run: Run; previousRun: Run | null } | Fail<'not_found' | 'stale_brief' | 'already_approved'>>
   /** Conditional status change: only applies when the current status is in `from`. Returns false otherwise. */
-  setEventStatus(eventId: string, from: readonly EventStatus[], to: EventStatus): Promise<boolean>
+  setEventStatus(eventId: string, from: readonly EventStatus[], to: EventStatus, expectedBriefRevision?: number): Promise<boolean>
   /** Sets cancelRequestedAt once and status canceling; returns null if already canceled. */
   requestCancel(eventId: string, at: Date): Promise<Event | null>
 
@@ -50,7 +53,7 @@ export interface Store {
   /** Single-flight lease: sets advancingUntil only if it is null or past and the run is running. Returns the claimed run or null. */
   claimRunAdvance(runId: string, now: Date, leaseMs: number): Promise<Run | null>
   /** Clears the lease and records the last fully processed Naive sequence (never decreases it). */
-  releaseRunAdvance(runId: string, lastSequence: number): Promise<void>
+  releaseRunAdvance(runId: string, lastSequence: number, lease?: string | null): Promise<void>
   /** Increments correctionsUsed from 0 to 1. Returns false if a correction was already used. */
   recordCorrection(runId: string): Promise<boolean>
   /** Conditional state change for a run: only from the listed states. */
@@ -61,7 +64,7 @@ export interface Store {
    * (awaiting_input -> needs_input, failed -> failed, canceled -> canceled; success/partial leave
    * the status for the caller to set after Plan derivation).
    */
-  publishResearchResult(result: ResearchResult): Promise<{ ok: true } | Fail<'stale_brief' | 'run_not_active' | 'duplicate' | 'not_found'>>
+  publishResearchResult(result: ResearchResult, lease?: string | null, lastSequence?: number): Promise<{ ok: true } | Fail<'stale_brief' | 'run_not_active' | 'duplicate' | 'not_found'>>
   getResearchResult(runId: string): Promise<ResearchResult | null>
   /** Stores a plan; unique on (eventId, revision). Sets Event.planRevision. */
   savePlan(plan: Plan): Promise<void>

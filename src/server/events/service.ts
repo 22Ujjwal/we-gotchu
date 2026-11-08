@@ -66,11 +66,11 @@ async function startRun(deps: Deps, event: Event, run: Run): Promise<void> {
       runId: run.runId,
       brief: event.brief,
     })
-    await deps.store.setRunSession(run.runId, naiveSessionId)
+    if (naiveSessionId) await deps.store.setRunSession(run.runId, naiveSessionId)
     await deps.store.appendProgress(event.eventId, 'system', `Research started (brief revision ${run.briefRevision}).`)
   } catch (err) {
     // Uncertain outcome: record it on the run so it is reconciled, not silently retried.
-    console.error('[research] startResearch failed', err)
+    console.error('[research] startResearch failed')
     await deps.store.setRunState(run.runId, ['running'], 'unknown')
     await deps.store.appendProgress(event.eventId, 'system', 'Research could not be started; the outcome is unknown.')
     throw new ApiError(502, 'research_start_failed', 'Research could not be started. Try again shortly.')
@@ -81,6 +81,7 @@ async function startRun(deps: Deps, event: Event, run: Run): Promise<void> {
 export async function createEvent(deps: Deps, body: unknown): Promise<EventView> {
   const customerId = await deps.requireCustomerId()
   const brief = parseBrief(body)
+  deps.research.validateConfiguration?.()
   const { event, run } = await deps.store.createEvent({ customerId, brief })
   await startRun(deps, event, run)
   return view(deps, event.eventId)
@@ -95,7 +96,7 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
     const step = await deps.research.advanceResearch({ event, run: claimed })
     if (step.status !== 'done') return
     lastSequence = step.lastSequence
-    const published = await deps.store.publishResearchResult(step.result)
+    const published = await deps.store.publishResearchResult(step.result, claimed.advancingUntil, step.lastSequence)
     if (!published.ok) {
       console.warn('[research] result not stored', published.reason)
       return
@@ -120,16 +121,16 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
     })
     if (built.ok) {
       await deps.store.savePlan(built.plan)
-      await deps.store.setEventStatus(event.eventId, ['researching'], 'plan_ready')
-      await deps.store.appendProgress(event.eventId, 'agent', `Plan ready: total ${built.plan.total} ${built.plan.currency}.`)
+      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'plan_ready', result.briefRevision)
+      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Plan ready: total ${built.plan.total} ${built.plan.currency}.`)
     } else {
-      await deps.store.setEventStatus(event.eventId, ['researching'], 'researched')
-      await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
+      const changed = await deps.store.setEventStatus(event.eventId, ['researching'], 'researched', result.briefRevision)
+      if (changed) await deps.store.appendProgress(event.eventId, 'agent', `Research finished but no bookable plan: ${built.reason}.`)
     }
   } catch (err) {
-    console.error('[research] advance failed', err)
+    console.error('[research] advance failed')
   } finally {
-    await deps.store.releaseRunAdvance(run.runId, lastSequence)
+    await deps.store.releaseRunAdvance(run.runId, lastSequence, claimed.advancingUntil)
   }
 }
 
@@ -159,6 +160,7 @@ export async function updateBrief(
   if (!changes || typeof changes !== 'object') throw new ApiError(422, 'invalid_input', 'changes must be an object.')
   const known = Object.fromEntries(Object.entries(changes).filter(([k]) => (BRIEF_FIELDS as string[]).includes(k)))
   const brief = parseBrief({ ...event.brief, ...known })
+  deps.research.validateConfiguration?.()
 
   const res = await deps.store.updateBrief({ eventId, expectedBriefRevision, brief })
   if (!res.ok) {
@@ -167,11 +169,12 @@ export async function updateBrief(
     throw new ApiError(409, 'already_approved', 'The plan is already approved; cancel before changing the brief.')
   }
   const prev = res.previousRun
-  if (prev?.naiveSessionId) {
+  if (prev) {
     try {
-      await deps.research.cancelResearch(prev.naiveSessionId)
+      await deps.research.cancelResearch(prev)
     } catch (err) {
-      console.warn('[research] cancel of previous session failed', err)
+      console.warn('[research] cancel of previous session failed')
+      await deps.store.appendProgress(eventId, 'system', 'Previous research cleanup could not be confirmed; provider reconciliation is needed.')
     }
   }
   await deps.store.setEventStatus(eventId, ['needs_input', 'researched', 'plan_ready', 'failed'], 'researching')
@@ -299,13 +302,12 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
   }
 
   const run = await deps.store.getCurrentRun(eventId, 'research')
-  if (run && (run.state === 'running' || run.state === 'awaiting_input')) {
-    if (run.naiveSessionId) {
-      try {
-        await deps.research.cancelResearch(run.naiveSessionId)
-      } catch (err) {
-        console.warn('[cancel] research session cancel failed', err)
-      }
+  if (run) {
+    try {
+      await deps.research.cancelResearch(run)
+    } catch {
+      console.warn('[cancel] research session cancel failed')
+      await deps.store.appendProgress(eventId, 'system', 'Research stop could not be confirmed. No new research will be scheduled; provider reconciliation is needed.')
     }
     await deps.store.setRunState(run.runId, ['running', 'awaiting_input'], 'canceled')
   }
