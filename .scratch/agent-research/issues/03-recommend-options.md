@@ -17,7 +17,7 @@
 
 ## Implementation handoff
 
-See [defensible recommendation evidence](../../../../docs/research/defensible-recommendations.md) for supported calculations, configurable freshness policy, and cross-ticket integration.
+See [defensible recommendation evidence](../../../docs/research/defensible-recommendations.md) for supported calculations, configurable freshness policy, and cross-ticket integration.
 The controlled workflow calculates listing estimates with explicit quantity assumptions, not verified final event totals.
 Current contracts do not provide enough structured evidence to report a within-budget event.
 Real retrieval demonstration and deployment remain unverified.
