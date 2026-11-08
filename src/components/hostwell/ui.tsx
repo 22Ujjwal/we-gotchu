@@ -16,7 +16,7 @@ const steps: Array<{ id: Step; label: string; to: string }> = [
 export function Header({ step }: { step: Step }) {
   const current = steps.findIndex((s) => s.id === step)
   return (
-    <header className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 px-6 pt-9 md:px-12">
+    <header className="flex items-center justify-between gap-x-8 px-5 pt-6 lg:px-12 lg:pt-9">
       <Link to="/" className="flex items-center gap-2.5">
         <Logo />
         <span className="text-[18px] leading-[22px] font-extrabold tracking-[-0.02em]">
@@ -24,7 +24,7 @@ export function Header({ step }: { step: Step }) {
         </span>
       </Link>
       <nav aria-label="Progress">
-        <ol className="m-0 flex list-none items-center gap-5 p-0 text-[16px] leading-[22px] whitespace-nowrap md:gap-8 md:text-[18px]">
+        <ol className="m-0 flex list-none items-center gap-5 p-0 text-[18px] leading-[22px] whitespace-nowrap lg:gap-8">
           {steps.map((s, i) => {
             if (i === current)
               return (
@@ -38,7 +38,7 @@ export function Header({ step }: { step: Step }) {
               )
             if (i < current && step !== 'party')
               return (
-                <li key={s.id}>
+                <li key={s.id} className="hidden lg:list-item">
                   <Link
                     to={s.to}
                     className="text-muted line-through decoration-ink decoration-1 hover:text-ink"
@@ -50,11 +50,9 @@ export function Header({ step }: { step: Step }) {
             return (
               <li
                 key={s.id}
-                className={
-                  i < current
-                    ? 'text-muted line-through decoration-ink decoration-1'
-                    : 'text-muted'
-                }
+                className={`hidden text-muted lg:list-item ${
+                  i < current ? 'line-through decoration-ink decoration-1' : ''
+                }`}
               >
                 {s.label}
               </li>
@@ -80,7 +78,7 @@ export function Button({
 
 export function MetaLine({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[14px] leading-[18px] font-semibold">
+    <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[14px] leading-[18px] font-semibold lg:gap-x-6">
       {children}
     </div>
   )

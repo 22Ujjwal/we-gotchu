@@ -172,11 +172,9 @@ const sealPoints =
 export function GoldSeal() {
   return (
     <svg
-      width="96"
-      height="96"
       viewBox="0 0 96 96"
       aria-hidden
-      className="shrink-0"
+      className="size-20 shrink-0 lg:size-24"
       style={{ filter: 'drop-shadow(#966E1E59 0px 12px 22px)' }}
     >
       <defs>

@@ -99,7 +99,7 @@ function PartyPage() {
     <div className="relative flex min-h-screen flex-col overflow-hidden">
       <div
         aria-hidden
-        className="confetti pointer-events-none absolute top-0 left-1/2 h-[420px] w-[1440px] -translate-x-1/2"
+        className="confetti pointer-events-none absolute top-0 left-1/2 h-[420px] w-[1440px] origin-top -translate-x-1/2 scale-[0.55] lg:scale-100"
       >
         {confetti.map(([left, top, width, height, bg, rotate, round], i) => (
           <span
@@ -120,35 +120,35 @@ function PartyPage() {
       </div>
 
       <Header step="party" />
-      <main className="relative flex flex-1 flex-col items-center gap-7 px-6 pt-14 pb-12 md:px-12">
+      <main className="relative flex flex-1 flex-col items-center gap-6 px-5 pt-11 pb-10 lg:gap-7 lg:px-12 lg:pt-14 lg:pb-12">
         <GoldSeal />
-        <div className="flex flex-col items-center gap-1.5 text-center">
-          <h1 className="m-0 font-script text-[44px] leading-[60px] font-normal md:text-[52px] md:leading-[72px]">
+        <div className="flex flex-col items-center gap-1 text-center lg:gap-1.5">
+          <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[52px] lg:leading-[72px]">
             It's happening!
           </h1>
-          <p className="m-0 font-body text-[18px] leading-[22px] text-receipt-muted">
+          <p className="m-0 font-body text-[16px] leading-5 text-receipt-muted lg:text-[18px] lg:leading-[22px]">
             Everything is booked for {occasionShort}.
           </p>
         </div>
 
         <div className="flex w-full max-w-[820px] flex-col shadow-[0_24px_56px_#1F1B161A]">
-          <div className="flex flex-col gap-9 border border-line bg-white p-6 md:flex-row">
+          <div className="flex flex-col border border-line bg-white lg:flex-row lg:gap-9 lg:p-6">
             <img
               src={venue.photo}
               alt={venue.name}
-              className="aspect-square w-full shrink-0 object-cover md:size-[280px]"
+              className="h-[210px] w-full shrink-0 object-cover lg:size-[280px]"
             />
-            <div className="flex flex-1 flex-col gap-[22px] pt-1.5">
-              <h2 className="m-0 font-script text-[34px] leading-[46px] font-normal">
+            <div className="flex flex-1 flex-col gap-[18px] px-5 pt-[22px] pb-6 lg:gap-[22px] lg:p-0 lg:pt-1.5">
+              <h2 className="m-0 font-script text-[28px] leading-10 font-normal lg:text-[34px] lg:leading-[46px]">
                 {brief.occasion}
               </h2>
               <Fact
                 badge={
-                  <div className="flex h-[52px] w-12 flex-col items-center border border-line-strong">
+                  <div className="flex h-12 w-11 flex-col items-center border border-line-strong lg:h-[52px] lg:w-12">
                     <span className="w-full bg-ink py-0.5 text-center font-mono text-[11px] leading-[14px] font-semibold tracking-[0.08em] text-white">
                       {date ? MONTHS[date.month] : '—'}
                     </span>
-                    <span className="pt-[3px] text-[20px] leading-6 font-bold">
+                    <span className="pt-0.5 text-[18px] leading-[22px] font-bold lg:pt-[3px] lg:text-[20px] lg:leading-6">
                       {date?.day ?? '?'}
                     </span>
                   </div>
@@ -174,37 +174,37 @@ function PartyPage() {
               />
             </div>
           </div>
-          <div className="flex flex-col gap-[18px] border border-t-0 border-cream-line bg-cream px-6 py-5 md:flex-row md:items-center">
-            <span className="flex size-12 shrink-0 items-center justify-center border border-cream-line bg-white">
+          <div className="flex flex-col gap-3.5 border border-t-0 border-cream-line bg-cream p-5 lg:flex-row lg:items-center lg:gap-[18px] lg:px-6">
+            <span className="hidden size-12 shrink-0 items-center justify-center border border-cream-line bg-white lg:flex">
               <Ticket />
             </span>
             <div className="flex flex-1 flex-col gap-[3px]">
-              <span className="text-[17px] leading-[22px] font-semibold">
+              <span className="text-[16px] leading-5 font-semibold lg:text-[17px] lg:leading-[22px]">
                 Invite guests with Luma
               </span>
-              <span className="font-body text-[15px] leading-[18px] text-brass">
+              <span className="font-body text-[15px] leading-[22px] text-brass lg:leading-[18px]">
                 We'll set up the event page and RSVPs. Nothing is sent until you say so.
               </span>
             </div>
-            <Button type="button" className="shrink-0 px-[22px] py-[13px] text-[15px] leading-[18px]">
+            <Button type="button" className="shrink-0 py-3.5 text-[16px] leading-5 lg:px-[22px] lg:py-[13px] lg:text-[15px] lg:leading-[18px]">
               Create Luma page
             </Button>
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex w-full max-w-[468px] gap-2.5 lg:w-auto lg:max-w-none lg:gap-3">
           <button
             type="button"
             onClick={downloadIcs}
             disabled={!date}
-            className="cursor-pointer border border-ink px-[26px] py-3.5 text-[16px] leading-5 font-semibold hover:bg-ink hover:text-white disabled:opacity-40"
+            className="flex-1 cursor-pointer border border-ink px-[26px] py-3.5 text-[16px] leading-5 font-semibold hover:bg-ink hover:text-white disabled:opacity-40"
           >
             Add to calendar
           </button>
           <button
             type="button"
             onClick={() => receipt.current?.showModal()}
-            className="cursor-pointer border border-line-strong px-[26px] py-3.5 text-[16px] leading-5 font-semibold hover:border-ink"
+            className="flex-1 cursor-pointer border border-line-strong px-[26px] py-3.5 text-[16px] leading-5 font-semibold hover:border-ink"
           >
             View receipt
           </button>
@@ -225,7 +225,7 @@ function PartyPage() {
 
 function IconBadge({ icon }: { icon: 'pin' | 'guests' }) {
   return (
-    <div className="flex h-[52px] w-12 items-center justify-center border border-line-strong">
+    <div className="flex h-12 w-11 items-center justify-center border border-line-strong lg:h-[52px] lg:w-12">
       <FeatureIcon icon={icon} size={22} />
     </div>
   )
@@ -244,8 +244,8 @@ function Fact({
     <div className="flex items-center gap-3.5">
       <div className="shrink-0">{badge}</div>
       <div className="flex flex-col gap-0.5">
-        <span className="text-[17px] leading-[22px] font-semibold">{title}</span>
-        <span className="font-body text-[16px] leading-5 text-receipt-muted">
+        <span className="text-[16px] leading-5 font-semibold lg:text-[17px] lg:leading-[22px]">{title}</span>
+        <span className="font-body text-[15px] leading-[18px] text-receipt-muted lg:text-[16px] lg:leading-5">
           {detail}
         </span>
       </div>

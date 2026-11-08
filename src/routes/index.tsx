@@ -41,19 +41,19 @@ function BriefPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step="brief" />
-      <main className="flex flex-1 flex-col items-center justify-center px-6 pt-10 pb-8 md:px-12">
+      <main className="flex flex-1 flex-col items-center justify-center px-5 pt-10 pb-8 lg:px-12">
         <form
           onSubmit={submit}
-          className="flex w-full max-w-[900px] flex-col items-center gap-12"
+          className="flex w-full max-w-[900px] flex-col items-center gap-9 lg:gap-12"
         >
           {step > 0 && (
-            <ol aria-label="Your brief so far" className="flex flex-col items-center gap-1.5">
+            <ol aria-label="Your brief so far" className="m-0 flex list-none flex-col items-center gap-2 p-0 lg:gap-1.5">
               {sentences.slice(0, step).map((s, i) => (
                 <li key={i}>
                   <button
                     type="button"
                     onClick={() => setStep(i)}
-                    className="cursor-pointer text-center text-[18px] leading-[30px] text-stone hover:text-ink md:text-[22px] md:leading-[38px]"
+                    className="cursor-pointer text-center text-[16px] leading-[26px] text-stone hover:text-ink lg:text-[22px] lg:leading-[38px]"
                   >
                     {s.map((part, j) =>
                       typeof part === 'string' ? (
@@ -72,7 +72,7 @@ function BriefPage() {
 
           <p
             key={step}
-            className="rise m-0 text-center text-[30px] leading-[56px] font-light tracking-[-0.02em] md:text-[56px] md:leading-[96px]"
+            className="rise m-0 text-center text-[34px] leading-[60px] font-light tracking-[-0.02em] lg:text-[56px] lg:leading-[96px]"
           >
             {sentence.map((part, j) =>
               typeof part === 'string' ? (
@@ -93,7 +93,7 @@ function BriefPage() {
           <Button
             type="submit"
             disabled={!complete}
-            className="px-14 py-[17px] text-[18px] leading-[22px] font-bold"
+            className="w-full py-[17px] text-[18px] leading-[22px] font-bold lg:w-auto lg:px-14"
           >
             {last ? 'Find venues' : 'Next'}
           </Button>
@@ -151,7 +151,7 @@ function Blank({
           e.currentTarget.closest('form')?.requestSubmit()
         }
       }}
-      className={`blank mx-1 font-script text-[28px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] md:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
+      className={`blank mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
     />
   )
 }

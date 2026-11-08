@@ -43,9 +43,9 @@ function VenuePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step="setting" />
-      <main className="flex flex-col items-center gap-10 px-6 pt-10 pb-14 md:px-12">
-        <div className="flex flex-col items-center gap-3.5 text-center">
-          <h1 className="m-0 font-script text-[36px] leading-[52px] font-normal md:text-[46px] md:leading-16">
+      <main className="flex flex-col items-center gap-6 px-5 pt-7 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
+        <div className="flex flex-col items-center gap-2 text-center lg:gap-3.5">
+          <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
             {venue.name}
           </h1>
           <MetaLine>
@@ -54,7 +54,7 @@ function VenuePage() {
             </span>
             <span>{venue.neighbourhood}</span>
             <Guests n={brief.guests} />
-            <span>≤ {brief.budget}</span>
+            <span className="hidden lg:inline">≤ {brief.budget}</span>
             <Link
               to="/settings"
               className="underline decoration-1 [text-underline-position:from-font]"
@@ -64,24 +64,24 @@ function VenuePage() {
           </MetaLine>
         </div>
 
-        <div className="flex w-full max-w-[1100px] flex-col items-start gap-14 lg:flex-row">
+        <div className="flex w-full max-w-[1100px] flex-col items-start gap-8 lg:flex-row lg:gap-14">
           <div className="flex w-full min-w-0 flex-1 flex-col">
             <Photo
               photos={venue.photos}
               alt={venue.name}
-              className="aspect-[664/400] w-full"
+              className="-mx-5 aspect-[390/260] w-[calc(100%+40px)] lg:mx-0 lg:aspect-[664/400] lg:w-full"
             />
-            <div className="flex flex-col gap-[18px] pt-8">
-              <p className="m-0 font-body text-[18px] leading-[29px] text-body">
+            <div className="flex flex-col gap-4 pt-6 lg:gap-[18px] lg:pt-8">
+              <p className="m-0 font-body text-[16px] leading-[26px] text-body lg:text-[18px] lg:leading-[29px]">
                 {venue.description}
               </p>
-              <ul className="m-0 flex list-none flex-wrap gap-x-6 gap-y-3 p-0 [&>li]:gap-2">
+              <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2.5 p-0 lg:gap-x-6 lg:gap-y-3 [&>li]:gap-2">
                 {venue.detailFeatures.map((f) => (
                   <FeatureRow key={f.label} feature={f} />
                 ))}
               </ul>
             </div>
-            <section className="flex flex-col pt-10">
+            <section className="flex flex-col pt-8 lg:pt-10">
               <h2 className="m-0 pb-4 text-[22px] leading-7 font-semibold">
                 Add to your booking
               </h2>
@@ -106,22 +106,23 @@ function VenuePage() {
         ref={dialog}
         aria-labelledby="anything-else"
         onClick={(e) => e.target === dialog.current && dialog.current.close()}
-        className="m-auto w-[580px] max-w-[calc(100vw-32px)] bg-white p-0 shadow-[0_40px_80px_#1F1B164D] backdrop:bg-[#1F1B1673]"
+        className="mx-0 mt-auto mb-0 max-h-[90dvh] w-full max-w-none bg-white p-0 shadow-[0_-20px_50px_#1F1B1640] backdrop:bg-[#1F1B1673] lg:m-auto lg:w-[580px] lg:max-w-[calc(100vw-32px)] lg:shadow-[0_40px_80px_#1F1B164D]"
       >
-        <div className="flex flex-col gap-6 px-6 pt-10 pb-8 md:px-10">
-          <div className="flex flex-col items-center gap-1.5 text-center">
+        <div className="flex flex-col gap-5 px-5 pt-3 pb-8 lg:gap-6 lg:px-10 lg:pt-10">
+          <div aria-hidden className="mx-auto h-1 w-10 bg-[#D6CCBA] lg:hidden" />
+          <div className="flex flex-col items-center gap-1 text-center lg:gap-1.5">
             <h2
               id="anything-else"
-              className="m-0 font-script text-[40px] leading-14 font-normal"
+              className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[40px] lg:leading-14"
             >
               Anything else?
             </h2>
-            <p className="m-0 font-body text-[17px] leading-[22px] text-receipt-muted">
+            <p className="m-0 font-body text-[16px] leading-5 text-receipt-muted lg:text-[17px] lg:leading-[22px]">
               Add it now and it's on the same booking.
             </p>
           </div>
           <AddOnList boxed />
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col-reverse gap-3 pt-2 lg:flex-row lg:items-center lg:justify-between lg:gap-0">
             <button
               type="button"
               onClick={() => dialog.current?.close()}
@@ -132,7 +133,7 @@ function VenuePage() {
             <Button
               type="button"
               onClick={book}
-              className="px-9 py-4 text-[17px] leading-[22px]"
+              className="py-4 text-[17px] leading-[22px] lg:px-9"
             >
               {bookLabel}
             </Button>
