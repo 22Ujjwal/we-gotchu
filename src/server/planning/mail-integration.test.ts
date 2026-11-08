@@ -1,11 +1,22 @@
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { processReplyJobs } from './reply-worker'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createTestPlanningRepository } from '../db/client'
 import { createPlanningMail } from './mail-integration'
 import type { PlanningRecord } from './repository'
 
 let db: Awaited<ReturnType<typeof createTestPlanningRepository>>
-beforeEach(async () => { db = await createTestPlanningRepository() })
-afterEach(async () => db.close())
+let directory: string
+beforeEach(async () => {
+  directory = await mkdtemp(join(tmpdir(), 'planning-mail-'))
+  db = await createTestPlanningRepository(directory)
+})
+afterEach(async () => {
+  await db.close()
+  await rm(directory, { recursive: true, force: true })
+})
 
 test('transport receipt atomically queues one reply and does not run interpretation inside acknowledgement', async () => {
   const inquiry = { id: 'inquiry', revision: 1, status: 'draft' as const, recipient: 'venue@example.com', subject: 'Inquiry', text: 'Party',
@@ -30,5 +41,19 @@ test('transport receipt atomically queues one reply and does not run interpretat
   expect(saved.view.inquiry?.replies).toHaveLength(1)
   expect(saved.view.inquiry?.replies?.[0]).toMatchObject({ status: 'received', receiptId: expect.any(String), message: { mode: 'simulated' } })
   expect(await db.repository.pendingReplyJobs(10, Date.now())).toHaveLength(1)
+  expect(provider.send).toHaveBeenCalledTimes(1)
+
+  await db.close()
+  db = await createTestPlanningRepository(directory)
+  const restarted = createPlanningMail({ repository: db.repository, storage: db.mail, provider, secret: 'unused', evidenceMode: 'fixture' })
+  expect(await restarted.receiver.receive(raw)).toBe('duplicate')
+  const interpret = vi.fn(async () => ({ kind: 'question', summary: 'The venue asks for the time.',
+    nextAction: 'Confirm the event time.', facts: [], missing: ['Event time'] }))
+  expect(await processReplyJobs(db.repository, interpret)).toEqual({ processed: 1 })
+  expect(await processReplyJobs(db.repository, interpret)).toEqual({ processed: 0 })
+  expect(interpret).toHaveBeenCalledTimes(1)
+  const restored = (await db.repository.getById('conversation'))!
+  expect(restored.view.inquiry?.replies?.[0]).toMatchObject({ status: 'ready', message: { text: 'Which time?' } })
+  expect(restored.view.selections).toEqual([inquiry.venue])
   expect(provider.send).toHaveBeenCalledTimes(1)
 })
