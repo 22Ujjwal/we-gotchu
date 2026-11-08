@@ -96,3 +96,23 @@ Controlled component checks exercised one approval request and payment-state res
 They used fake HTTP responses and do not establish real Stripe acceptance or signed local webhook delivery.
 The selected-offer browser recipe is recorded as a draft pending the deferred live run.
 The complete real browser journey, failed and abandoned Checkout, actual mail receipt and browser-closed provider processing remain unverified.
+
+## Controlled payment integration checkpoint
+
+At `5158e98`, all 625 application tests in 62 files, 25 coordination tests, typecheck and build passed locally.
+The build log is `/tmp/stage4-final-build.log`.
+The integrated database test uses a signed controlled webhook, a fake payment provider and the real simulated supplier execution code.
+It verifies the selected offer reaches approval and saved payment state, and repeated approval and webhook requests do not repeat the logical action.
+This does not prove external payment acceptance or delivery.
+
+The regression also changes the selection after Checkout approval but before payment arrives.
+Previously that payment left the event executing without a supplier action or refund.
+The webhook now rechecks the linked offer and uses the existing cancellation and refund process when the offer is no longer current.
+The controlled run records a pending refund and no supplier commitment for that case.
+
+After a canceled payment plan has settled, the customer can release its link and prepare a revised offer.
+The application retains the original transaction records and refuses release while payment or refund remains unsettled.
+
+The user deferred live checks until morning.
+No email, live provider request, deployment or push occurred in this checkpoint.
+The approved mail address is also the sending inbox, so a future self-send cannot establish independent recipient delivery.
