@@ -30,6 +30,7 @@ function VenuePage() {
         </Link>
       }
       onArrange={() => {
+        sessionStorage.removeItem('demo-all-set-key')
         setBookedVenueId(venue.id)
         navigate({ to: '/party', search: { arranging: true } })
       }}

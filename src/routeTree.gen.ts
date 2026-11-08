@@ -23,6 +23,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsVenueIdRouteImport } from './routes/settings.$venueId'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as ApiDemoAllSetRouteImport } from './routes/api/demo.all-set'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 import { Route as ApiPlanningIdRouteImport } from './routes/api/planning.$id'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
@@ -103,6 +104,11 @@ const SignUpSplatRoute = SignUpSplatRouteImport.update({
   path: '/sign-up/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDemoAllSetRoute = ApiDemoAllSetRouteImport.update({
+  id: '/api/demo/all-set',
+  path: '/api/demo/all-set',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/planning/': typeof PlanningIndexRoute
   '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/demo/all-set': typeof ApiDemoAllSetRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/planning': typeof PlanningIndexRoute
   '/receipts': typeof ReceiptsIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/demo/all-set': typeof ApiDemoAllSetRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   '/planning/': typeof PlanningIndexRoute
   '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/demo/all-set': typeof ApiDemoAllSetRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -245,6 +254,7 @@ export interface FileRouteTypes {
     | '/planning/'
     | '/receipts/'
     | '/settings/'
+    | '/api/demo/all-set'
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/stripe/webhook'
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/planning'
     | '/receipts'
     | '/settings'
+    | '/api/demo/all-set'
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/stripe/webhook'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/planning/'
     | '/receipts/'
     | '/settings/'
+    | '/api/demo/all-set'
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/stripe/webhook'
@@ -321,6 +333,7 @@ export interface RootRouteChildren {
   PlanningIndexRoute: typeof PlanningIndexRoute
   ReceiptsIndexRoute: typeof ReceiptsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  ApiDemoAllSetRoute: typeof ApiDemoAllSetRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   EventsEventIdReceiptsReceiptIdRoute: typeof EventsEventIdReceiptsReceiptIdRoute
   EventsEventIdReceiptsIndexRoute: typeof EventsEventIdReceiptsIndexRoute
@@ -424,6 +437,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-up/$'
       fullPath: '/sign-up/$'
       preLoaderRoute: typeof SignUpSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/demo/all-set': {
+      id: '/api/demo/all-set'
+      path: '/api/demo/all-set'
+      fullPath: '/api/demo/all-set'
+      preLoaderRoute: typeof ApiDemoAllSetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events/$id': {
@@ -560,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlanningIndexRoute: PlanningIndexRoute,
   ReceiptsIndexRoute: ReceiptsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  ApiDemoAllSetRoute: ApiDemoAllSetRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   EventsEventIdReceiptsReceiptIdRoute: EventsEventIdReceiptsReceiptIdRoute,
   EventsEventIdReceiptsIndexRoute: EventsEventIdReceiptsIndexRoute,

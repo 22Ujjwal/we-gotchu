@@ -8,6 +8,8 @@ const csrfMiddleware = createCsrfMiddleware({
 
 const previewMiddleware = createMiddleware().server(({ request, handlerType, next }) => {
   const path = new URL(request.url).pathname;
+  // The demo's "It's happening!" email is the one API the preview serves.
+  if (path === '/api/demo/all-set') return next();
   if (handlerType === 'serverFn' || path === '/api' || path.startsWith('/api/')) {
     return new Response('API unavailable in local UI preview. Configure Clerk credentials to enable it.', { status: 503 });
   }

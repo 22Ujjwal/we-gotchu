@@ -1,9 +1,11 @@
-import { Link, Navigate, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { Link, Navigate, createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { ArrangingView } from '#/components/hostwell/arranging-view'
 import { PartyView } from '#/components/hostwell/party-view'
 import { Header } from '#/components/hostwell/ui'
+import { briefFromPreview } from '#/lib/hostwell/brief-adapter'
 import { to24h } from '#/lib/hostwell/fixture'
+import type { Brief } from '#/lib/hostwell/fixture'
 import { buildOrder, findVenue, useHostwell } from '#/lib/hostwell/store'
 import { localPreview } from '#/lib/local-preview'
 
@@ -14,8 +16,18 @@ export const Route = createFileRoute('/party')({
   component: PartyPage,
 })
 
-/** How long the preview pretends suppliers take to confirm. */
-const ARRANGING_MS = 5000
+const exampleBrief: Brief = {
+  occasion: 'Franz’s 30th birthday',
+  guests: '24',
+  date: 'Sat 12 Dec 2026',
+  from: '7pm',
+  till: '11pm',
+  area: 'Kreuzberg',
+  budget: '900',
+  canLose: '200',
+  needs: '',
+  vibe: '',
+}
 
 function PartyPage() {
   return localPreview ? <PreviewPartyPage /> : <Navigate to="/" />
@@ -25,12 +37,49 @@ function PreviewPartyPage() {
   const { brief, addOns, selected, bookedVenueId } = useHostwell()
   const venue = bookedVenueId ? findVenue(bookedVenueId) : undefined
   const { arranging } = Route.useSearch()
-  const navigate = useNavigate()
+  const [emailTo, setEmailTo] = useState<string | null>(null)
+  // The "It's happening!" email links back to /party; the page itself stays put.
   useEffect(() => {
     if (!arranging || !venue) return
-    const done = setTimeout(() => navigate({ to: '/party', replace: true }), ARRANGING_MS)
-    return () => clearTimeout(done)
-  }, [arranging, venue, navigate])
+    const order = buildOrder(venue, addOns, selected)
+    const cents = (n: number) => Math.round(n * 100)
+    let contractBrief
+    try {
+      // Fields left blank in the demo fall back to the brief's placeholder example.
+      const filled = Object.fromEntries(
+        Object.entries(brief).map(([k, v]) => [k, v.trim() || exampleBrief[k as keyof Brief]]),
+      ) as Brief
+      contractBrief = briefFromPreview(filled)
+    } catch {
+      return
+    }
+    // One key per booking, so a reload or a double effect never emails twice.
+    const key = sessionStorage.getItem('demo-all-set-key') ?? crypto.randomUUID()
+    sessionStorage.setItem('demo-all-set-key', key)
+    let live = true
+    fetch('/api/demo/all-set', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        key,
+        brief: contractBrief,
+        items: [
+          ...order.lines.map((l) => ({
+            name: l.item,
+            amount: typeof l.amount === 'number' ? cents(l.amount) : 0,
+          })),
+          { name: 'VAT', amount: cents(order.vat ?? 0) },
+        ],
+        total: cents(order.total),
+      }),
+    })
+      .then((r) => r.json())
+      .then((r: { to?: string | null }) => live && r.to && setEmailTo(r.to))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [arranging, venue, addOns, selected, brief])
 
   if (!venue) {
     return (
@@ -52,7 +101,7 @@ function PreviewPartyPage() {
       .join(', ')
     return (
       <ArrangingView
-        email="you@example.com"
+        email={emailTo}
         items={[
           { label: 'Venue', title: venue.name, detail: when },
           ...addOns
