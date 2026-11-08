@@ -93,6 +93,15 @@ export function settingsFromView(view: EventView): Settings {
   const candidates = (current?.candidates ?? [])
     .filter((c) => c.kind === 'venue')
     .sort((a, b) => rank(a.candidateId) - rank(b.candidateId))
+  // The recommended supply (candles, flowers…) is bought whichever venue is
+  // chosen, so every venue's price includes it.
+  const supply = (current?.candidates ?? [])
+    .filter((c) => c.kind === 'supply' && c.priceEstimate !== null)
+    .sort((a, b) => rank(a.candidateId) - rank(b.candidateId))[0]
+  const supplyLine: ReceiptLine | null = supply
+    ? { qty: 1, item: supply.name, amount: supply.priceEstimate! / 100 }
+    : null
+  const extras = supplyLine ? (supplyLine.amount as number) : 0
 
   const venues = candidates.map((c): Venue => {
     const inPlan = !!currentPlan?.selectedCandidateIds.includes(c.candidateId)
@@ -107,7 +116,7 @@ export function settingsFromView(view: EventView): Settings {
       neighbourhood: event.brief.location,
       photo: '',
       photos: [],
-      total: inPlan ? currentPlan!.total / 100 : c.priceEstimate === null ? null : c.priceEstimate / 100,
+      total: inPlan ? currentPlan!.total / 100 : c.priceEstimate === null ? null : c.priceEstimate / 100 + extras,
       cardFeatures: features,
       description: c.whyChosenOrRejected,
       detailFeatures: features,
@@ -125,8 +134,9 @@ export function settingsFromView(view: EventView): Settings {
       const total = currentPlan.total / 100
       return { lines, requests: [], subtotal: total, vat: null, total }
     }
-    const total = typeof venue.venueLine.amount === 'number' ? venue.venueLine.amount : 0
-    return { lines: [venue.venueLine], requests: [], subtotal: total, vat: null, total }
+    const lines = supplyLine ? [venue.venueLine, supplyLine] : [venue.venueLine]
+    const total = lines.reduce((s, l) => s + (typeof l.amount === 'number' ? l.amount : 0), 0)
+    return { lines, requests: [], subtotal: total, vat: null, total }
   }
 
   const approvable = !!currentPlan && assessPlanForApproval(currentPlan).ok && !event.cancelRequestedAt &&

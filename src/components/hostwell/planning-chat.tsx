@@ -89,7 +89,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       <Button type="submit" disabled={!!blocked || !draft.trim()} className="self-start px-8 py-[17px] text-[18px]">{session.pending ? 'Saving...' : id ? 'Send message' : 'Plan my event'}</Button>
     </form>
   if (id && view?.status === 'working' && !view.proposal && !view.inquiry && !view.selections.length && !notice) {
-    return <div className="w-full"><ReceiptLoader brief={view.brief} label={view.progress || 'Research in progress'} />
+    return <div className="w-full"><ReceiptLoader brief={view.brief} label={view.progress || 'Research in progress'} activity={view.progress || 'Finding options for your event.'} />
       <p role="status" className="text-center text-stone">{view.progress || 'Finding options for your event.'}</p></div>
   }
   return <div className={`flex w-full flex-col gap-8 ${id ? 'max-w-[1400px]' : 'max-w-[900px]'}`}>

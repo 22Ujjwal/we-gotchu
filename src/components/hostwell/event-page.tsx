@@ -33,11 +33,11 @@ export function EventPage({ eventId, identity, paid = false, onCheckout = (url) 
 // Long enough for the first receipt to finish printing.
 const QUOTE_SCREEN_MS = 4000
 
-export function Loading() {
+export function Loading({ activity = 'Loading your event' }: { activity?: string } = {}) {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step="setting" />
-      <ReceiptLoader />
+      <ReceiptLoader activity={activity} />
     </div>
   )
 }
@@ -107,7 +107,7 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
     return <Notice title="This event is canceled" action={<a href="/">Plan another</a>} />
   }
   // Payment is confirmed by Stripe's webhook a few seconds after checkout.
-  if (paid && payment?.state === 'pending' && !booked) return <Loading />
+  if (paid && payment?.state === 'pending' && !booked) return <Loading activity="Confirming payment" />
   if (booked && settings.planned) {
     return (
       <PartyView
@@ -123,7 +123,10 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
     )
   }
   if (settings.venues.length === 0) {
-    if (event.status === 'researching' || view.run?.state === 'running') return <Loading />
+    if (event.status === 'researching' || view.run?.state === 'running') {
+      const latest = view.progress.filter(entry => entry.actor === 'agent').at(-1)
+      return <Loading activity={latest?.message ?? 'Researching your event'} />
+    }
     return <Notice title="We couldn't find a setting" action={<a href="/">Edit brief</a>} />
   }
 

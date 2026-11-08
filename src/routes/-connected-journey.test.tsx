@@ -111,12 +111,14 @@ test('signed out visitors are sent to sign in and back to the event', () => {
 })
 
 test('running research shows only the receipt loader', async () => {
-  getOnly(createEventViewFixture('running'))
+  const view = createEventViewFixture('running')
+  getOnly(view)
   render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
   await flush()
   expect(loader()).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Arrange' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent(view.progress.filter(entry => entry.actor === 'agent').at(-1)?.message ?? 'Researching your event')
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
 })
 
 test('failed research offers to edit the brief instead of a plan', async () => {

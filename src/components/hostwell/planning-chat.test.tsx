@@ -20,6 +20,20 @@ function http(handle: (request: Request) => Response | Promise<Response>) {
 }
 beforeEach(() => { auth.user = { id: 'customer-a' }; auth.isLoaded = true })
 
+test('initial research dial follows saved progress as polling updates arrive', async () => {
+  vi.useFakeTimers()
+  let saved = view({ status: 'working', proposal: null, progress: 'Checking Oakland venue capacity.' })
+  http(() => Response.json(saved))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await act(async () => {})
+  const loader = screen.getByRole('region', { name: 'Checking Oakland venue capacity.' })
+  expect(within(loader).getByRole('status')).toHaveTextContent('Checking Oakland venue capacity.')
+  saved = { ...saved, version: 2, progress: 'Comparing venue cancellation terms.' }
+  await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+  expect(within(loader).getByRole('status')).toHaveTextContent('Comparing venue cancellation terms.')
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+})
+
 test('keyboard intake sends natural language once and opens the saved conversation', async () => {
   const user = userEvent.setup()
   const created = vi.fn()
