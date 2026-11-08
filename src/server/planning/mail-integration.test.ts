@@ -37,6 +37,9 @@ test.each([
   const sent = await mail.transport.sendInquiry({ requestId: 'send', conversationId: 'conversation', inquiryId: 'inquiry', draftRevision: 1,
     to: recipient, subject: 'Inquiry', text: 'Party' })
   expect(sent).toMatchObject({ status: 'accepted', threadId: 'thread' })
+  expect(await mail.transport.reconcileInquiry!({ requestId: 'send', conversationId: 'conversation', inquiryId: 'inquiry' })).toEqual(sent)
+  expect(await mail.transport.reconcileInquiry!({ requestId: 'send', conversationId: 'other-customer', inquiryId: 'inquiry' })).toBeNull()
+  expect(provider.send).toHaveBeenCalledTimes(1)
   const echo = JSON.stringify({ type: 'event', event_id: 'self-send', event_type: 'message.received', message: {
     inbox_id: 'inbox', message_id: 'sent', thread_id: 'thread', from: 'venue@example.com', to: ['venue@example.com'],
     subject: 'Inquiry', text: 'Party', timestamp: new Date().toISOString(),

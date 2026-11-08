@@ -109,3 +109,27 @@ test('a rejected inquiry can be replaced explicitly while its attempted message 
   expect((await db.repository.get('customer', view.id))?.inquiryHistory?.[0].delivery?.status).toBe('failed')
   expect(deps.mail.sendInquiry).toHaveBeenCalledTimes(1)
 })
+
+test.each(['accepted', 'failed', 'uncertain'] as const)('checks an uncertain send without resending and records %s evidence', async status => {
+  let view = await selected()
+  view = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'draft', expectedVersion: view.version })
+  const reconcileInquiry = vi.fn(async () => status === 'accepted'
+    ? { status, messageId: 'mail-1', threadId: 'thread-1', acceptedAt: '2026-11-08T10:00:00Z' }
+    : status === 'failed' ? { status, code: 'rejected', reason: 'Rejected' }
+      : { status, operationId: 'operation-1' })
+  deps.mail = { sendInquiry: vi.fn(async () => { throw new Error('Lost acknowledgement') }), reconcileInquiry }
+  const inquiry = view.inquiry!
+  view = await commandPlanning(deps, view.id, { kind: 'send_inquiry', requestId: 'send', expectedVersion: view.version,
+    inquiryId: inquiry.id, expectedDraftRevision: inquiry.revision })
+  expect((await getPlanning(deps, view.id, { savedOnly: true })).inquiry?.delivery?.status).toBe('uncertain')
+  expect(reconcileInquiry).not.toHaveBeenCalled()
+  const checked = await getPlanning(deps, view.id, { reconcileMail: true })
+  expect(checked.inquiry?.delivery?.status).toBe(status)
+  expect(checked.inquiry?.delivery?.requestId).toBe('send')
+  expect(reconcileInquiry).toHaveBeenCalledExactlyOnceWith({ requestId: 'send', conversationId: view.id, inquiryId: inquiry.id })
+  expect(deps.mail.sendInquiry).toHaveBeenCalledTimes(1)
+  if (status === 'failed') {
+    const replacement = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'replacement', expectedVersion: checked.version })
+    expect(replacement.inquiry?.id).not.toBe(inquiry.id)
+  }
+})
