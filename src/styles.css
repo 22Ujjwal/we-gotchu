@@ -107,6 +107,16 @@ body {
   .rise {
     animation: rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
+  /* Brief: each word surfaces from a blur, then each answer is written in. */
+  .brief-word {
+    position: relative;
+    animation: brief-surface 650ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(var(--i) * 60ms + 120ms);
+  }
+  .brief-ink {
+    animation: brief-ink 750ms cubic-bezier(0.6, 0, 0.25, 1) backwards;
+    animation-delay: calc(var(--i) * 60ms + 300ms);
+  }
   .confetti > * {
     animation: drift 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
@@ -116,6 +126,23 @@ body {
   from {
     opacity: 0;
     transform: translateY(12px);
+  }
+}
+
+@keyframes brief-surface {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    top: 0.35em;
+  }
+}
+
+@keyframes brief-ink {
+  from {
+    clip-path: inset(-30% 100% -30% 0);
+  }
+  to {
+    clip-path: inset(-30% 0 -30% 0);
   }
 }
 
@@ -206,4 +233,26 @@ body {
   .loading-dots::after {
     animation: none;
   }
+}
+
+/* Keep the header still while receipts give way to the venue shortlist. */
+@media (prefers-reduced-motion: no-preference) {
+  .slip-loader[data-finishing] > :is(.slip-meter, .slip-strip) {
+    animation: receipts-leave 360ms 260ms cubic-bezier(.4, 0, .6, 1) both;
+  }
+  .venue-reveal > div,
+  .venue-reveal > section > *,
+  .venue-reveal > form {
+    animation: venue-settle 520ms cubic-bezier(.2, .72, .2, 1) backwards;
+  }
+  .venue-reveal > section > .gold-frame { animation-delay: 45ms; }
+  .venue-reveal > section > article { animation-delay: 105ms; }
+  .venue-reveal > form { animation-delay: 150ms; }
+}
+
+@keyframes receipts-leave {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes venue-settle {
+  from { opacity: 0; transform: translateY(8px); }
 }

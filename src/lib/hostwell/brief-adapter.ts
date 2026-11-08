@@ -21,10 +21,19 @@ export function briefFromPreview(b: PreviewBrief): Brief {
   if (!date || month < 0 || !time) throw new Error('Pick a date and a start time.')
   const startsAt = new Date(Number(date[3]), month, Number(date[1]), Number(time[1]), Number(time[2]))
 
+  let endsAt: Date | undefined
+  if (b.till.trim()) {
+    const end = to24h(b.till).match(/^(\d{2}):(\d{2})$/)
+    if (!end || Number(end[1]) > 23 || Number(end[2]) > 59) throw new Error('Pick a valid end time.')
+    endsAt = new Date(Number(date[3]), month, Number(date[1]), Number(end[1]), Number(end[2]))
+    if (endsAt.getTime() === startsAt.getTime()) throw new Error('Choose a different end time.')
+    if (endsAt < startsAt) endsAt.setDate(endsAt.getDate() + 1)
+  }
   const brief = Brief.safeParse({
     eventType: b.occasion.trim(),
     location: b.area.trim(),
     startsAt: startsAt.toISOString(),
+    ...(endsAt ? { endsAt: endsAt.toISOString() } : {}),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     headcount: Number(b.guests.trim()),
     budget: cents(b.budget),
@@ -54,7 +63,7 @@ export function previewFromBrief(brief: Brief): PreviewBrief {
     guests: String(brief.headcount),
     date,
     from: `${hour % 12 || 12}${minute ? `:${String(minute).padStart(2, '0')}` : ''}${hour >= 12 ? 'pm' : 'am'}`,
-    till: '',
+    till: brief.endsAt ? new Intl.DateTimeFormat('en-US', { ...zone, hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(brief.endsAt)).replace(':00', '').replace(/\s/g, '').toLowerCase() : '',
     area: brief.location,
     budget: fromCents(brief.budget),
     canLose: fromCents(brief.maximumCancellationLoss),

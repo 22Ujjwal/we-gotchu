@@ -179,6 +179,7 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   let result: Awaited<ReturnType<PlanningAgent['read']>>
   try {
     result = await bounded(() => deps.agent().read({ sessionId: record.sessionId!, afterSequence: record.sequence,
+      ...(record.view.status === 'ready' && !record.pending ? { completedSequence: record.sequence } : {}),
       ...(record.pending?.kind === 'confirm' && record.pending.approval ? { approvalId: record.pending.approval.id } : {}),
     }), timeout(deps))
     if (!Number.isSafeInteger(result.sequence) || result.sequence < 0) throw new Error('Invalid sequence.')
@@ -192,13 +193,19 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   const confirmationClosed = record.pending?.kind === 'confirm' && !!record.pending.approval
     && result.confirmation?.id === record.pending.approval.id && result.confirmation.state === 'closed'
   const pending = confirmationClosed ? null : record.pending
-  if (result.sequence < record.sequence || (result.sequence === record.sequence && !confirmationClosed && !['failed', 'blocked'].includes(result.status))) return record.view
+  const correctedCompletion = record.view.status === 'ready' && result.status === 'ready' && result.proposal
+    && !isDeepStrictEqual(result.proposal, record.view.proposal)
+  if (result.sequence < record.sequence || (result.sequence === record.sequence && !confirmationClosed
+    && !correctedCompletion && !['failed', 'blocked'].includes(result.status))) return record.view
   const proposal = result.proposal ?? record.view.proposal
   const messages = [...record.view.messages]
   const answersNewTurn = result.status === 'ready' && messages.at(-1)?.role === 'user'
   if (result.proposal && (answersNewTurn || !isDeepStrictEqual(result.proposal, record.view.proposal))) {
     const messageId = `assistant:${record.sessionId}:${result.sequence}`
-    if (!messages.some(message => message.id === messageId)) {
+    const existing = messages.findIndex(message => message.id === messageId)
+    if (existing >= 0) {
+      messages[existing] = { ...messages[existing], text: [result.proposal.summary, result.proposal.nextQuestion].filter(Boolean).join('\n\n') }
+    } else {
       messages.push({
         id: messageId, role: 'assistant',
         text: [result.proposal.summary, result.proposal.nextQuestion].filter(Boolean).join('\n\n'),

@@ -379,3 +379,12 @@ it('retries the refund after a paid cancellation already revoked its approval', 
   expect(retried.payment?.refundState).toBe('pending')
   expect(stripe.refundCalls).toHaveLength(1)
 })
+
+it('preserves the host end time through creation and reload', async () => {
+  const { deps } = makeDeps()
+  const endsAt = new Date(Date.parse(validBrief.startsAt) + 4 * 60 * 60 * 1000).toISOString()
+  const created = await createEvent(deps, { ...validBrief, endsAt })
+  expect(created.event.brief.endsAt).toBe(endsAt)
+  const restored = await getEventView(deps, created.event.eventId)
+  expect(restored.event.brief.endsAt).toBe(endsAt)
+})

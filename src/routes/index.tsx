@@ -1,7 +1,7 @@
 import { useUser } from '@clerk/tanstack-react-start'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { Fragment, useEffect, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { CSSProperties, FormEvent } from 'react'
 import { DateTimePicker } from '#/components/hostwell/date-time-picker'
 import type { ScheduleField } from '#/components/hostwell/date-time-picker'
 import { ReceiptLoader } from '#/components/hostwell/receipt-loader'
@@ -24,6 +24,18 @@ const sentences: Array<Sentence> = [
   ["I'll spend up to $", { key: 'budget', label: 'Budget in dollars', placeholder: '900' }, ', and can lose $', { key: 'canLose', label: 'Acceptable cancellation loss in dollars', placeholder: '10' }, ' if plans change.'],
   ["We'll need ", { key: 'needs', label: 'What you need', placeholder: 'table candles' }, ', and the vibe should be ', { key: 'vibe', label: 'Vibe', optional: true, placeholder: 'cosy? fancy?' }],
 ]
+
+// Where the finished sentence and the brief so far sat before moving on.
+type Flight = { from: DOMRect; fontSize: number; rows: Array<DOMRect> }
+
+const canAnimate = () =>
+  typeof Element.prototype.animate === 'function' &&
+  !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+const centre = (r: DOMRect) => [r.left + r.width / 2, r.top + r.height / 2]
+
+/** Each word fades in after the one before it. */
+const stagger = (i: number) => ({ '--i': i }) as CSSProperties
 
 function BriefPage() {
   return localPreview ? <PreviewBriefPage /> : <ConnectedBriefPage />
@@ -84,6 +96,9 @@ function BriefFlow({
   const [scheduleField, setScheduleField] = useState<ScheduleField | null>(null)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
+  const listRef = useRef<HTMLOListElement>(null)
+  const sentenceRef = useRef<HTMLDivElement>(null)
+  const flight = useRef<Flight | null>(null)
 
   useEffect(() => {
     const saved = sessionStorage.getItem(savedBrief)
@@ -98,6 +113,31 @@ function BriefFlow({
     }
   }, [])
 
+  // The finished sentence shrinks into the brief so far, and earlier lines
+  // slide up to make room for it.
+  useLayoutEffect(() => {
+    const f = flight.current
+    flight.current = null
+    const rows = listRef.current?.children
+    if (!f || !rows || !canAnimate()) return
+    Array.from(rows).forEach((row, i) => {
+      const to = row.getBoundingClientRect()
+      const easing = 'cubic-bezier(0.5, 0, 0.15, 1)'
+      if (i < f.rows.length) {
+        const from = f.rows[i]
+        row.animate([{ translate: `0 ${from.top - to.top}px` }, { translate: '0 0' }], { duration: 560, easing })
+        return
+      }
+      const scale = f.fontSize / parseFloat(getComputedStyle(row.firstElementChild!).fontSize)
+      const [fx, fy] = centre(f.from)
+      const [tx, ty] = centre(to)
+      row.animate(
+        [{ transform: `translate(${fx - tx}px, ${fy - ty}px) scale(${scale})` }, { transform: 'none' }],
+        { duration: 560, easing },
+      )
+    })
+  }, [step])
+
   const sentence = sentences[step]
   const last = step === sentences.length - 1
   const complete = sentence.every(
@@ -109,7 +149,16 @@ function BriefFlow({
     if (!complete || disabled) return
     setBrief(draft)
     setError('')
-    if (!last) return setStep(step + 1)
+    if (!last) {
+      const finished = sentenceRef.current
+      if (finished)
+        flight.current = {
+          from: finished.getBoundingClientRect(),
+          fontSize: parseFloat(getComputedStyle(finished).fontSize),
+          rows: Array.from(listRef.current?.children ?? [], (row) => row.getBoundingClientRect()),
+        }
+      return setStep(step + 1)
+    }
     setSearching(true)
     onSearch(draft).catch((cause: unknown) => {
       setSearching(false)
@@ -121,10 +170,11 @@ function BriefFlow({
     return (
       <div className="flex min-h-screen flex-col">
         <Header step="setting" />
-        <ReceiptLoader onDone={onLoaderDone} />
+        <ReceiptLoader brief={draft} onDone={onLoaderDone} />
       </div>
     )
 
+  let order = 0
   return (
     <div className="flex min-h-screen flex-col">
       <Header step="brief" />
@@ -134,7 +184,7 @@ function BriefFlow({
           className="flex w-full max-w-[900px] flex-col items-center gap-9 lg:gap-12"
         >
           {step > 0 && (
-            <ol aria-label="Your brief so far" className="m-0 flex list-none flex-col items-center gap-2 p-0 lg:gap-1.5">
+            <ol ref={listRef} aria-label="Your brief so far" className="m-0 flex list-none flex-col items-center gap-2 p-0 lg:gap-1.5">
               {sentences.slice(0, step).map((s, i) => (
                 <li key={i}>
                   <button
@@ -159,14 +209,22 @@ function BriefFlow({
 
           <div
             key={step}
-            className="rise m-0 text-center text-[34px] leading-[60px] font-light tracking-[-0.02em] lg:text-[56px] lg:leading-[96px]"
+            ref={sentenceRef}
+            className="m-0 text-center text-[34px] leading-[60px] font-light tracking-[-0.02em] lg:text-[56px] lg:leading-[96px]"
           >
             {sentence.map((part, j) =>
               typeof part === 'string' ? (
-                <Fragment key={j}>{part}</Fragment>
+                <Fragment key={j}>
+                  {part.split(/(\s+)/).map((word, k) =>
+                    word.trim() ? (
+                      <span key={k} className="brief-word" style={stagger(order++)}>{word}</span>
+                    ) : word,
+                  )}
+                </Fragment>
               ) : (
                 <Blank
                   key={part.key}
+                  order={order++}
                   label={part.label}
                   value={draft[part.key]}
                   placeholder={part.placeholder}
@@ -209,6 +267,7 @@ function BriefFlow({
 }
 
 function Blank({
+  order,
   label,
   value,
   placeholder,
@@ -216,6 +275,7 @@ function Blank({
   onChange,
   onPick,
 }: {
+  order: number
   label: string
   value: string
   placeholder?: string
@@ -248,13 +308,14 @@ function Blank({
     if (autoFocus) ref.current?.focus()
   }, [autoFocus])
 
-  const className = `blank mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`
+  const className = `blank brief-ink mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`
   if (onPick) {
     return (
       <button
         type="button"
         aria-label={value ? `${label}: ${value}` : label}
         aria-haspopup="dialog"
+        style={stagger(order)}
         onClick={onPick}
         autoFocus={autoFocus}
         className={`${className} cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold ${value ? '' : 'text-faint'}`}
@@ -273,6 +334,7 @@ function Blank({
       suppressContentEditableWarning
       data-placeholder={placeholder}
       data-empty={!value}
+      style={stagger(order)}
       onFocus={(e) => {
         if (!value) focusEmptyField(e.currentTarget)
       }}
@@ -301,7 +363,7 @@ function Blank({
           e.currentTarget.closest('form')?.requestSubmit()
         }
       }}
-      className={`blank mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
+      className={`blank brief-ink mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
     />
   )
 }

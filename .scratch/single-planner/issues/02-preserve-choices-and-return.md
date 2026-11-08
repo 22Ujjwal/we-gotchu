@@ -5,7 +5,7 @@ Reuse the existing planning selection and persistence behavior, changing only wh
 
 **Blocked by:** 01: Deliver a useful proposal with one planner.
 
-**Status:** ready-for-agent
+**Status:** verified-local; ready to ship
 
 Owner: Tony.
 
@@ -32,3 +32,10 @@ Stop only test-owned resources after the run and preserve customer sign-in and s
 Keep work local with no push, merge or deployment.
 Selecting an option remains a preference, not purchase approval.
 No supplier outreach, transaction bridge, payment work, production migration or unrelated frontend redesign.
+
+## Verification outcome
+
+See `docs/research/stage-two-selection-continuity.md` for the fresh browser run and read-only provider trace.
+Core comparison, saved selection, same-session continuation, close-and-return, and reload passed on `10efa51`.
+Complete HTTP attempt counts and new failure-path browser coverage remain unverified.
+Shipping was subsequently authorized by Tony after successful verification.

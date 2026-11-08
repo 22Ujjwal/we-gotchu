@@ -16,12 +16,12 @@ test('maps the fill-in brief to dollars in minor units and the browser timezone'
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
   expect(brief).toEqual({
     eventType: 'Franz’s 30th birthday', location: 'Kreuzberg', headcount: 24,
-    startsAt: new Date(2026, 11, 12, 19, 0).toISOString(), timezone: zone,
+    startsAt: new Date(2026, 11, 12, 19, 0).toISOString(), endsAt: new Date(2026, 11, 12, 23, 0).toISOString(), timezone: zone,
     budget: 90000, currency: 'usd', maximumCancellationLoss: 1000,
     supplyNeeds: ['table candles', 'paper plates'],
   })
   expect(previewFromBrief(brief)).toMatchObject({
-    occasion: typed.occasion, guests: '24', date: 'Sat 12 Dec 2026', from: '7pm', area: 'Kreuzberg',
+    occasion: typed.occasion, guests: '24', date: 'Sat 12 Dec 2026', from: '7pm', till: '11pm', area: 'Kreuzberg',
     budget: '900', canLose: '10', needs: 'table candles, paper plates',
   })
 })
@@ -61,3 +61,10 @@ test('prices every venue with the recommended supply included', () => {
   expect(settings.order(settings.venues[1]).total).toBe(215)
   expect(settings.venues[0].total).toBe(planReadyEvent.plan!.total / 100)
 })
+
+ test('preserves overnight end times and rejects equal times', () => {
+  const brief = briefFromPreview({ ...typed, from: '11pm', till: '1am' })
+  expect(brief).toHaveProperty('endsAt', new Date(2026, 11, 13, 1, 0).toISOString())
+  expect(previewFromBrief(brief).till).toBe('1am')
+  expect(() => briefFromPreview({ ...typed, till: '7pm' })).toThrow('end time')
+ })

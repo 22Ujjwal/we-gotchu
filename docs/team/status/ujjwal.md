@@ -1,3 +1,41 @@
+## Venue images — 2026-11-08
+
+Branch: `feat/venue-images`, baseline `5eafbcb`; [draft PR #61](https://github.com/22Ujjwal/we-gotchu/pull/61), pushed but not merged or deployed.
+Independent source-page image lookup returns zero to four images for a caller-owned
+saved venue option without calling the planning agent or changing the proposal.
+Source URLs are public HTTPS only with pinned IPv4 DNS, no redirects, bounded HTML
+size and time. Responses are private/no-store. No new credentials or migrations.
+
+Verification: 517 application tests and 25 coordination tests passed; typecheck,
+Vercel build and independent review passed. A review-found directory metadata
+association bug was reproduced and fixed before final verification. Live source
+retrieval of The Pearl worked under Node and Bun and through the endpoint module
+with a test-owned record. Its captioned rooftop photo was downloaded and visually
+checked. Hosted auth/endpoint and frontend carousel are not verified or deployed.
+
+Contract, configuration and example: [venue-images.md](../venue-images.md).
+Next: Tony/Leo wire the independent image response into planning cards. Review
+in draft PR #61; coordinate generated route tree when integrating newer main.
+Optional places-provider matching/Place IDs remain a future increment, not shipped.
+No research, prompt/schema, frontend design, payment, or supplier changes.
+
+## Email send key and full event duration — 2026-11-08
+
+Branch: `fix/agentmail-send-key`; baseline `776cd5b`; [draft PR #55](https://github.com/22Ujjwal/we-gotchu/pull/55), not merged or deployed.
+Fixes the invalid AgentMail send key and preserves optional event `endsAt` from
+Leo's form through the API/reload into the customer email. Includes timezone,
+end date and elapsed duration. Existing events remain supported. No migration,
+provider send, vendor outreach, payment change, or changes to email retry/copy.
+Touches Leo's brief adapter solely to retain the already-entered end time;
+frontend and research consumers should review this compatible contract addition.
+Independent review found no functional blockers against the integrated baseline.
+Focused email/adapter/event tests: 41 passed. Typecheck, Vercel build and all
+25 coordination tests passed. Full application suite: 483 passed.
+Code commits: `995b878` (send key), `f7facec` (event duration).
+The prior receipts formatting failure was addressed in latest main before integration.
+Next: review the compatible adapter/contract addition with Leo/Tony; no merge or
+production deployment is part of this handoff.
+
 # Ujjwal's status
 
 ## Latest checkpoint — sandbox payment/refund verified

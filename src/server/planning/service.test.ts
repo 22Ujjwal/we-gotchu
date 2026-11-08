@@ -267,3 +267,16 @@ it('rejects customer tool confirmation without calling the provider or recording
   expect(record?.pending).toBeNull()
   expect(record?.requests).not.toHaveProperty('forbidden')
 })
+
+it('repairs a saved stale answer at the same completed sequence without sending again', async () => {
+  const before = await ready()
+  const latest = { ...proposal, summary: 'Corrected supplier comparison' }
+  vi.mocked(agent.read).mockResolvedValue({ status: 'ready', sequence, proposal: latest, progress: null, error: null })
+  const repaired = await getPlanning(deps, before.id)
+  expect(repaired.proposal).toEqual(latest)
+  expect(repaired.messages).toHaveLength(2)
+  expect(repaired.messages[1].text).toContain(latest.summary)
+  expect(repaired.messages[1].id).toBe(before.messages[1].id)
+  expect((await getPlanning(deps, before.id)).version).toBe(repaired.version)
+  expect(agent.send).not.toHaveBeenCalled()
+})
