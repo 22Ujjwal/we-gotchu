@@ -59,3 +59,14 @@ it('routes mail reconciliation separately from research and saved-only reads', a
   expect((await planningGet(deps, 'plan', new Request('http://localhost/api/planning/plan?mail=1'))).status).toBe(200)
   expect(service.getPlanning).toHaveBeenCalledWith(deps, 'plan', { reconcileMail: true })
 })
+
+it('dispatches saved reply retries independently of the customer connection', async () => {
+  service.commandPlanning.mockResolvedValue({ id: 'plan' })
+  const dispatch = vi.fn()
+  const body = { kind: 'retry_reply', requestId: 'retry', expectedVersion: 1, inquiryId: 'inquiry', replyId: 'reply' }
+  expect((await planningPost(deps, 'plan', request(body), dispatch)).status).toBe(200)
+  expect(dispatch).toHaveBeenCalledTimes(1)
+  service.commandPlanning.mockRejectedValue({ status: 409, errorCode: 'stale' })
+  expect((await planningPost(deps, 'plan', request(body), dispatch)).status).toBe(409)
+  expect(dispatch).toHaveBeenCalledTimes(1)
+})
