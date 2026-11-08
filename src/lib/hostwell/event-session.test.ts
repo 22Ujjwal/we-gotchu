@@ -149,8 +149,11 @@ test('uncertain writes are never repeated by polling or a second click without r
 test.each(['awaiting_payment', 'executing', 'canceling'] as const)('continues polling %s without treating terminal research as completion', async status => {
   const fetcher = vi.fn(async () => json({ ...planReadyEvent, event: { ...planReadyEvent.event, status } }))
   setup(fetcher)
-  await tick(2000)
-  expect(fetcher).toHaveBeenCalledTimes(3)
+  const interval = status === 'awaiting_payment' ? 5000 : 1000
+  await tick(interval - 1)
+  expect(fetcher).toHaveBeenCalledTimes(1)
+  await tick(1)
+  expect(fetcher).toHaveBeenCalledTimes(2)
 })
 
 test('refund pending polls until authoritative refund completion', async () => {
