@@ -1,3 +1,18 @@
+## Latest: Leo main integration, 2026-11-08
+
+Branch: `integrate/leo-main-preserve-local`, local only; no PR or push.
+Tested merge: `a31d85a67b0b08a0f8da9b7f8881fb11a5b54a4d`.
+Merged main baseline: `4f312b946846bd1b52db194d882f3e676ba147bc` (PR #74).
+Rollback branch: `integrate/agent-connect-tony` at `971208e`.
+
+Leo's new arranging screen, event page, demo fixture photos and party route match main exactly. Existing authenticated planning, image retrieval/retry, concise copy, saved-selection fix and agent-connect work remain on the integration branch. The only textual merge conflict was additive `.env.example` settings; both sets were retained. No new product copy or layout changes were introduced for the merge.
+
+Verification: 777 application tests (72 files), 31 tooling tests, typecheck and build passed; frozen dependency installation passed. All 12 fixture photo paths exist. Native Chrome accessibility inspection after reload retained the selected local venue and arrangement controls. Screenshot capture returned blank, so fresh visual alignment and mobile verification remain pending. No email, supplier, payment, migration, deployment or hosted configuration action occurred.
+
+Demo fixtures remain separate from authenticated saved planning. Demo email and final booking email were not sent in verification. Hosted agents have not been updated with local prompt changes. Tony's newer `feat/planning-company-actions` changes through `df2a1e4` are not included; coordinate before integrating them. Next: visual review when browser capture is usable, then user-authorized push/PR.
+
+Earlier status entries below are historical evidence, not claims about this merge.
+
 ## Venue images — 2026-11-08
 
 Branch: `feat/venue-images`, baseline `5eafbcb`; [draft PR #61](https://github.com/22Ujjwal/we-gotchu/pull/61), pushed but not merged or deployed.
