@@ -1,7 +1,7 @@
 import { Link, Navigate, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { SettingsView } from '#/components/hostwell/settings-view'
 import { venues } from '#/lib/hostwell/fixture'
-import { useHostwell } from '#/lib/hostwell/store'
+import { buildOrder, useHostwell } from '#/lib/hostwell/store'
 import { localPreview } from '#/lib/local-preview'
 
 export const Route = createFileRoute('/settings/')({ component: SettingsPage })
@@ -11,9 +11,12 @@ function SettingsPage() {
 }
 
 function PreviewSettingsPage() {
-  const { brief } = useHostwell()
+  const { brief, addOns, selected } = useHostwell()
   const navigate = useNavigate()
-  const [prev, featured, next] = venues
+  const [prev, featured, next] = venues.map((v) => ({
+    ...v,
+    total: buildOrder(v, addOns, selected).total,
+  }))
   return (
     <SettingsView
       brief={{ ...brief, area: 'Berlin' }}

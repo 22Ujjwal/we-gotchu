@@ -47,6 +47,21 @@ test('features the planned venue first with the plan as its receipt', () => {
   expect(settings.venues[1].total).toBeNull()
 })
 
+test('prices every venue with the recommended supply included', () => {
+  const result = planReadyEvent.researchResult!
+  const view = {
+    ...planReadyEvent,
+    researchResult: {
+      ...result,
+      candidates: result.candidates.map((c) => (c.candidateId === 'cand_venue_b' ? { ...c, priceEstimate: 20000 } : c)),
+    },
+  }
+  const settings = settingsFromView(view)
+  expect(settings.venues[1].total).toBe(215)
+  expect(settings.order(settings.venues[1]).total).toBe(215)
+  expect(settings.venues[0].total).toBe(planReadyEvent.plan!.total / 100)
+})
+
  test('preserves overnight end times and rejects equal times', () => {
   const brief = briefFromPreview({ ...typed, from: '11pm', till: '1am' })
   expect(brief).toHaveProperty('endsAt', new Date(2026, 11, 13, 1, 0).toISOString())
