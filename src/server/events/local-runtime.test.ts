@@ -15,7 +15,7 @@ test('wires the existing event and execution runtimes to the planning database i
   const result = await getRequestDeps({ NODE_ENV: 'development', PLANNING_LOCAL_DB_DIR: '.scratch/test' })
   expect(state.getStorage).toHaveBeenCalledTimes(1)
   expect(state.configureStore).toHaveBeenCalledWith(state.store)
-  expect(state.configureDeps).toHaveBeenCalledWith({ store: state.store })
+  expect(state.configureDeps).toHaveBeenCalledWith(expect.objectContaining({ store: state.store, notifications: null }))
   expect(result.store).toBe(state.store)
 })
 test('does not open a local database in production', async () => {
