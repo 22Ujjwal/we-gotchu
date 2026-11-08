@@ -77,6 +77,8 @@ export interface Store {
   revokeApprovals(eventId: string, at: Date): Promise<Approval[]>
   getPaymentByCheckoutSession(checkoutSessionId: string): Promise<Payment | null>
   getPaymentByApproval(approvalId: string): Promise<Payment | null>
+  /** Paid approvals remain discoverable after revocation for cancellation retries. */
+  listPaidApprovalIds(eventId: string): Promise<string[]>
   /** Conditional pending -> paid. Returns null if it was not pending. */
   markPaymentPaid(checkoutSessionId: string, paymentIntentId: string): Promise<Payment | null>
   markPaymentExpired(checkoutSessionId: string): Promise<boolean>

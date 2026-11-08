@@ -424,3 +424,13 @@ describe('authorized commitment claim', () => {
     expect(await store.listAttempts(event.eventId)).toHaveLength(1)
   })
 })
+
+
+it('finds paid approvals after revocation for a cancellation retry', async () => {
+  const { event, run } = await store.createEvent({ customerId: 'refund-retry', brief })
+  const approval = await approve(event.eventId, run.runId)
+  await store.markPaymentPaid(approval.checkoutSessionId, 'pi_refund_retry')
+  await store.revokeApprovals(event.eventId, new Date())
+  expect(await store.listPaidApprovalIds(event.eventId)).toEqual([approval.approvalId])
+  expect(await store.listPaidApprovalIds('another-event')).toEqual([])
+})

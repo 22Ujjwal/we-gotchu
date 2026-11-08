@@ -70,6 +70,11 @@ export class MemoryStore implements Store {
     return structuredClone(this.approvals.find((a) => a.approvalId === approvalId) ?? null)
   }
 
+  async listPaidApprovalIds(eventId: string) {
+    return this.approvals.filter(a => a.eventId === eventId &&
+      this.payments.some(p => p.approvalId === a.approvalId && p.state === 'paid')).map(a => a.approvalId)
+  }
+
   async claimCommit(attempt: Attempt, now: Date) {
     const event = this.events.get(attempt.eventId)
     const approval = this.approvals.find((a) => a.approvalId === attempt.approvalId)

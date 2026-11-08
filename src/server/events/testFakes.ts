@@ -237,6 +237,11 @@ export class MemoryStore implements Store {
     this.stripeEvents.add(id)
     return true
   }
+  async listPaidApprovalIds(eventId: string) {
+    return [...this.approvals.values()].filter(a => a.eventId === eventId &&
+      [...this.payments.values()].some(p => p.approvalId === a.approvalId && p.state === 'paid')).map(a => a.approvalId)
+  }
+
   async claimCommit(attempt: Attempt, now: Date) {
     const event = this.events.get(attempt.eventId)
     const approval = this.approvals.get(attempt.approvalId)

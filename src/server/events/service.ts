@@ -286,7 +286,7 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
   if (!requested) return view(deps, eventId) // already canceled
 
   const revoked = await deps.store.revokeApprovals(eventId, now)
-  const paidApprovalIds: string[] = []
+  const paidApprovalIds = await deps.store.listPaidApprovalIds(eventId)
   for (const approval of revoked) {
     const payment = await deps.store.getPaymentByApproval(approval.approvalId)
     if (payment?.state === 'pending') {
@@ -295,8 +295,6 @@ export async function cancel(deps: Deps, eventId: string): Promise<EventView> {
       } catch (err) {
         console.warn('[cancel] could not expire Checkout session', payment.checkoutSessionId, err)
       }
-    } else if (payment?.state === 'paid') {
-      paidApprovalIds.push(approval.approvalId)
     }
   }
 

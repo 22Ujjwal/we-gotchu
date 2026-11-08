@@ -582,6 +582,13 @@ export function createStore(db: Db): Store {
       return row ? toPayment(row) : null
     },
 
+    async listPaidApprovalIds(eventId) {
+      const rows = await db.select({ id: approvals.id }).from(approvals)
+        .innerJoin(payments, eq(payments.approvalId, approvals.id))
+        .where(and(eq(approvals.eventId, eventId), eq(payments.state, 'paid')))
+      return rows.map(row => row.id)
+    },
+
     async markPaymentPaid(checkoutSessionId, paymentIntentId) {
       const [row] = await db
         .update(payments)

@@ -1,3 +1,5 @@
+import { settleCancellation } from '../execution/execute'
+import { issueFinalRefund } from '../payments/webhook'
 import { describe, expect, it } from 'vitest'
 import type { ResearchPort } from './deps'
 import { ApiError } from './errors'
@@ -199,4 +201,33 @@ describe('cancel', () => {
     expect(canceled).toEqual([run!.naiveSessionId])
     expect(after.run?.state).toBe('canceled')
   })
+})
+
+
+it('retries the refund after a paid cancellation already revoked its approval', async () => {
+  const { deps, store, stripe, eventId, view } = await planReady()
+  const { payment, approval } = await approve(deps, eventId, view.plan!.planId, 1)
+  await store.markPaymentPaid(payment.checkoutSessionId, 'pi_retry_cancel')
+  const original = deps.stripe.refunds.create
+  let calls = 0
+  deps.stripe.refunds.create = async (...args) => {
+    if (++calls === 1) throw new Error('refund temporarily unavailable')
+    return original(...args)
+  }
+  const seen: string[][] = []
+  deps.hooks.startSupplierCancellation = async ({ paidApprovalIds }) => {
+    seen.push(paidApprovalIds)
+    await settleCancellation({
+      store, adapterFor: () => { throw new Error('No supplier commitment exists') },
+      onAllCanceled: async id => { await issueFinalRefund(deps, id) },
+    }, eventId)
+  }
+  await expect(cancel(deps, eventId)).rejects.toThrow('refund temporarily unavailable')
+  expect((await store.getEvent(eventId))?.status).toBe('canceling')
+  expect((await store.getApproval(approval.approvalId))?.revokedAt).not.toBeNull()
+  const retried = await cancel(deps, eventId)
+  expect(seen).toEqual([[approval.approvalId], [approval.approvalId]])
+  expect(retried.event.status).toBe('canceled')
+  expect(retried.payment?.refundState).toBe('pending')
+  expect(stripe.refundCalls).toHaveLength(1)
 })
