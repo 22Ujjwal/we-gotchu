@@ -42,3 +42,27 @@ test('malformed option URLs never reach rendered source links', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ ...saved, selections: [{ id: 'bad', kind: 'venue', name: 'Bad source', url: 'javascript:alert(1)', why: 'Test', facts: [], unknowns: [] }] })))
   await expect(createPlanningApi().read('plan-a', new AbortController().signal)).rejects.toBeInstanceOf(PlanningApiError)
 })
+
+test('preserves saved offer and linked payment across command response and reload', async () => {
+  const offer = { id: 'offer', revision: 1, inquiryId: 'inquiry', replyId: 'reply', contextMessageIds: [],
+    currency: 'usd', expiresAt: null, mode: 'simulated', missing: [],
+    brief: { eventType: 'Party', location: 'SF', startsAt: '2026-12-12T20:00:00Z', timezone: 'America/Los_Angeles',
+      headcount: 12, budget: 30000, currency: 'usd', supplyNeeds: [], maximumCancellationLoss: 0 },
+    lines: [{ option: { id: 'room', kind: 'venue', name: 'Controlled room', url: 'https://example.com/room', why: 'Room', facts: [], unknowns: [] },
+      sourceReplyId: 'reply', unitAmount: 20000, units: 1, quantityDescription: 'Room for 12', tax: 0, delivery: 0, fees: 0,
+      deposit: { amount: 5000, treatment: 'included' }, cancellationTerms: 'Refundable.', sourceQuotes: ['USD 200 includes the USD 50 deposit.'] }],
+  }
+  const paymentLink = { eventId: 'event', planId: 'transaction', planRevision: 1, offerId: 'offer', offerRevision: 1 }
+  const response = { ...saved, status: 'ready', offer, paymentLink }
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(response)))
+  const api = createPlanningApi()
+  const signal = new AbortController().signal
+  expect(await api.command('plan-a', { kind: 'prepare_payment', requestId: 'payment', expectedVersion: 1, offerId: 'offer', offerRevision: 1 }, signal)).toEqual(response)
+  expect(await api.read('plan-a', signal, true)).toEqual(response)
+})
+
+test.each([{ offer: { id: 'incomplete' } }, { paymentLink: { eventId: 'event', planId: 'plan', planRevision: -1, offerId: 'offer', offerRevision: 1 } }])(
+  'rejects malformed offer/payment data instead of silently dropping it', async extra => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ...saved, ...extra })))
+    await expect(createPlanningApi().read('plan-a', new AbortController().signal)).rejects.toBeInstanceOf(PlanningApiError)
+  })
