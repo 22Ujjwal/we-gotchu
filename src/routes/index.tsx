@@ -117,9 +117,9 @@ function Blank({
   onChange: (v: string) => void
 }) {
   const ref = useRef<HTMLSpanElement>(null)
-  // An invisible text anchor gives the browser a native caret position while
-  // the field is empty. It never becomes part of the brief's value.
-  const emptyAnchor = '\u200b'
+  // A word joiner gives the native caret a text position and prevents a line
+  // break between it and the placeholder. It is never saved in the brief.
+  const emptyAnchor = '\u2060'
   const focusEmptyField = (field: HTMLSpanElement) => {
     const range = document.createRange()
     range.setStart(field.firstChild!, 0)
