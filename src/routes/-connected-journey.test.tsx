@@ -146,7 +146,7 @@ test('a ready plan is chosen, approved once and sent to checkout', async () => {
   const cards = within(await screen.findByRole('region', { name: 'Suggested venues' }))
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ready.event.brief.eventType)
   expect(cards.getByRole('heading', { name: 'Harbor Loft (simulated)' })).toBeVisible()
-  expect(cards.getByText(`$${(ready.plan!.total / 100).toFixed(2)}`)).toBeVisible()
+  expect(cards.queryByText(`$${(ready.plan!.total / 100).toFixed(2)}`)).not.toBeInTheDocument()
 
   fireEvent.click(cards.getByRole('button', { name: 'Choose Garden Room (simulated)' }))
   expect(screen.getByRole('button', { name: 'Arrange' })).toBeDisabled()

@@ -31,6 +31,7 @@ import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.br
 import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
 import { Route as EventsEventIdReceiptsIndexRouteImport } from './routes/events.$eventId_.receipts.index'
 import { Route as EventsEventIdReceiptsReceiptIdRouteImport } from './routes/events.$eventId_.receipts.$receiptId'
+import { Route as ApiPlanningIdOptionsOptionIdImagesRouteImport } from './routes/api/planning.$id.options.$optionId.images'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -144,6 +145,12 @@ const EventsEventIdReceiptsReceiptIdRoute =
     path: '/events/$eventId/receipts/$receiptId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPlanningIdOptionsOptionIdImagesRoute =
+  ApiPlanningIdOptionsOptionIdImagesRouteImport.update({
+    id: '/options/$optionId/images',
+    path: '/options/$optionId/images',
+    getParentRoute: () => ApiPlanningIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -161,13 +168,14 @@ export interface FileRoutesByFullPath {
   '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
-  '/api/planning/$id': typeof ApiPlanningIdRoute
+  '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
   '/events/$eventId/receipts/$receiptId': typeof EventsEventIdReceiptsReceiptIdRoute
   '/events/$eventId/receipts/': typeof EventsEventIdReceiptsIndexRoute
+  '/api/planning/$id/options/$optionId/images': typeof ApiPlanningIdOptionsOptionIdImagesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -185,13 +193,14 @@ export interface FileRoutesByTo {
   '/receipts': typeof ReceiptsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
-  '/api/planning/$id': typeof ApiPlanningIdRoute
+  '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
   '/events/$eventId/receipts/$receiptId': typeof EventsEventIdReceiptsReceiptIdRoute
   '/events/$eventId/receipts': typeof EventsEventIdReceiptsIndexRoute
+  '/api/planning/$id/options/$optionId/images': typeof ApiPlanningIdOptionsOptionIdImagesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -210,13 +219,14 @@ export interface FileRoutesById {
   '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
-  '/api/planning/$id': typeof ApiPlanningIdRoute
+  '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
   '/events/$eventId_/receipts/$receiptId': typeof EventsEventIdReceiptsReceiptIdRoute
   '/events/$eventId_/receipts/': typeof EventsEventIdReceiptsIndexRoute
+  '/api/planning/$id/options/$optionId/images': typeof ApiPlanningIdOptionsOptionIdImagesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/api/events/$id/cancel'
     | '/events/$eventId/receipts/$receiptId'
     | '/events/$eventId/receipts/'
+    | '/api/planning/$id/options/$optionId/images'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/events/$id/cancel'
     | '/events/$eventId/receipts/$receiptId'
     | '/events/$eventId/receipts'
+    | '/api/planning/$id/options/$optionId/images'
   id:
     | '__root__'
     | '/'
@@ -291,6 +303,7 @@ export interface FileRouteTypes {
     | '/api/events/$id/cancel'
     | '/events/$eventId_/receipts/$receiptId'
     | '/events/$eventId_/receipts/'
+    | '/api/planning/$id/options/$optionId/images'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -469,6 +482,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdReceiptsReceiptIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/planning/$id/options/$optionId/images': {
+      id: '/api/planning/$id/options/$optionId/images'
+      path: '/options/$optionId/images'
+      fullPath: '/api/planning/$id/options/$optionId/images'
+      preLoaderRoute: typeof ApiPlanningIdOptionsOptionIdImagesRouteImport
+      parentRoute: typeof ApiPlanningIdRoute
+    }
   }
 }
 
@@ -500,12 +520,25 @@ const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
   ApiEventsRouteChildren,
 )
 
+interface ApiPlanningIdRouteChildren {
+  ApiPlanningIdOptionsOptionIdImagesRoute: typeof ApiPlanningIdOptionsOptionIdImagesRoute
+}
+
+const ApiPlanningIdRouteChildren: ApiPlanningIdRouteChildren = {
+  ApiPlanningIdOptionsOptionIdImagesRoute:
+    ApiPlanningIdOptionsOptionIdImagesRoute,
+}
+
+const ApiPlanningIdRouteWithChildren = ApiPlanningIdRoute._addFileChildren(
+  ApiPlanningIdRouteChildren,
+)
+
 interface ApiPlanningRouteChildren {
-  ApiPlanningIdRoute: typeof ApiPlanningIdRoute
+  ApiPlanningIdRoute: typeof ApiPlanningIdRouteWithChildren
 }
 
 const ApiPlanningRouteChildren: ApiPlanningRouteChildren = {
-  ApiPlanningIdRoute: ApiPlanningIdRoute,
+  ApiPlanningIdRoute: ApiPlanningIdRouteWithChildren,
 }
 
 const ApiPlanningRouteWithChildren = ApiPlanningRoute._addFileChildren(

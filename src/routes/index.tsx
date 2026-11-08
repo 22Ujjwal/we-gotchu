@@ -170,7 +170,7 @@ function BriefFlow({
     return (
       <div className="flex min-h-screen flex-col">
         <Header step="setting" />
-        <ReceiptLoader onDone={onLoaderDone} />
+        <ReceiptLoader brief={draft} onDone={onLoaderDone} />
       </div>
     )
 

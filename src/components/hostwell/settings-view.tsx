@@ -28,7 +28,7 @@ export function SettingsView({
   return (
     <div className="flex min-h-screen flex-col overflow-x-clip">
       <Header step="setting" />
-      <main className="flex flex-col items-center gap-6 px-5 pt-8 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
+      <main className="venue-reveal flex flex-col items-center gap-6 px-5 pt-8 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
         <div className="flex flex-col items-center gap-2 text-center lg:gap-3.5">
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
             {brief.occasion}
@@ -51,7 +51,7 @@ export function SettingsView({
           {prev && <SideCard venue={prev} onSelect={() => choose(prev.id)} />}
           <div
             key={current.id}
-            className="gold-frame rise order-first flex w-full max-w-[468px] shrink-0 lg:w-[468px] p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
+            className="gold-frame order-first flex w-full max-w-[468px] shrink-0 lg:w-[468px] p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
           >
             <article className="flex w-full flex-col overflow-hidden bg-white">
               <Photo
@@ -119,18 +119,9 @@ export function SettingsView({
 
 function CardTitle({ venue, large }: { venue: Venue; large?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <h2
-        className={`m-0 font-semibold ${large ? 'text-[22px] leading-7 lg:text-[26px] lg:leading-8' : 'text-[20px] leading-6 lg:text-[22px] lg:leading-7'}`}
-      >
-        {venue.name}
-      </h2>
-      <span
-        className={`shrink-0 font-mono font-medium tracking-[-0.01em] text-stone ${large ? 'text-[18px] leading-[22px] lg:text-[24px] lg:leading-[30px]' : 'text-[17px] leading-[22px] lg:text-[20px] lg:leading-6'}`}
-      >
-        {venue.total === null ? 'Quote' : `$${venue.total.toFixed(2)}`}
-      </span>
-    </div>
+    <h2 className={`m-0 font-semibold ${large ? 'text-[22px] leading-7 lg:text-[26px] lg:leading-8' : 'text-[20px] leading-6 lg:text-[22px] lg:leading-7'}`}>
+      {venue.name}
+    </h2>
   )
 }
 
