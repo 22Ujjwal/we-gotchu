@@ -1,6 +1,6 @@
 # Venue images handoff
 
-Branch: `feat/venue-images`, based on `5eafbcb`. Local only; not merged, pushed or deployed.
+Branch: `feat/venue-images`, based on `5eafbcb`. [Draft PR #61](https://github.com/22Ujjwal/we-gotchu/pull/61); pushed, not merged or production deployed.
 
 ## Response contract
 

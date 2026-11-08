@@ -1,6 +1,6 @@
 ## Venue images — 2026-11-08
 
-Branch: `feat/venue-images`, baseline `5eafbcb`; local only, no PR/push/deployment.
+Branch: `feat/venue-images`, baseline `5eafbcb`; [draft PR #61](https://github.com/22Ujjwal/we-gotchu/pull/61), pushed but not merged or deployed.
 Independent source-page image lookup returns zero to four images for a caller-owned
 saved venue option without calling the planning agent or changing the proposal.
 Source URLs are public HTTPS only with pinned IPv4 DNS, no redirects, bounded HTML
@@ -15,7 +15,7 @@ checked. Hosted auth/endpoint and frontend carousel are not verified or deployed
 
 Contract, configuration and example: [venue-images.md](../venue-images.md).
 Next: Tony/Leo wire the independent image response into planning cards. Review
-before pushing; coordinate generated route tree when integrating newer main.
+in draft PR #61; coordinate generated route tree when integrating newer main.
 Optional places-provider matching/Place IDs remain a future increment, not shipped.
 No research, prompt/schema, frontend design, payment, or supplier changes.
 
