@@ -155,5 +155,15 @@ Recipient delivery, signed hosted receipt, and hosted scheduling remain separate
 
 A failed nonempty reply offers Retry reply summary.
 This command records its request ID and changes that saved reply back to pending interpretation.
-The worker processes it on its next invocation.
+The server registers background processing after the retry is saved; the daily recovery job remains a fallback.
 Repeating the same command does not enqueue another logical reply or send another inquiry.
+
+
+## Uncertain inquiry recovery
+
+Check send status reads the durable mail operation using the original request ID and verifies its conversation and inquiry identity.
+It never calls the send endpoint.
+A saved provider acceptance or rejection updates the conversation without changing the approved content.
+A missing operation or an uncertain operation without a known provider message remains uncertain.
+The application does not treat absence as proof that nothing was sent.
+Saved-only page restoration does not perform provider reconciliation.
