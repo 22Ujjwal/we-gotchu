@@ -2,7 +2,7 @@ import { beforeAll, expect, test, vi } from 'vitest'
 import { CONTRACT_VERSION, ResearchResult } from '../contracts'
 import { createTestStore } from '../server/db/client'
 import type { Store } from '../server/store'
-import { createEvent, getEventView, cancel } from '../server/events/service'
+import { createEvent, getEventView, cancel, updateBrief } from '../server/events/service'
 import { makeDeps } from '../server/events/testFakes'
 import { createResearchIntegration } from './integration'
 import { discoveryFixture, researchBriefFixture, researchConsumerFixtures } from './integration.fixtures'
@@ -295,4 +295,93 @@ test('a brief revision after result publication keeps the newer run researching'
     expect(view.event.status).toBe('researching')
     expect(view.researchResult).toBeNull()
   } finally { spy.mockRestore() }
+})
+
+for (const action of ['cancel', 'revise'] as const) {
+  test(`${action} cleans a saved hosted definition before a session exists`, async () => {
+    const { deps, session } = setup()
+    const started = await createEvent(deps, researchBriefFixture)
+    await getEventView(deps, started.event.eventId)
+    await getEventView(deps, started.event.eventId)
+    expect((await store.researchCheckpoints!.read(started.run!.runId))!.agentId).toBe('agent')
+    expect((await store.getRun(started.run!.runId))!.naiveSessionId).toBeNull()
+    if (action === 'cancel') await cancel(deps, started.event.eventId)
+    else await updateBrief(deps, started.event.eventId, 1, { location: 'Updated location' })
+    expect(session.deleteAgent).toHaveBeenCalledTimes(1)
+    expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
+    expect(session.start).not.toHaveBeenCalled()
+  })
+}
+
+test('brief replacement after completion does not repeat confirmed cleanup', async () => {
+  const { deps, session } = setup()
+  const started = await createEvent(deps, researchBriefFixture)
+  await finish(deps, started.event.eventId)
+  vi.mocked(session.deleteAgent).mockRejectedValueOnce(new Error('already deleted'))
+  await updateBrief(deps, started.event.eventId, 1, { location: 'New brief' })
+  expect(session.deleteAgent).toHaveBeenCalledTimes(1)
+  expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
+})
+
+test('a failed read cannot prevent explicit cancellation and definition cleanup', async () => {
+  const { deps, session } = setup({ start: vi.fn(async () => 'failed-read-session'),
+    poll: vi.fn(async () => { throw new Error('GET failed') }) })
+  const started = await createEvent(deps, researchBriefFixture)
+  for (let i = 0; i < 3; i++) await getEventView(deps, started.event.eventId)
+  await cancel(deps, started.event.eventId)
+  expect(session.cancel).toHaveBeenCalledTimes(1)
+  expect(session.deleteAgent).toHaveBeenCalledTimes(1)
+  expect((await store.researchCheckpoints!.read(started.run!.runId))!.cleanup).toMatchObject({ confirmed: true })
+})
+
+test('legacy runs without checkpoints end visibly and never send simulated IDs to the provider', async () => {
+  const { deps, session } = setup()
+  const { event, run } = await store.createEvent({ customerId: 'user_alice', brief: researchBriefFixture })
+  await store.setRunSession(run.runId, `sim_session_${run.runId}`)
+  const view = await getEventView(deps, event.eventId)
+  expect(view.run!.state).toBe('failed')
+  expect(view.researchResult!.warnings.join(' ')).toContain('checkpoint')
+  await cancel(deps, event.eventId)
+  expect(session.poll).not.toHaveBeenCalled()
+  expect(session.cancel).not.toHaveBeenCalled()
+})
+
+test('uncertain provider creation remains visible even when the run deadline passed', async () => {
+  const { deps } = setup()
+  const started = await createEvent(deps, researchBriefFixture)
+  const claimed = (await store.claimRunAdvance(started.run!.runId, new Date(), 30000))!
+  const checkpoint = (await store.researchCheckpoints!.read(claimed.runId))!
+  await store.researchCheckpoints!.save(claimed, checkpoint.version, {
+    ...checkpoint, stage: 'uncertain', expiresAt: '2026-01-01T00:00:00.000Z',
+  })
+  await store.releaseRunAdvance(claimed.runId, 0, claimed.advancingUntil)
+  const completed = await finish(deps, started.event.eventId)
+  expect(completed.researchResult!.warnings.join(' ')).toContain('uncertain outcome')
+})
+
+test('revalidation publishes each warning only once', async () => {
+  const { deps, discover, session } = setup()
+  deps.research = createResearchIntegration({ store, providers: { discover, session, enrich: async (_input, evidence) => evidence } })
+  const started = await createEvent(deps, researchBriefFixture)
+  const result = (await finish(deps, started.event.eventId)).researchResult!
+  expect(result.warnings).toEqual([...new Set(result.warnings)])
+})
+
+test('read-only enrichment failure does not invent remote resource reconciliation work', async () => {
+  const { deps, discover, session } = setup()
+  deps.research = createResearchIntegration({ store, providers: { discover, session,
+    enrich: async () => { throw new Error('read failed') } } })
+  const started = await createEvent(deps, researchBriefFixture)
+  const result = (await finish(deps, started.event.eventId)).researchResult!
+  expect(result.outcome).toBe('partial')
+  expect(result.warnings.join(' ')).not.toContain('uncertain')
+  expect(result.warnings.join(' ')).not.toContain('reconciliation')
+})
+
+test('non-checkpoint ports persist their final sequence when publishing', async () => {
+  const { simulatedResearchPort } = await import('../server/events/simulatedResearch')
+  const { deps } = makeDeps({ store, research: simulatedResearchPort, now: () => new Date() })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await getEventView(deps, started.event.eventId)
+  expect(completed.run!.lastSequence).toBe(1)
 })
