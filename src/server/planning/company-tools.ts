@@ -1,3 +1,4 @@
+import { eventMailSubject } from './customer-notifications'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { inquiryFieldsSchema, planningInquirySchema } from '../../agent/planning/contract'
@@ -188,7 +189,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       }
       return { saved: true, sendStatus: result.status }
     }
-    const fields = { recipient: draft.recipient, subject: draft.subject, text: draft.text, contactSourceUrl: draft.recipient ? draft.contactSourceUrl : null }
+    const fields = { recipient: draft.recipient, subject: eventMailSubject(draft.subject, record.id), text: draft.text, contactSourceUrl: draft.recipient ? draft.contactSourceUrl : null }
     const requestId = `company-inquiry:${scope.inquiryId}:${scope.revision}`
     const fingerprint = JSON.stringify(fields)
     if (record.requests[requestId] === fingerprint) return { saved: true, revision: inquiry.revision, sent: false }

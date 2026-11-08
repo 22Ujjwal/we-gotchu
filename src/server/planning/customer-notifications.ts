@@ -4,11 +4,17 @@ import { createHash } from 'node:crypto'
 import { SendRejected, type MailProvider } from '../email/supplier-inquiries/types'
 import type { PlanningRecord, PlanningRepository } from './repository'
 
+export function eventMailSubject(subject: string, conversationId: string): string {
+  const prefix = `[Arrange ${createHash('sha256').update(conversationId).digest('hex').slice(0, 12)}] `
+  return subject.startsWith(prefix) ? subject.slice(0, 200) : `${prefix}${subject.slice(0, 200 - prefix.length)}`
+}
+
 // Reserve the exact content before sending so a restart never blindly repeats an email.
 export async function sendCustomerNotification(repository: PlanningRepository, provider: MailProvider,
   record: PlanningRecord, key: string, email: { subject: string; text: string }): Promise<void> {
   const to = record.view.arrangement?.customerEmail
   if (!to) return
+  email = { ...email, subject: eventMailSubject(email.subject, record.id) }
   const notification = { to, ...email, status: 'uncertain' as const }
   let reserved = false
   for (let attempt = 0; attempt < 4; attempt++) {
