@@ -116,7 +116,6 @@ export function createResearchIntegration(options: {
         }
         switch (c.stage) {
           case 'discovery': {
-            await save({}, 'Looking for supplier evidence.')
             const result = await bounded(() => researchEvent(c!.input, {
               discover: options.providers.discover, recommend: supportedOrder,
             }, { timeoutMs: stepMs, signal }))
@@ -127,7 +126,6 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'investigating': {
-            await save({}, 'Investigating supplier details.')
             // Reuse the shared enrichment validator and its cooperative-abort grace period.
             // Discovery is already saved and recommendation here is only a private ID order.
             const remaining = stepDeadline - Date.now()
