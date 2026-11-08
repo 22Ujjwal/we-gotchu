@@ -501,3 +501,24 @@ test('bounded investigation saves evidence returned during cooperative abort', a
   expect(completed.researchResult!.sourceChecks).toContainEqual(expect.objectContaining({ reason: 'Evidence collected before the detail deadline.' }))
   expect(completed.researchResult!.recommendations).not.toEqual([])
 })
+
+test('cancellation stops a session while a correction to a terminal snapshot is in flight', async () => {
+  let entered: () => void = () => {}
+  let accept: (sequence: number) => void = () => {}
+  const waiting = new Promise<void>(resolve => { entered = resolve })
+  const { deps, session } = setup({
+    poll: vi.fn(async () => ({ id: 'session', status: 'completed', stop_reason: 'end_turn', last_seq: 7,
+      structured_output: { candidateIds: ['invented'] } })),
+    correct: vi.fn(() => { entered(); return new Promise<number>(resolve => { accept = resolve }) }),
+  })
+  const started = await createEvent(deps, researchBriefFixture)
+  for (let i = 0; i < 4; i++) await getEventView(deps, started.event.eventId)
+  const pending = getEventView(deps, started.event.eventId)
+  await waiting
+  await cancel(deps, started.event.eventId)
+  accept(8)
+  const view = await pending
+  expect(view.run!.state).toBe('canceled')
+  expect(session.cancel).toHaveBeenCalledWith('session', expect.any(AbortSignal))
+  expect(view.researchResult).toBeNull()
+})
