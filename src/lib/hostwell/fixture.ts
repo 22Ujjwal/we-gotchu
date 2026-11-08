@@ -35,7 +35,7 @@ export type Feature = {
 export type ReceiptLine = {
   qty: number
   item: string
-  amount: number | 'incl.'
+  amount: number | string
   notes?: Array<string>
   noteAmount?: string
 }
@@ -47,7 +47,8 @@ export type Venue = {
   /** Cover photo; also photos[0]. */
   photo: string
   photos: Array<string>
-  total: number
+  /** Null when the price is not known yet. */
+  total: number | null
   cardFeatures: Array<Feature>
   description: string
   detailFeatures: Array<Feature>
@@ -78,7 +79,7 @@ export const venues: Array<Venue> = [
     total: 768.2,
     cardFeatures: [
       { icon: 'guests', label: 'Seats 28' },
-      { icon: 'fee', label: '€8 fee after 1 Dec' },
+      { icon: 'fee', label: '$8 fee after 1 Dec' },
     ],
     description:
       'A converted factory floor wrapped around a courtyard garden, with tall steel windows, long oak tables and plenty of plants. Warm and loud in the best way.',
@@ -164,7 +165,7 @@ export const venues: Array<Venue> = [
 export type AddOn = {
   id: string
   label: string
-  /** Gross price in EUR (VAT included). Null for free-text requests. */
+  /** Gross price in USD (VAT included). Null for free-text requests. */
   price: number | null
   included?: boolean
 }
@@ -178,7 +179,7 @@ export const addOns: Array<AddOn> = [
 
 export const VAT_RATE = 0.19
 
-export function eur(n: number) {
+export function usd(n: number) {
   return n.toFixed(2)
 }
 

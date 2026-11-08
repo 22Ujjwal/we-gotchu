@@ -72,13 +72,14 @@ export type Order = {
   lines: Array<ReceiptLine>
   requests: Array<string>
   subtotal: number
-  vat: number
+  /** Null when the amounts already include tax. */
+  vat: number | null
   total: number
 }
 
 /**
  * Builds the receipt for a venue plus the selected add-ons. Candles are part
- * of every quote; other add-ons are shown gross so the "+€" next to each one
+ * of every quote; other add-ons are shown gross so the "+$" next to each one
  * is exactly what it adds to the total.
  */
 export function buildOrder(

@@ -249,3 +249,25 @@ test('automatic conflict reconciliation preserves the mutation error until expli
   await session.refresh()
   expect(session.getSnapshot().error).toBeNull()
 })
+
+test('keeps reading briefly while a finished run is still saving its plan', async () => {
+  const saving: EventView = { ...running(), run: { ...running().run!, state: 'succeeded' },
+    researchResult: { ...planReadyEvent.researchResult!, createdAt: new Date().toISOString() } }
+  const fetcher = vi.fn().mockResolvedValueOnce(json(saving)).mockResolvedValue(json(planReadyEvent))
+  const session = setup(fetcher)
+  await tick()
+  expect(session.getSnapshot().view?.plan).toBeNull()
+  await tick(1000)
+  expect(session.getSnapshot().view?.event.status).toBe('plan_ready')
+  await tick(10000)
+  expect(fetcher).toHaveBeenCalledTimes(2)
+})
+
+test('stops reading if a published result never gets its plan', async () => {
+  const stuck: EventView = { ...running(), run: { ...running().run!, state: 'succeeded' },
+    researchResult: { ...planReadyEvent.researchResult!, createdAt: new Date(Date.now() - 60_000).toISOString() } }
+  const fetcher = vi.fn(async () => json(stuck))
+  setup(fetcher)
+  await tick(10000)
+  expect(fetcher).toHaveBeenCalledTimes(1)
+})
