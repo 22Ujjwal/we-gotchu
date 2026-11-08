@@ -1,4 +1,6 @@
 import { ClerkProvider } from '@clerk/tanstack-react-start'
+import { Fragment } from 'react'
+import { localPreview } from '#/lib/local-preview'
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -41,13 +43,14 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const AuthProvider = localPreview ? Fragment : ClerkProvider
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <ClerkProvider>
+        <AuthProvider>
           <HostwellProvider>{children}</HostwellProvider>
           <TanStackDevtools
             config={{
@@ -61,7 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             ]}
           />
           <Scripts />
-        </ClerkProvider>
+        </AuthProvider>
       </body>
     </html>
   )
