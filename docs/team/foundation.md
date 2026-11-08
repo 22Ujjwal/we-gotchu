@@ -30,6 +30,9 @@ Do not create empty packages or pretend database, payment, or worker behavior is
 
 A clean checkout installs with Bun and passes the new typecheck and test commands.
 Shared schemas accept the agreed fixtures and reject materially invalid input.
+Publish those fixtures from src/contracts for both frontend and agent consumers.
+Add contract tests for missing approval identity, mismatched currency, unsupported states, and the agreed successful examples.
+Coordinate consumer tests with Tony and Leo and record the tested contract version.
 Leo can consume the shared fixtures without importing server code.
 Tony can consume the same types and the documented worker interface.
 CI passes for the foundation PR before the team integrates it.

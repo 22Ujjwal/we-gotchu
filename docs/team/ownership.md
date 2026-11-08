@@ -50,3 +50,9 @@ Confirm your branch and declared file ownership before editing.
 Implement only your assigned work after the humans begin implementation.
 Report needed shared changes to their owner instead of editing around the boundary.
 Keep real transactions disabled until the agreed live prerequisites and customer approvals are satisfied.
+
+## Coordination files
+
+Each teammate owns their individual file under docs/team/status.
+Ujji coordinates the shared status index and contract-change process.
+Follow the [coordination workflow](coordination.md) when starting work or handing it off.
