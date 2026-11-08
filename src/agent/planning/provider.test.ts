@@ -98,10 +98,10 @@ it('finds completion across event pages even with more than a page of trailing e
   const { agent, snapshot, client } = setup()
   snapshot.last_seq = 260
   const rows = Array.from({ length: 260 }, (_, i) => ({ seq: i + 1,
-    type: i === 40 ? 'session.idle' : 'usage.updated',
-    data: i === 40 ? { structured_output: proposal } : {},
+    type: i === 140 ? 'session.idle' : 'usage.updated',
+    data: i === 140 ? { structured_output: proposal } : {},
   }))
-  vi.mocked(client.sessions.events).mockImplementation(async (_id, query) => ({ data: rows.filter(row => row.seq > query.after_seq).slice(0, query.limit) }))
-  expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', sequence: 41, proposal })
-  expect(client.sessions.events).toHaveBeenCalledTimes(3)
+  vi.mocked(client.sessions.events).mockImplementation(async (_id, query) => ({ data: rows.filter(row => row.seq > query.after_seq).slice(0, 50) }))
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', sequence: 141, proposal })
+  expect(client.sessions.events).toHaveBeenCalledTimes(6)
 })
