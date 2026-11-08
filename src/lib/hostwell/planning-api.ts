@@ -1,11 +1,11 @@
 import { z } from 'zod'
-import { planningOptionSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
+import { planningInquirySchema, planningOptionSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
 
 const viewSchema: z.ZodType<PlanningView> = z.object({
   id: z.string().min(1), version: z.number().int().nonnegative(),
   status: z.enum(['working', 'ready', 'failed', 'uncertain', 'blocked']),
   messages: z.array(z.object({ id: z.string(), role: z.enum(['user', 'assistant']), text: z.string(), createdAt: z.string() })),
-  proposal: planningProposalSchema.nullable(), selections: z.array(planningOptionSchema),
+  proposal: planningProposalSchema.nullable(), inquiry: planningInquirySchema.optional(), selections: z.array(planningOptionSchema),
   progress: z.string().nullable(), error: z.string().nullable(), approvals: z.array(planningApprovalSchema).optional(),
   activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(),
 })

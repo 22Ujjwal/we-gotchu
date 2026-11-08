@@ -1,3 +1,4 @@
+import { prepareInquiry, staleInquiry } from './inquiry'
 import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
 import { planningCommandSchema, planningCreateSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema } from '../../agent/planning/contract'
@@ -130,9 +131,27 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (command.expectedVersion !== record.view.version) throw stale()
   if (record.pending && record.view.status !== 'uncertain' && record.pending.expiresAt > now(deps)) throw busy()
   const requests = { ...record.requests, [command.requestId]: fingerprint }
+  if (command.kind === 'prepare_inquiry' || command.kind === 'save_inquiry') {
+    if (record.pending || record.view.status !== 'ready') throw busy()
+    if (command.kind === 'prepare_inquiry' && record.view.inquiry?.status === 'draft') {
+      throw new ApiError(409, 'draft_exists', 'An inquiry draft already exists. Edit the saved draft.')
+    }
+    let inquiry = record.view.inquiry
+    if (command.kind === 'prepare_inquiry') inquiry = prepareInquiry(record.view, now(deps))
+    else {
+      if (!inquiry || inquiry.status !== 'draft' || inquiry.id !== command.inquiryId
+        || inquiry.revision !== command.expectedDraftRevision) throw stale()
+      inquiry = { ...inquiry, revision: inquiry.revision + 1, recipient: command.recipient,
+        subject: command.subject, text: command.text, updatedAt: new Date(now(deps)).toISOString(),
+        contactSourceUrl: command.recipient === inquiry.recipient ? inquiry.contactSourceUrl : null }
+    }
+    return (await save(deps, record, { ...record, requests, view: changed(record, { inquiry }) })).view
+  }
   if (command.kind === 'select') {
     const selections = toggle(record.view.selections, record.view.proposal?.options ?? [], command.optionId)
-    return (await save(deps, record, { ...record, requests, view: changed(record, { selections }) })).view
+    return (await save(deps, record, { ...record, requests, view: changed(record, { selections,
+      ...(selections.find(option => option.kind === 'venue')?.id !== record.view.selections.find(option => option.kind === 'venue')?.id
+        ? { inquiry: staleInquiry(record.view) } : {}) }) })).view
   }
   if (command.kind === 'confirm') {
     if (!deps.allowResearchReview) throw new ApiError(403, 'operator_required', 'Research review is handled by the planning team.')
@@ -155,7 +174,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
       selections: record.view.selections, expiresAt: now(deps) + Math.max(90_000, timeout(deps) + 5_000),
     },
     view: changed(record, {
-      status: 'working', progress: null, error: null,
+      status: 'working', progress: null, error: null, inquiry: staleInquiry(record.view),
       messages: [...record.view.messages, {
         id: `user:${command.requestId}`, role: 'user', text: command.message, createdAt: new Date(now(deps)).toISOString(),
       }],
