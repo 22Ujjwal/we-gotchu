@@ -46,6 +46,7 @@ test('an open editor keeps its original revision after polling loads another tab
     newer.event.briefRevision = 2
     newer.run!.briefRevision = 2
     newer.event.brief.location = 'Berkeley, CA'
+    newer.event.brief.headcount = 80
     let reads = 0
     vi.mocked(fetch).mockImplementation(async (_url, init) => {
       if (init?.method === 'PATCH') {
@@ -74,5 +75,23 @@ test('an open editor keeps its original revision after polling loads another tab
     const writes = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')
     expect(writes).toHaveLength(2)
     expect(JSON.parse(String(writes[1][1]!.body)).expectedBriefRevision).toBe(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Apply my edits to the latest revision' }))
+    expect(screen.getByLabelText('Area')).toHaveValue('Oakland, CA')
+    fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
+    await act(async () => {})
+    const accepted = vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')[2]
+    expect(JSON.parse(String(accepted[1]!.body))).toEqual({ expectedBriefRevision: 2, changes: { location: 'Oakland, CA' } })
+    expect(screen.queryByRole('region', { name: 'Edit event brief' })).not.toBeInTheDocument()
   } finally { vi.useRealTimers() }
+})
+
+test('saving an unchanged brief closes the editor without restarting research', async () => {
+  vi.mocked(fetch).mockImplementation(async () => Response.json(planReadyEvent))
+  render(<EventPage eventId={planReadyEvent.event.eventId} identity="alice" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit brief' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
+  await act(async () => {})
+  expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')).toHaveLength(0)
+  expect(screen.queryByRole('region', { name: 'Edit event brief' })).not.toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'Current plan' })).toBeInTheDocument()
 })
