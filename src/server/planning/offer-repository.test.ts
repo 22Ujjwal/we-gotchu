@@ -32,6 +32,45 @@ beforeEach(async () => {
 })
 afterEach(async () => db.close())
 
+test('prepares an offer after interpreting a quote without a customer command or payment approval', async () => {
+  const { processReplyJobs } = await import('./reply-worker')
+  const { prepareReplyOffer } = await import('./reply-offer')
+  const record = (await db.repository.getById('conversation'))!
+  const inquiry = record.view.inquiry!
+  await db.repository.compareAndSet(record, { ...record, view: { ...record.view, version: 1,
+    inquiry: { ...inquiry, replies: inquiry.replies!.map(reply => ({ ...reply, status: 'received' as const, interpretation: undefined })) } } })
+  let generated = 0
+  await processReplyJobs(db.repository, async () => ({ kind: 'quote', summary: 'Quote', nextAction: 'Review', facts: [], missing: [] }), 5,
+    job => prepareReplyOffer(db.repository, db.offers, async () => { generated++; return offer }, job))
+  const saved = (await db.repository.getById('conversation'))!
+  expect(saved.view.offer).toEqual(offer)
+  expect(saved.view.paymentLink).toBeUndefined()
+  expect(saved.view.selections).toEqual([venue])
+  await prepareReplyOffer(db.repository, db.offers, async () => { generated++; return offer },
+    { customerId: 'customer', conversationId: 'conversation', inquiryId: 'inquiry', replyId: 'reply' })
+  expect(generated).toBe(1)
+})
+
+test('does not turn an acknowledgment into an offer or discard unknown quote costs', async () => {
+  const { prepareReplyOffer } = await import('./reply-offer')
+  const job = { customerId: 'customer', conversationId: 'conversation', inquiryId: 'inquiry', replyId: 'reply' }
+  const record = (await db.repository.getById('conversation'))!
+  const inquiry = record.view.inquiry!
+  const acknowledged = (await db.repository.compareAndSet(record, { ...record, view: { ...record.view, version: 1,
+    inquiry: { ...inquiry, replies: inquiry.replies!.map(reply => ({ ...reply,
+      interpretation: { kind: 'other' as const, summary: 'Got it', nextAction: 'Await quote', facts: [], missing: ['Price'] } })) } } }))!
+  let generated = 0
+  const incomplete = { ...offer, missing: ['Tax amount'], lines: [{ ...offer.lines[0], tax: null }] }
+  const generate = async () => { generated++; return incomplete }
+  await prepareReplyOffer(db.repository, db.offers, generate, job)
+  expect(generated).toBe(0)
+  expect((await db.repository.getById('conversation'))!.view.offer).toBeUndefined()
+  await db.repository.compareAndSet(acknowledged, { ...acknowledged, view: { ...acknowledged.view, version: 2, inquiry } })
+  await prepareReplyOffer(db.repository, db.offers, generate, job)
+  expect((await db.repository.getById('conversation'))!.view.offer).toEqual(incomplete)
+  await expect(db.offers.prepare('customer', 'conversation', 'offer', 1, now)).rejects.toMatchObject({ status: 422 })
+})
+
 test('saves one offer and atomically links concurrent preparation to the same existing transaction records', async () => {
   const saved = await db.offers.save('customer', 'conversation', 0, offer)
   expect(saved.view.offer).toEqual(offer)
