@@ -23,7 +23,7 @@ export function createResearchCheckpointStore(db: Db): ResearchCheckpointStore {
           (old?.sessionId === cleanup.sessionId && (old.sessionStopped === true || old.confirmed))
         const agentDeleted = cleanup.agentDeleted === true || cleanup.confirmed ||
           (old?.agentId === cleanup.agentId && (old.agentDeleted === true || old.confirmed))
-        const confirmed = sessionStopped && agentDeleted
+        const confirmed = sessionStopped && agentDeleted && !cleanup.unresolvedOperation
         await tx.update(runs).set({
           researchCheckpoint: sql`jsonb_set(${runs.researchCheckpoint}, '{cleanup}',
             ${JSON.stringify({ ...cleanup, sessionStopped, agentDeleted, confirmed })}::jsonb)`,
