@@ -15,7 +15,8 @@ The split changes ownership, not the customer outcome or the three existing tick
 These are the five stages from Tony's saved roadmap.
 Stage three contains three implementation tickets; they are not additional product stages.
 The latest reported local browser run passed stage-two comparison and persistence, but shipping and review remain separate gates.
-Stages four and five remain roadmap work, not newly published implementation tickets.
+The complete implementation sequence and acceptance runbook for stages three through five now live in [the remaining-work handoff](../handoffs/remaining-stages/README.md).
+Use that packet for independent implementation and this page for the short ownership summary.
 
 ## Work that can start in parallel
 

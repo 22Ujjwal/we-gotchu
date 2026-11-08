@@ -76,3 +76,11 @@ Venue images remain independent work.
 
 - [Live research paper slips](../../.scratch/specs/live-research-slips.md) preserves Tony's direction for adapting the receipt animation to actual company activity and findings.
 This is a deferred design note, not an active ticket or a blocker for venue inquiries.
+
+## Remaining stages: parallel implementation handoff
+
+Tony approved publishing the complete stages-three-through-five handoff for independent work by Ujjwal.
+The [handoff index](../handoffs/remaining-stages/README.md) defines work blocks, ownership, interfaces, implementation sequence and verification gates.
+Ujjwal starts with mail transport and can prepare payment and hosting work while Tony implements planning and customer UI.
+The existing stage-three tickets remain the vertical customer acceptance slices.
+Stages four and five use the handoff work blocks until separately tracked implementation tickets are needed.
