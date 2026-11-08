@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PlanningCommand, PlanningInquiry, PlanningView } from '../../agent/planning/contract'
 import { Button } from './ui'
+import { PlanningReplies } from './planning-replies'
 
 const fields = (inquiry: PlanningInquiry) => ({ recipient: inquiry.recipient, subject: inquiry.subject, text: inquiry.text, revision: inquiry.revision })
 
@@ -80,6 +81,7 @@ export function PlanningInquiryEditor({ inquiry, version, disabled, canSend = fa
       : inquiry.delivery.status === 'accepted' ? 'Email provider accepted your inquiry. Delivery and a venue reply are not confirmed yet.'
         : inquiry.delivery.status === 'failed' ? 'The inquiry was rejected by the email provider. Nothing was confirmed sent.'
           : 'We could not confirm whether this inquiry was sent. We will not send it again automatically. Please contact the planning team to check.'}</p>}
+    <PlanningReplies replies={inquiry.replies ?? []} stale={stale} />
     {canSend && !inquiry.delivery && <div className="flex flex-col gap-4">
       {dirty && <p className="text-stone">Save your edits before approving the message.</p>}
       <label className="flex items-start gap-3">
