@@ -1,19 +1,21 @@
 # Read-only research workflow
 
 Ticket 01 provides researchEvent with the shared contract 0.4 input and result.
-Call it with createDiscovery and one createNaiveRanker instance per research run.
+Call it with createDiscovery, optional createDetailEnricher, and one createNaiveRanker instance per research run.
 The workflow validates input before paid discovery, retrieves venue and supply leads, asks the model to order only existing candidate IDs, and returns source-backed candidates.
 The model cannot modify supplier facts or add unsupported budget claims to the result.
 Invalid or repeated discovery results are skipped with a warning, and the remaining evidence is kept.
 A brief without a valid currency returns awaiting_input like any other missing field.
 The first slice deliberately returns partial research with unknown final costs.
-Supplier detail extraction and complete budget calculations belong to tickets 02 and 03.
+Ticket02 adds bounded supplier detail evidence before ranking.
+Complete budget and quantity calculations remain ticket03 work.
+See [supplier detail evidence and verification](../../docs/research/supplier-detail-evidence.md) for the adapter limits, provider choice, and evidence rules.
 
 ## Runtime boundary
 
 These modules are server-side code and must not be imported by frontend components.
 Supply credentials explicitly from server configuration, never from the brief or model messages.
-The provider paths are fixed to two read-only Monid discovery endpoints and the Naive session lifecycle.
+The provider paths are fixed to two read-only Monid discovery endpoints, two optional read-only detail endpoints, and the Naive session lifecycle.
 Naive ordinary tools are denied; its structured-output mechanism remains available.
 The direct REST path reuses the authenticated research path without adding another root dependency.
 The existing Monid CLI was used to inspect the provider schemas before implementation.
@@ -46,7 +48,9 @@ The optional live smoke command is bun src/agent/smoke.ts.
 It requires RESEARCH_LIVE_SMOKE=1, NAIVE_API_KEY, MONID_API_KEY, and RESEARCH_CHECKPOINT_PATH.
 RESEARCH_RESULT_PATH optionally saves the resulting research document.
 NAIVE_MODEL selects the model; the smoke default is openai/gpt-4.1-nano, which is not a quality benchmark.
-The smoke uses a synthetic future San Francisco birthday brief with real supplier discovery.
+The smoke uses a synthetic future San Francisco birthday brief with real supplier discovery and bounded detail investigation.
+It checks up to two selected candidates, with at most two venue pages and one product record.
+It requires detail provenance for both kinds and a sourced product listing price before reporting success.
 It performs no supplier contact, booking, purchase, payment, or refund.
 
 On 2026-11-07, the live workflow returned six candidates, three venues and three supply products, from two successful Monid calls.
@@ -61,6 +65,8 @@ Exact prices, date availability, capacity, and cancellation terms were not verif
 
 The current discovery adapter uses the US product catalog and one bounded search combining the requested supply needs.
 It does not establish that every requested supply category has adequate coverage.
-Candidate quantities and prices remain unknown until detail extraction and normalization are implemented.
+Selected product listing prices are retained as sourced verification notes.
+The total priceEstimate and required quantities remain unknown until ticket03 calculates them.
+Venue excerpts remain unverified and cannot establish event-specific terms.
 The complete UI, database persistence, polling, and crash recovery have not been tested by this slice.
 The GitHub ci check passed on PR #18; still record local verification on each PR.
