@@ -233,3 +233,16 @@ test('reload after the research deadline reads full authoritative terminal state
   expect(fetcher.mock.calls.map(call => call[0])).toEqual([`/api/events/${expired.event.eventId}`, `/api/events/${expired.event.eventId}`])
   expect(restored.getSnapshot().view?.run?.state).toBe('partial')
 })
+
+test('automatic conflict reconciliation preserves the mutation error until explicit refresh', async () => {
+  const fetcher = vi.fn(async (_url: string, init?: RequestInit) => init?.method === 'PATCH'
+    ? json({ errorCode: 'stale_revision', message: 'Review current answers.' }, 409)
+    : json(planReadyEvent))
+  const session = setup(fetcher)
+  await tick()
+  await expect(session.update({ headcount: 30 })).rejects.toMatchObject({ code: 'stale_revision' })
+  await tick()
+  expect(session.getSnapshot().error?.code).toBe('stale_revision')
+  await session.refresh()
+  expect(session.getSnapshot().error).toBeNull()
+})
