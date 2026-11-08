@@ -1,60 +1,68 @@
 # Event UI integration validation
 
-## Current evidence
+## Implementation and test boundary
 
 The fixture stage starts from the shared API client branch at `dc452f3` and merges the owner's DOM prerequisite `04bca45050f9c82bb5faab3fa0501d5fcaefefab`.
-This session changes only the assigned test fixtures, journey tests, and this validation record.
-No production screen, hook, backend, contract, configuration, or shared fixture was edited.
+The journey branch then adopts the delivered API/session, screen, and generated-route commits, including the access-loss polling, retained-conflict-error, saved-timezone, and keyboard-focus follow-ups.
+This session authors only the assigned test fixtures, journey tests, and this validation record.
+It does not independently edit production screens, hooks, backend code, contracts, configuration, or shared fixtures.
 
 `src/lib/hostwell/event-view.test-fixtures.ts` exports `createEventViewFixture` with optional event ID, customer ID, and brief revision.
 It returns isolated complete EventViews for running, partial, failed, missing-input, plan-ready, awaiting-payment, booked, canceling, refund-pending, and refund-completed states.
-It reuses the shared plan-ready, booked, and cancellation examples and wraps the research-only examples in full event responses.
-The builder preserves simulated evidence and does not import into production code.
+It reuses the shared complete examples and wraps the research-only examples with matching event/run/revision identities.
+The builder preserves simulated evidence and is not imported by production code.
 The pending Checkout fixture contains no successful payment or supplier attempts.
-The completed-refund fixture records an explicit succeeded refund independently of cancellation.
+The completed-refund fixture records a succeeded refund independently of cancellation.
 
-Thirteen tests validate the schemas, matching event/run/revision identities, plan/approval/action references, absence of payment evidence during research, distinct refund states, and independent fixture copies.
-These are fixture checks running in the DOM project, not proof that a connected screen renders correctly.
-Bun 1.4.4 frozen install, the focused fixture suite, typecheck, and production build pass at fixture commit `814d69d`.
-The build warns that `src/routes/connected-journey.test.tsx` does not export a Route and excludes it from the route tree.
-No root configuration change was made to suppress the warning.
-The full combined suite and rendered acceptance checks remain pending production integration.
-
-## Agreed rendered test boundary
-
-Import the actual `EventPage` export from `src/components/hostwell/event-page.tsx`.
-Pass its supported `eventId`, `identity`, and optional `onCheckout` props.
-Keep the real `useEventSession` and customer API client in the test.
-Mock only customer fetch responses, reject unexpected requests, and change the identity prop to represent sign-in, sign-out, and account replacement.
+`src/routes/-connected-journey.test.tsx` contains thirteen fixture checks and twenty-four rendered journey checks.
+The authorized filename prefix excludes the test from route discovery without a configuration change.
+The tests render the actual EventPage, ConnectedEventPage, and BriefIntake exports with the real session hook and customer API client.
+Only customer fetch and Clerk useUser are mocked.
+No substitute screen, hook mock, or backend implementation is used.
 The checkout callback records the returned URL without navigating to an external payment service.
-Do not mock the session hook or create a substitute event component.
 
-Import the actual `BriefIntake` export from `src/components/hostwell/brief-intake.tsx`.
-Pass `identity` and `onCreated` through its supported interface.
-Use labels and keyboard interaction to enter an explicit date/time with offset, IANA timezone, and ISO currency.
-Assert the actual POST body and preserve entered values after validation failures.
-Do not accept an inferred timezone, date, currency, or fallback brief as successful intake.
+## Verified scenarios
 
-## Scenarios to implement after the production commits arrive
+- Complete fixtures validate schema and cross-record event, run, revision, plan, approval, and action identities.
+- A remounted connected screen restores the persisted event brief through a fresh customer GET.
+- Partial, failed, and missing-input research display their evidence and never offer approval without a Plan.
+- Approval sends the displayed plan ID and revision once despite repeated clicks, then uses only the backend Checkout URL.
+- A restored event with checkout=success still displays pending payment and no supplier confirmation until authoritative evidence changes.
+- Cancellation requested, event canceled, refund pending, and refund succeeded remain separate visible states.
+- Clerk account replacement and sign-out clear private event data, reject an earlier account's late response, and stop old polling.
+- Changing event links rejects an older event's late response.
+- A controlled slow poll cannot overlap another read, uses the application progress cursor, and renders ordered deduplicated entries.
+- A revised brief wins over an older in-flight research response.
+- A 409 edit conflict restores current server state while retaining typed answers and conflict feedback.
+- Keyboard intake submits the explicit date, UTC offset, IANA timezone, ISO currency, amounts, and supply needs without guessed defaults.
+- Ambiguous dates, absent UTC offsets, invalid zones, and invalid currencies produce focused errors before any request.
+- A lost create response retains answers and blocks repeated creation.
+- Missing-field server errors preserve earlier intake answers for correction.
+- HTTP 401, 403, and 404 clear private data, focus the error, and stop automatic reads.
+- A temporary read failure retains saved evidence and reconnects with GET requests only.
+- Mixed supplier outcomes show paid status separately from one confirmed commitment and one unknown commitment.
+- After unmounting for more than the default research deadline, the restored screen displays the server's terminal failure without automatically creating another run or claiming cancellation.
 
-- Restore the same event after unmount and remount, using the stored brief rather than local fixture state.
-- Advance slow controlled research reads without overlapping polls, show ordered deduplicated progress, and reject older responses after an event or revision changes.
-- Preserve unsent edits after a revision conflict while fetching the current server state.
-- Show failed, missing-input, and partial outcomes without enabling approval when no Plan exists.
-- Submit exactly the displayed plan ID and revision once, record only the backend Checkout URL, and keep payment pending until a later authoritative response confirms it.
-- Restore a checkout-return event without treating navigation as payment or supplier confirmation.
-- Distinguish requested cancellation, confirmed cancellation, pending refund, and completed refund using the supplied records.
-- Clear the prior customer's data on identity replacement or sign-out, including when an older request completes late.
-- Preserve draft answers after missing-field and uncertain-write errors, with no automatic write retry.
+Assertions target visible roles, labels, status text, retained form values, focus, and outgoing HTTP request meaning.
+The deadline test supplies a controlled expired server response; it does not retest the backend timer or claim a browser can advance research while closed.
+No production failure was found by these rendered checks on the delivered implementation.
 
-Assertions will target visible roles, labels, status text, retained form values, and outgoing HTTP request meaning.
-The production screen and hook commits must be delivered before those tests can be implemented honestly.
-The chief integrates the exact fixture and test commits into one combined feature branch and publishes its PR.
-This independent session will not push, open its own PR, or merge the combined feature.
+## Reproduction and handoff
+
+Use Bun 1.4.4 and `bun install --frozen-lockfile` with the unchanged owner-provided lockfile.
+Run `bun run test --project dom src/routes/-connected-journey.test.tsx` for the 37 focused checks.
+Run `bun run test --maxWorkers 2`, `bun run typecheck`, `bun run build`, and `node --test tools/team-coordination/*.test.mjs` for combined verification.
+The final session handoff records the exact tested HEAD and totals.
+
+The authored rendered-test commits are `ecdfe35`, `c242cbe`, `efff822`, and `8ccd39c` in that order.
+They follow the already delivered fixture commits and authorized test-file rename.
+The chief integrates these exact commits into the combined feature branch and reruns its checks before handing that final HEAD to the user for separate review.
+This independent session does not push, open a separate PR, or merge the feature.
 
 ## Limits
 
-Controlled fetch and identity props do not verify Clerk sign-in, server authorization, deployed routing, hosted research, payment processing, supplier execution, or live recovery.
-JSDOM does not establish mobile layout, real browser focus behavior, or visual correctness.
+Controlled fetch and identity boundaries do not verify real Clerk sign-in, server authorization, deployed routing, hosted research, payment processing, supplier execution, or live recovery.
+The tests assert component behavior on a checkout-return URL but do not exercise a live redirect or the route's hosted deployment.
+JSDOM verifies the tested focus and keyboard interactions, but does not establish mobile layout, browser visual correctness, or reduced-motion rendering.
 Those checks require separate evidence against the intended environment and deployed commit.
-No live endpoints, credentials, purchases, or external messages are used by this suite.
+No live endpoints, credentials, purchases, supplier contacts, or external messages are used by this suite.
