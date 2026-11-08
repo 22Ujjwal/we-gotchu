@@ -14,6 +14,10 @@ This includes `0003_supplier_mail` and `0004_payment_paid_at`.
 Production does not migrate on startup.
 
 Keep the existing Clerk, database, research, and Stripe sandbox settings.
+Legacy `/events` research also requires `NAIVE_RESEARCH_AGENT_ID` for a saved ranking agent.
+This branch no longer creates a ranking agent for each research run.
+New homepage research requires `NAIVE_PLANNING_AGENT_ID` for the saved planner.
+Verify both agents and their configuration before testing either entry point.
 Set `APP_URL` to the production HTTPS origin so customer emails and checkout return to the deployed app.
 Configure these additional server variables from `.env.example`:
 
@@ -59,3 +63,17 @@ Typechecking and the production build passed.
 A separate in-memory handoff check preserved the selected venue and supply, dispatched once, and reused the same conversation on replay.
 That check used existing fixture data and made no provider calls.
 No new test cases were authored for this PR; existing backend tests accompanied the port and obsolete UI assertions were updated.
+
+## Continuation audit on 2026-11-08
+
+The continuation started from clean commit `b4a2a4049ca6a4c0209f0ecff380dd7ba090de77`.
+GitHub CI and the existing Vercel preview passed for that commit.
+Fresh local checks passed with 645 application tests across 62 files, 26 tooling tests, typechecking, and a production build.
+Only documentation and the example environment file changed after those checks.
+Copilot reported insufficient review quota, and the PR had no inline review comments.
+The local Vercel account was `ambitiouscommitte` and listed only `tonys-projects-6d126fa0`.
+Inspecting `ujjwal-guptas-projects-0fa3ab48/we-gotchu` failed with `The specified scope does not exist`.
+The alternate Composio access check failed with `Invalid or revoked user API key`.
+Production variables, migrations, provider configuration, and the production deployment version remain unverified.
+Do not substitute a local database URL for the deployment database without confirming its identity.
+No emails, payments, venue selections, migrations, merges, or deployments were triggered during this continuation audit.
