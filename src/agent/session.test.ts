@@ -3,7 +3,7 @@ import { CONTRACT_VERSION, planReadyEvent, type ResearchInput } from '../contrac
 import { createResearchSession } from './session'
 
 test('bounded session lifecycle uses the documented REST paths and does not wait for completion', async () => {
-  const replies = [{ id: 'agent' }, { id: 'session' }, { id: 'session', status: 'idle', stop_reason: 'error', last_seq: 4 }, { accepted_seq: 5 }, {}, {}]
+  const replies = [{ id: 'agent' }, { id: 'session' }, { id: 'session', status: 'idle', stop_reason: 'error', last_seq: 4 }, { accepted_seq: 5 }, { id: 'session', status: 'cancelled' }, { id: 'agent', deleted: true }]
   const fetcher = vi.fn(async () => new Response(JSON.stringify(replies.shift())))
   const session = createResearchSession({ apiKey: 'secret', model: 'model', fetch: fetcher as typeof fetch })
   const input: ResearchInput = { contractVersion: CONTRACT_VERSION, eventId: 'event', runId: 'run', briefRevision: 1, brief: planReadyEvent.event.brief }

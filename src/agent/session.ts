@@ -46,7 +46,13 @@ export function createResearchSession(options: { apiKey: string; model: string; 
         message: 'Return submit_output with only candidateIds from the supplied evidence. Reuse evidence. Do not search or include other fields.',
       }, `${runId}:correction:1`)).accepted_seq
     },
-    async cancel(id, signal) { await call(`${path(id)}/cancel`, signal, {}) },
-    async deleteAgent(id, signal) { await call(`/agents/${encodeURIComponent(id)}`, signal, undefined, undefined, 'DELETE') },
+    async cancel(id, signal) {
+      const result = z.object({ id: z.literal(id), status: z.literal('cancelled') })
+      result.parse(await call(`${path(id)}/cancel`, signal, {}))
+    },
+    async deleteAgent(id, signal) {
+      z.object({ id: z.literal(id), deleted: z.literal(true) }).parse(
+        await call(`/agents/${encodeURIComponent(id)}`, signal, undefined, undefined, 'DELETE'))
+    },
   }
 }

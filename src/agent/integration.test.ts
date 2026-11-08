@@ -242,7 +242,8 @@ test('real REST adapters work through application polling with controlled HTTP r
         : { products: [{ id: 'plates', title: 'Controlled plates', offers: [{ url: 'https://example.com/plates' }] }] } }
     else if (path.endsWith('/agents')) reply = { id: 'http-agent' }
     else if (path.endsWith('/sessions')) reply = { id: 'http-session' }
-    else if (path.endsWith('/cancel') || init?.method === 'DELETE') reply = {}
+    else if (path.endsWith('/cancel')) reply = { id: 'http-session', status: 'cancelled' }
+    else if (init?.method === 'DELETE') reply = { id: 'http-agent', deleted: true }
     else reply = { id: 'http-session', status: 'idle', stop_reason: 'end_turn', last_seq: 12,
       structured_output: { candidateIds: ['venue:venue', 'supply:plates'] } }
     return new Response(JSON.stringify(reply))
@@ -259,4 +260,19 @@ test('real REST adapters work through application polling with controlled HTTP r
   expect(JSON.stringify(completed)).not.toContain('controlled-secret')
   expect(requests.filter(path => path === 'https://api.monid.ai/v1/run')).toHaveLength(2)
   expect(requests.filter(path => path.endsWith('/sessions'))).toHaveLength(1)
+})
+
+test('a stalled discovery request terminates within the configured step bound', async () => {
+  const { deps, session } = setup()
+  let aborted = false
+  const discover = vi.fn((_input, signal: AbortSignal) => new Promise<never>((_resolve, reject) => {
+    signal.addEventListener('abort', () => { aborted = true; reject(new Error('stopped')) }, { once: true })
+  }))
+  deps.research = createResearchIntegration({ store, providers: { discover, session }, stepTimeoutMs: 20 })
+  const started = await createEvent(deps, researchBriefFixture)
+  const completed = await finish(deps, started.event.eventId)
+  expect(aborted).toBe(true)
+  expect(completed.researchResult!.outcome).toBe('failed')
+  expect(discover).toHaveBeenCalledTimes(1)
+  expect(session.start).not.toHaveBeenCalled()
 })

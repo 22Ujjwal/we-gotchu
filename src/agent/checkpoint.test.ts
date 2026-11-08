@@ -1,5 +1,5 @@
 import { beforeAll, expect, test } from 'vitest'
-import { CONTRACT_VERSION, planReadyEvent } from '../contracts'
+import { CONTRACT_VERSION, planReadyEvent, type ResearchResult } from '../contracts'
 import { createTestStore } from '../server/db/client'
 import type { Store } from '../server/store'
 import type { ResearchCheckpoint } from './checkpoint'
@@ -51,7 +51,7 @@ test('result publication rejects an older lease and a canceled event', async () 
     const { event, run } = await setup()
     if (action === 'lease') await store.claimRunAdvance(run.runId, new Date(Date.now() + 31000), 30000)
     else await store.requestCancel(event.eventId, new Date())
-    const result = { contractVersion: CONTRACT_VERSION, eventId: event.eventId, runId: run.runId,
+    const result: ResearchResult = { contractVersion: CONTRACT_VERSION, eventId: event.eventId, runId: run.runId,
       briefRevision: 1, outcome: 'partial' as const, candidates: [], sourceChecks: [], missing: [],
       recommendations: [], budgetFit: 'unknown' as const, budgetBasis: 'Unknown costs.', currency: 'USD',
       warnings: [], superseded: false, createdAt: new Date().toISOString() }
