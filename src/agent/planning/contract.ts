@@ -41,6 +41,7 @@ export type PlanningView = {
   selections: PlanningOption[]
   progress: string | null
   error: string | null
+  canReviewResearch?: boolean
   activity?: PlanningActivity[]
   approvals?: PlanningApproval[]
 }

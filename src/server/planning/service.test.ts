@@ -19,7 +19,7 @@ beforeEach(async () => {
     send: vi.fn(async () => ({ sequence: sequence + 1 })),
     read: vi.fn(async () => ({ status: 'ready' as const, sequence, proposal, progress: null, error: null })),
   }
-  deps = { repository: db.repository, agent: () => agent, requireCustomerId: async () => 'alice', timeoutMs: 100 }
+  deps = { repository: db.repository, agent: () => agent, requireCustomerId: async () => 'alice', timeoutMs: 100, allowResearchReview: true }
 })
 afterEach(async () => { await db.close() })
 const create = () => createPlanning(deps, { requestId: 'create', message: 'Plan my party' })
@@ -251,4 +251,19 @@ it('reconciles a closed confirmation without replaying it and exposes the curren
   expect(view.activity?.[0].status).toBe('blocked')
   expect(agent.confirm).toHaveBeenCalledTimes(1)
   expect((await db.repository.get('alice', view.id))?.pending).toBeNull()
+})
+
+it('rejects customer tool confirmation without calling the provider or recording a command', async () => {
+  const initial = await create()
+  agent.confirm = vi.fn(async () => {})
+  vi.mocked(agent.read).mockResolvedValue({ status: 'blocked', sequence: 2, proposal: null, progress: null, error: null,
+    approvals: [{ id: 'approval', tool: 'monid.monid_inspect', arguments: {} }] })
+  const paused = await getPlanning(deps, initial.id)
+  deps.allowResearchReview = false
+  await expect(commandPlanning(deps, initial.id, { kind: 'confirm', requestId: 'forbidden', expectedVersion: paused.version,
+    approvalId: 'approval', decision: 'allow' })).rejects.toMatchObject({ status: 403 })
+  expect(agent.confirm).not.toHaveBeenCalled()
+  const record = await deps.repository.get('alice', initial.id)
+  expect(record?.pending).toBeNull()
+  expect(record?.requests).not.toHaveProperty('forbidden')
 })

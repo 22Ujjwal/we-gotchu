@@ -21,7 +21,7 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
   return {
     async getDeps(): Promise<PlanningDeps> {
       repository ??= open().catch(error => { repository = undefined; throw error })
-      return { repository: await repository, requireCustomerId, agent: () => createConfiguredPlanningAgent(env) }
+      return { repository: await repository, requireCustomerId, allowResearchReview: env.NODE_ENV === 'development' && !!env.PLANNING_LOCAL_DB_DIR, agent: () => createConfiguredPlanningAgent(env) }
     },
     async close(): Promise<void> {
       await repository?.catch(() => undefined)

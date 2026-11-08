@@ -1,6 +1,7 @@
 import { createClient, type SessionCreate } from '@usenaive-sdk/managed-agents'
 import { z } from 'zod'
 import { isBlocked, pendingResearch, type ApprovalSnapshot } from './approvals'
+import { researchActivity } from './activity'
 import { createPlanningFetch } from './transport'
 import { ApiError } from '../../server/events/errors'
 import { planningProposalSchema, type PlanningAgent } from './contract'
@@ -62,7 +63,7 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
         client.sessions.get(input.sessionId),
         client.sessions.events(input.sessionId, { after_seq: input.afterSequence, limit: 100 }),
       ])
-      const result = { status: 'working' as const, sequence: session.last_seq, proposal: null, error: null,
+      const result = { status: 'working' as const, sequence: session.last_seq, proposal: null, error: null, activity: researchActivity([session], events.data),
         progress: events.data.some(event => event.type === 'tool.started')
           ? 'Checking sources for your event.' : 'Working on your event options.' }
       if (['failed', 'cancelled'].includes(session.status) || ['error', 'budget_paused', 'max_iterations', 'context_exhausted'].includes(session.stop_reason ?? '')) {
@@ -72,7 +73,7 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
       const approvals = pendingResearch(sessions).map(action => action.view)
       const confirmation = input.approvalId ? { id: input.approvalId,
         state: approvals.some(action => action.id === input.approvalId) ? 'pending' as const : 'closed' as const } : undefined
-      const state = { ...result, ...(confirmation ? { confirmation } : {}) }
+      const state = { ...result, activity: researchActivity(sessions, events.data), ...(confirmation ? { confirmation } : {}) }
       if (sessions.some(isBlocked)) {
         return { ...state, status: 'blocked', progress: null,
           error: 'Research is paused for a decision.', approvals }

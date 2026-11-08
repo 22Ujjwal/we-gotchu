@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
-import { planningCommandSchema, planningCreateSchema, planningProposalSchema, planningApprovalSchema } from '../../agent/planning/contract'
+import { planningCommandSchema, planningCreateSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema } from '../../agent/planning/contract'
 import type { PlanningAgent, PlanningOption, PlanningView } from '../../agent/planning/contract'
 import { ApiError } from '../events/errors'
 import type { PlanningRecord, PlanningRepository } from './repository'
@@ -9,6 +9,7 @@ export type PlanningDeps = {
   repository: PlanningRepository
   agent: () => PlanningAgent
   requireCustomerId: () => Promise<string>
+  allowResearchReview?: boolean
   timeoutMs?: number
   now?: () => number
 }
@@ -134,6 +135,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
     return (await save(deps, record, { ...record, requests, view: changed(record, { selections }) })).view
   }
   if (command.kind === 'confirm') {
+    if (!deps.allowResearchReview) throw new ApiError(403, 'operator_required', 'Research review is handled by the planning team.')
     if (!record.sessionId || record.pending || record.view.status !== 'blocked'
       || !record.view.approvals?.some(approval => approval.id === command.approvalId)) throw stale()
     const reserved = await save(deps, record, {
@@ -180,6 +182,7 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
       ...(record.pending?.kind === 'confirm' && record.pending.approval ? { approvalId: record.pending.approval.id } : {}),
     }), timeout(deps))
     if (!Number.isSafeInteger(result.sequence) || result.sequence < 0) throw new Error('Invalid sequence.')
+    if (result.activity) result.activity = result.activity.map(item => planningActivitySchema.parse(item))
     if (result.approvals) result.approvals = result.approvals.map(approval => planningApprovalSchema.parse(approval))
     if (result.proposal) result.proposal = planningProposalSchema.parse(result.proposal)
   } catch {

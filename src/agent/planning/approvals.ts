@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import type { PlanningApproval } from './contract'
 
-export type ApprovalSnapshot = { id: string; stop_reason: string | null; parent_session_id?: string | null; pending_actions?: unknown[] }
+export type ApprovalSnapshot = { id: string; status?: string; structured_output?: unknown; stop_reason: string | null; parent_session_id?: string | null; pending_actions?: unknown[] }
 const actionSchema = z.object({ kind: z.literal('tool'), tool_call_id: z.string(), name: z.string(), args: z.record(z.string(), z.unknown()) })
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical)
