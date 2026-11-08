@@ -57,7 +57,7 @@ function ArrangeStartPage() {
         <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
           <label className="flex flex-col gap-1">
             <span className="text-[14px] font-semibold text-ink">What are you planning?</span>
-            <input name="occasion" required placeholder="Team dinner, offsite, birthday…" className={inputClass} />
+            <input name="occasion" required placeholder="Team dinner, offsite, birthday..." className={inputClass} />
           </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1">
@@ -78,12 +78,12 @@ function ArrangeStartPage() {
             </label>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[14px] font-semibold text-ink">Budget (€, total)</span>
+            <span className="text-[14px] font-semibold text-ink">Budget (EUR , total)</span>
             <input name="budget" type="number" min={1} step="0.01" required placeholder="2500" className={inputClass} />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-[14px] font-semibold text-ink">Anything else we should know? <span className="font-normal text-body">(optional)</span></span>
-            <textarea name="notes" rows={3} placeholder="Food preferences, a neighbourhood you love, a firm end time…" className={inputClass} />
+            <textarea name="notes" rows={3} placeholder="Food preferences, a neighbourhood you love, a firm end time..." className={inputClass} />
           </label>
           <label className="flex items-start gap-3 rounded-lg bg-cream px-4 py-3">
             <input name="consent" type="checkbox" className="mt-1" />
@@ -93,7 +93,7 @@ function ArrangeStartPage() {
           </label>
           {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">{error}</p>}
           <Button type="submit" disabled={busy} className="mt-2 rounded-full px-6 py-3">
-            {busy ? 'One moment…' : 'Hand it over'}
+            {busy ? 'One moment...' : 'Hand it over'}
           </Button>
         </form>
       </main>
