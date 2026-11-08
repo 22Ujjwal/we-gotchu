@@ -1,0 +1,1 @@
+ALTER TABLE "arrange_mail_operations" ADD COLUMN "payment_operation_id" text;

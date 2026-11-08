@@ -271,6 +271,7 @@ export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; s
         const [created] = await tx.insert(arrangeMailOperations).values({
           id: newId('mop'), eventId, contactId, operationKey, recipient: contact.email,
           subject: draft.subject, body: draft.body, replyToMessageId: lastReply?.messageId ?? lastSent?.messageId ?? null,
+          paymentOperationId: commerceRow?.facts.payment?.operationId ?? null,
           state: 'authorized', createdAt: at, updatedAt: at,
         }).returning()
         return { operation: toMailOperation(created), replayed: false }

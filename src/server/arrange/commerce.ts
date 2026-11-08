@@ -141,7 +141,7 @@ export function createCommerceLedger(db: Db, now: () => Date) {
         if (!offer.lines.some(l => l.contactId === contactId)) fail('contact_not_on_event', 'This supplier is not in the paid offer.')
         const [receipt] = await tx.select().from(arrangeMailReceipts).where(and(eq(arrangeMailReceipts.eventId, eventId), eq(arrangeMailReceipts.contactId, contactId), eq(arrangeMailReceipts.messageId, messageId)))
         const [request] = receipt?.operationId ? await tx.select().from(arrangeMailOperations).where(eq(arrangeMailOperations.id, receipt.operationId)) : []
-        if (!receipt || !request?.sentAt || request.sentAt.getTime() < new Date(facts.payment.receivedAt).getTime() || receipt.receivedAt.getTime() < new Date(facts.payment.receivedAt).getTime()) fail('confirmation_not_after_payment', 'Confirmation must reply to a supplier request sent after payment.')
+        if (!receipt || !request?.sentAt || request.paymentOperationId !== facts.payment.operationId || request.sentAt.getTime() < new Date(facts.payment.receivedAt).getTime() || receipt.receivedAt.getTime() < new Date(facts.payment.receivedAt).getTime()) fail('confirmation_not_after_payment', 'Confirmation must reply to a supplier request sent after payment.')
         if (!normalize(excerpt) || !normalize(receipt.reply?.text ?? '').includes(normalize(excerpt))) fail('excerpt_not_in_message', 'Quote the supplier confirmation exactly.')
         const existing = facts.confirmations.find(c => c.contactId === contactId)
         if (!existing) facts.confirmations.push({ contactId, messageId, excerpt, confirmedAt: now().toISOString() })

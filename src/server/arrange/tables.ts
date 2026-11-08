@@ -35,6 +35,7 @@ export const arrangeMailOperations = pgTable('arrange_mail_operations', {
   eventId: text('event_id').notNull().references(() => arrangeEvents.id),
   contactId: text('contact_id').notNull().references(() => arrangeSupplierContacts.id),
   operationKey: text('operation_key').notNull(),
+  paymentOperationId: text('payment_operation_id'),
   recipient: text('recipient').notNull(),
   subject: text('subject').notNull(),
   body: text('body').notNull(),
