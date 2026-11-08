@@ -482,3 +482,19 @@ test('restores the saved plan first and retains it when an explicit research ref
   expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
   expect(paths).toEqual(['/api/planning/plan-a?saved=1', '/api/planning/plan-a'])
 })
+
+test('checking venue replies reads saved state without refreshing research or sending mail', async () => {
+  const paths: string[] = []
+  http(request => {
+    expect(request.method).toBe('GET')
+    paths.push(new URL(request.url).search)
+    return Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+      recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Inquiry', text: 'Please confirm.',
+      contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: { status: 'accepted', requestId: 'send',
+        draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'mail' },
+    } }))
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Check for venue replies' }))
+  expect(paths).toEqual(['?saved=1', '?saved=1'])
+})
