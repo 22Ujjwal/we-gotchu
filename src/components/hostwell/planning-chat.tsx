@@ -47,6 +47,8 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   // Saved snapshots remain authoritative even if a later proposal changes or omits the option.
   for (const option of view?.selections ?? []) options.set(option.id, option)
   const selected = new Set(view?.selections.map(option => option.id))
+  const proposalText = view?.proposal && [view.proposal.summary, view.proposal.nextQuestion].filter(Boolean).join('\n\n')
+  const answerAlreadyShown = view?.messages.some(message => message.role === 'assistant' && message.text === proposalText)
   return <div className="flex w-full max-w-[900px] flex-col gap-8">
     <h1 className="text-[34px] leading-tight font-light tracking-[-0.02em] lg:text-[56px]">{id ? 'Your event, coming together.' : "What are you planning?"}</h1>
     {!id && <p className="text-[18px] leading-7 text-stone">Tell us about the occasion, place, budget, and anything you need. Rough dates are fine. We can work out the details together.</p>}
@@ -68,7 +70,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
             : 'Your options are ready to explore.'}</p>
       {view.status === 'uncertain' && <Button className="self-start px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
-      {view.proposal && <div className="flex flex-col gap-3 text-[18px] leading-7">
+      {view.proposal && !answerAlreadyShown && <div className="flex flex-col gap-3 text-[18px] leading-7">
         <p>{view.proposal.summary}</p>
         {view.proposal.nextQuestion && <p>{view.proposal.nextQuestion}</p>}
       </div>}
