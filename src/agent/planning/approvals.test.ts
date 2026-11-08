@@ -7,7 +7,7 @@ function setup() {
     { kind: 'tool', tool_call_id: 'call-1', name: 'monid.monid_inspect', args: { provider: 'channel3', endpoint: '/v1/search' }, read_people: true },
   ] }
   const client = { sessions: {
-    create: vi.fn(), send: vi.fn(), get: vi.fn(async () => parent), events: vi.fn(async () => ({ data: [] })),
+    create: vi.fn(), send: vi.fn(), get: vi.fn(async () => parent), events: vi.fn(async () => ({ data: [{ seq: parent.last_seq, type: 'session.idle', data: { stop_reason: parent.stop_reason } }] })),
     threads: vi.fn(async () => ({ data: [child], has_more: false, next_cursor: null })), confirmTool: vi.fn(async () => ({})),
   } }
   return { child, parent, client, agent: createPlanningAgent({ client, agentId: 'tom' }) }
