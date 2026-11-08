@@ -34,7 +34,11 @@ function PartyPage() {
 }
 
 function PreviewPartyPage() {
-  const { brief, addOns, selected, bookedVenueId } = useHostwell()
+  const { brief: typed, addOns, selected, bookedVenueId, ready } = useHostwell()
+  // Fields left blank in the demo fall back to the brief's placeholder example.
+  const brief = Object.fromEntries(
+    Object.entries(typed).map(([k, v]) => [k, v.trim() || exampleBrief[k as keyof Brief]]),
+  ) as Brief
   const venue = bookedVenueId ? findVenue(bookedVenueId) : undefined
   const { arranging } = Route.useSearch()
   const [emailTo, setEmailTo] = useState<string | null>(null)
@@ -45,11 +49,7 @@ function PreviewPartyPage() {
     const cents = (n: number) => Math.round(n * 100)
     let contractBrief
     try {
-      // Fields left blank in the demo fall back to the brief's placeholder example.
-      const filled = Object.fromEntries(
-        Object.entries(brief).map(([k, v]) => [k, v.trim() || exampleBrief[k as keyof Brief]]),
-      ) as Brief
-      contractBrief = briefFromPreview(filled)
+      contractBrief = briefFromPreview(brief)
     } catch {
       return
     }
@@ -62,7 +62,6 @@ function PreviewPartyPage() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         key,
-        venueId: venue.id,
         brief: contractBrief,
         items: [
           ...order.lines.map((l) => ({
@@ -80,8 +79,9 @@ function PreviewPartyPage() {
     return () => {
       live = false
     }
-  }, [arranging, venue, addOns, selected, brief])
+  }, [arranging, venue, addOns, selected, typed])
 
+  if (!ready) return null
   if (!venue) {
     return (
       <div className="flex min-h-screen flex-col">

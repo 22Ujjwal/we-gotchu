@@ -175,6 +175,20 @@ export function buildQuoteReadyEmail(input: EmailInput, appUrl: string): QuoteRe
   })
 }
 
+/** The local demo's version: Arrange is the last step there, so the button moves on to the party. */
+export function buildDemoQuotesEmail(input: EmailInput, appUrl: string): QuoteReadyEmail {
+  const count = input.plan.actions.length
+  return render(input, appUrl, {
+    subject: `We're done: your ${count} ${count === 1 ? 'quote is' : 'quotes are'} in`,
+    heading: 'Your quotes are&nbsp;in',
+    intro: `We're done getting quotes for your ${input.brief.eventType}.`,
+    stamp: 'QUOTED',
+    totalLabel: 'Total',
+    cta: 'See your party',
+    footnote: "We're booking it all now.",
+  })
+}
+
 /** "It's all set" email, sent once when every supplier has confirmed a paid booking. */
 export function buildAllSetEmail(input: EmailInput, appUrl: string): QuoteReadyEmail {
   return render(input, appUrl, {
