@@ -16,29 +16,19 @@ const LENS = 46
 const ZOOM = 1.7
 
 // Timing (ms)
-const LAP = 2800 // one full swivel round the map
-const LAPS = 3 // when playing once
-const STATUS = 2100 // per status line
+const LAP = 5200 // one full swivel round the map
+const LAPS = 2 // when playing once
 const TOTAL = LAP * LAPS
 
-const statuses = [
-  'Reading your brief',
-  'Scanning the neighbourhood',
-  'Checking who fits your guests',
-  'Comparing prices',
-  'Shortlisting the best fits',
-]
-
 // Pins on the orbit get found as the glass passes; the rest stay unvisited.
-const onOrbit = [20, 75, 130, 190, 245, 300].map((deg) => {
+const onOrbit = [30, 120, 210, 300].map((deg) => {
   const a = (deg * Math.PI) / 180
   return { x: ORBIT.cx + ORBIT.rx * Math.cos(a), y: ORBIT.cy + ORBIT.ry * Math.sin(a), at: a }
 })
 const pins = [
   ...onOrbit,
-  { x: 418, y: 58, at: Infinity },
-  { x: 66, y: 268, at: Infinity },
-  { x: 236, y: 150, at: Infinity },
+  { x: 414, y: 62, at: Infinity },
+  { x: 72, y: 262, at: Infinity },
 ]
 
 /** Elapsed ms. Loops forever, or plays once and calls onDone. */
@@ -109,41 +99,18 @@ function MapArt({ found, near }: { found: boolean[]; near: boolean[] }) {
   return (
     <>
       <rect width={W} height={H} fill="var(--color-cream)" />
-      {/* Parks */}
-      <g fill="#dfe4d6">
-        <rect x="52" y="34" width="74" height="52" rx="10" />
-        <rect x="352" y="206" width="92" height="62" rx="12" />
-        <ellipse cx="300" cy="44" rx="34" ry="16" />
-      </g>
-      {/* River */}
       <path
-        d="M0 182 C90 146 160 222 250 184 S400 140 480 168"
+        d="M0 190 C120 150 220 220 320 180 S440 150 480 160"
         fill="none"
-        stroke="#cfd8d1"
-        strokeWidth="18"
+        stroke="#d9dfd8"
+        strokeWidth="12"
         strokeLinecap="round"
       />
-      {/* Side streets */}
-      <g stroke="#fffdf7" strokeWidth="4" strokeLinecap="round" fill="none">
-        <path d="M0 52 L480 40" />
-        <path d="M0 286 L480 296" />
-        <path d="M64 0 L84 320" />
-        <path d="M244 0 L236 320" />
-        <path d="M410 0 L396 320" />
-        <path d="M100 140 L230 120" />
-        <path d="M270 270 L380 140" />
-      </g>
-      {/* Avenues */}
-      <g stroke="#fffdf7" strokeWidth="9" strokeLinecap="round" fill="none">
-        <path d="M0 112 L480 92" />
-        <path d="M0 232 L480 252" />
-        <path d="M150 0 L170 320" />
-        <path d="M332 0 L312 320" />
-        <path d="M30 320 L270 0" />
-      </g>
-      <g stroke="var(--color-cream-line)" strokeWidth="1" fill="none">
-        <path d="M0 112 L480 92" />
-        <path d="M0 232 L480 252" />
+      <g stroke="#fffdf7" strokeWidth="7" strokeLinecap="round" fill="none">
+        <path d="M0 108 L480 96" />
+        <path d="M0 246 L480 256" />
+        <path d="M156 0 L168 320" />
+        <path d="M330 0 L316 320" />
       </g>
       {pins.map((p, i) => (
         <Pin key={i} x={p.x} y={p.y} found={found[i]} near={near[i]} />
@@ -204,8 +171,6 @@ export function SearchLoader({
 
   const found = pins.map((p) => reduced || swept >= p.at)
   const near = pins.map((p) => Math.hypot(p.x - x, p.y - y + 8) < LENS * 0.7)
-  const status = statuses[Math.floor(now / STATUS) % statuses.length]
-  const count = found.filter(Boolean).length
 
   return (
     <section aria-label={label} className="flex w-full flex-1 flex-col items-center px-5 pt-10 pb-20 lg:pt-12">
@@ -229,14 +194,6 @@ export function SearchLoader({
                 <stop offset="65%" stopColor="#f6e6b8" />
                 <stop offset="100%" stopColor="#b4852a" />
               </linearGradient>
-              <linearGradient id="search-folds" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stopColor="#000" stopOpacity="0" />
-                <stop offset="0.333" stopColor="#000" stopOpacity="0.03" />
-                <stop offset="0.334" stopColor="#fff" stopOpacity="0.2" />
-                <stop offset="0.666" stopColor="#000" stopOpacity="0.03" />
-                <stop offset="0.667" stopColor="#fff" stopOpacity="0.2" />
-                <stop offset="1" stopColor="#000" stopOpacity="0" />
-              </linearGradient>
               <radialGradient id="search-shadow">
                 <stop offset="0" stopColor="#3c2d19" stopOpacity="0.22" />
                 <stop offset="1" stopColor="#3c2d19" stopOpacity="0" />
@@ -247,7 +204,6 @@ export function SearchLoader({
             </defs>
 
             <MapArt found={found} near={near} />
-            <rect width={W} height={H} fill="url(#search-folds)" />
 
             {/* Glass shadow, cast down and to the right */}
             <ellipse cx={x + 18} cy={y + 22} rx={LENS + 14} ry={LENS + 6} fill="url(#search-shadow)" />
@@ -263,14 +219,6 @@ export function SearchLoader({
             <Glass x={x} y={y} tilt={tilt} scale={scale} />
           </svg>
         </div>
-
-        <p className="m-0 mt-8 flex items-baseline justify-between gap-4 font-body text-[15px] leading-6 text-stone">
-          <span className="text-body">
-            {status}
-            <span className="loading-dots" aria-hidden />
-          </span>
-          <span className="shrink-0 font-mono text-[13px]">{count} {count === 1 ? 'fit' : 'fits'} found</span>
-        </p>
       </div>
     </section>
   )
