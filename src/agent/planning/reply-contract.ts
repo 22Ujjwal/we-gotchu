@@ -3,7 +3,8 @@ import { z } from 'zod'
 const text = z.string().trim().min(1)
 export const supplierMessageSchema = z.object({
   provider: text, messageId: text, threadId: text.nullable(), inReplyTo: text.nullable(), references: z.array(text).optional(),
-  from: z.email(), to: z.array(z.email()).min(1), subject: z.string().max(1000), text: z.string().max(60000),
+  // Incoming headers can contain groups or omit To. Routing uses the inbox and saved message references.
+  from: z.email(), to: z.array(z.string().max(1024)).max(100), subject: z.string().max(10000), text: z.string().max(60000),
   receivedAt: z.iso.datetime(), originalRef: text, mode: z.enum(['live', 'simulated']),
 }).strict()
 export const replyInterpretationSchema = z.object({

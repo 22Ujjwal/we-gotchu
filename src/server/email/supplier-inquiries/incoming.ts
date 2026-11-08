@@ -93,8 +93,7 @@ export function createIncomingReceiver(opts: {
 function mailbox(value: string): string | null {
   const candidate = value.match(/^[^<>\r\n]*<([^<>\r\n]+)>$/)?.[1] ?? value
   if (!z.email().safeParse(candidate).success) return null
-  const at = candidate.lastIndexOf('@')
-  return candidate.slice(0, at) + candidate.slice(at).toLowerCase()
+  return candidate.toLowerCase()
 }
 
 /** Application uses persisted inquiry candidates. Subject/text never choose a conversation.
