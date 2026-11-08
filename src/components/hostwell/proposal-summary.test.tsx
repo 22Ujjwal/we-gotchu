@@ -41,7 +41,7 @@ test('long unbroken summaries have a bounded preview and expandable exact text',
   const summary = 'Availability and final costs remain unconfirmed '.repeat(12).trim()
   render(<ProposalSummary summary={summary} nextQuestion="Please confirm the end time" />)
   const copies = screen.getAllByText(summary)
-  expect(copies[0]).toHaveClass('line-clamp-3')
+  expect(copies[0]).toHaveClass('line-clamp-2')
   expect(copies[1]).not.toBeVisible()
   expect(screen.getByText('Please confirm the end time')).toBeVisible()
   fireEvent.click(screen.getByText('Details', { selector: 'summary' }))

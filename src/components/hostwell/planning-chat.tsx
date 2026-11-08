@@ -1,3 +1,4 @@
+import { displayCopy } from '../../lib/hostwell/display-copy'
 import { usePlanningImages } from '../../lib/hostwell/planning-images'
 import { ProposalSummary } from './proposal-summary'
 import { PlanningArrangement } from './planning-arrangement'
@@ -69,21 +70,20 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const offerCosts = offer && calculateOfferCosts(offer)
   const venueOptions = [...options.values()].filter(option => option.kind === 'venue')
   const supplyOptions = [...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id))
-  const venueCards = venueOptions.map(option => ({ id: option.id, name: option.name, photos: (venueImages[option.id] ?? []).map(image => image.url),
-    photoCredit: <>{(venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[13px] underline">Photo source: {image.attribution.text}</a>)}</>,
-    evidence: <details className="text-[15px] leading-6"><summary className="cursor-pointer underline">{option.name} sources and details</summary>
-      <p className="mt-3">{option.why}</p>
-      {option.facts.map((fact, index) => <p key={index} className="mt-2">{fact.label}: {fact.value} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></p>)}
-      {option.unknowns.length > 0 && <div className="mt-3"><p className="font-semibold">Still to confirm</p><ul className="list-disc pl-5">{option.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul></div>}
+  const venueCards = venueOptions.map(option => ({ id: option.id, name: displayCopy(option.name), photos: (venueImages[option.id] ?? []).map(image => image.url),
+    photoCredit: <>{(venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[13px] underline">Photo source: {displayCopy(image.attribution.text)}</a>)}</>,
+    evidence: <details className="text-[15px] leading-6"><summary className="cursor-pointer underline">Budget sources and details</summary>
+      <p className="mt-3">{displayCopy(option.why)}</p>
+      {option.facts.map((fact, index) => <p key={index} className="mt-2">{displayCopy(fact.label)}: {displayCopy(fact.value)} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></p>)}
+      {option.unknowns.length > 0 && <div className="mt-3"><p className="font-semibold">Still to confirm</p><ul className="list-disc pl-5">{option.unknowns.map((unknown, index) => <li key={index}>{displayCopy(unknown)}</li>)}</ul></div>}
     </details>,
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
-      : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: `${fact.label}: ${fact.value}` })) }))
+      : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: `${displayCopy(fact.label)}: ${displayCopy(fact.value)}` })) }))
   const messageForm = <section aria-label={id ? 'Plan changes' : 'Event details'} className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-      {view && view.status !== 'ready' && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center"><p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
+      {view && view.status !== 'ready' && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center">{view.status !== 'uncertain' && <p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
         : view.status === 'blocked' ? "Research is paused for our team's review."
         : view.status === 'failed' ? 'We could not finish this research. Send a message to try again.'
-          : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
-            : null}</p>
+            : null}</p>}
         {view.status === 'uncertain' && <Button className="px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
         {view.status === 'blocked' && !(view.canReviewResearch && view.approvals?.length) && <Button className="px-5 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for research updates</Button>}
       </div>}
@@ -94,7 +94,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() } }}
         placeholder={id ? 'Keep the venue, but find cheaper supplies...' : 'A birthday dinner for 20 in Oakland next Saturday, around $600...'}
         className="w-full resize-y border-[1.5px] border-sand bg-transparent p-4 text-[18px] leading-7 focus-visible:outline-2 focus-visible:outline-gold" />
-      <p className="text-[14px] text-stone">Press Enter to send. Use Shift+Enter for a new line.</p>
       <Button type="submit" disabled={!!blocked || !draft.trim()} className="self-start px-8 py-[17px] text-[18px]">{session.pending ? 'Saving...' : id ? 'Send message' : 'Plan my event'}</Button>
     </form>
   </section>
@@ -179,19 +178,19 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
 function PlanningOptionCard({ option, selected, disabled, onSelect }: { option: PlanningOption; selected: boolean; disabled: boolean; onSelect: () => void }) {
   return <article className={`flex flex-col gap-4 border p-5 ${selected ? 'border-ink' : 'border-sand'}`}>
     <p className="text-[14px] text-stone">{option.kind === 'venue' ? 'Venue' : 'Supplies'}{selected ? ' / Selected' : ''}</p>
-    <h2 className="text-[26px] leading-8 font-light">{option.name}</h2>
-    <p className="text-[17px] leading-6">{option.why}</p>
+    <h2 className="text-[26px] leading-8 font-light">{displayCopy(option.name)}</h2>
+    <p className="text-[17px] leading-6">{displayCopy(option.why)}</p>
     <dl className="flex flex-col gap-3">{option.facts.map((fact, index) => <div key={index}>
-      <dt className="text-[14px] text-stone">{fact.label}</dt>
-      <dd className="text-[17px]">{fact.value}</dd>
+      <dt className="text-[14px] text-stone">{displayCopy(fact.label)}</dt>
+      <dd className="text-[17px]">{displayCopy(fact.value)}</dd>
       <dd><a className="text-[14px] underline" href={fact.sourceUrl} target="_blank" rel="noreferrer">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></dd>
     </div>)}</dl>
     {option.unknowns.length > 0 && <div><p className="text-[14px] font-semibold">Still to confirm</p>
-      <ul className="list-disc pl-5 text-[15px] leading-6">{option.unknowns.map((unknown, index) => <li key={index}>{unknown}</li>)}</ul></div>}
+      <ul className="list-disc pl-5 text-[15px] leading-6">{option.unknowns.map((unknown, index) => <li key={index}>{displayCopy(unknown)}</li>)}</ul></div>}
     <details className="text-[15px] leading-6"><summary className="cursor-pointer underline">Sources and details</summary>
-      <a href={option.url} target="_blank" rel="noreferrer" className="underline">View {option.name}</a>
-      {option.facts.map((fact, index) => <blockquote key={index} className="mt-3 border-l border-sand pl-3">{fact.quote}</blockquote>)}
+      <a href={option.url} target="_blank" rel="noreferrer" className="underline">View {displayCopy(option.name)}</a>
+      {option.facts.map((fact, index) => <blockquote key={index} className="mt-3 border-l border-sand pl-3">{displayCopy(fact.quote)}</blockquote>)}
     </details>
-    <Button className="mt-auto px-5 py-3" aria-pressed={selected} disabled={disabled} onClick={onSelect}>{selected ? 'Remove' : 'Select'} {option.name}</Button>
+    <Button className="mt-auto px-5 py-3" aria-pressed={selected} disabled={disabled} onClick={onSelect}>{selected ? 'Remove' : 'Select'} {displayCopy(option.name)}</Button>
   </article>
 }

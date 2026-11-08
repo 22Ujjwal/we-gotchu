@@ -52,7 +52,9 @@ test.each(['working', 'failed', 'uncertain', 'blocked'] as const)('%s research r
   render(<ConnectedPlanningPage id="plan-a" />)
   const heading = await screen.findByRole('heading', { name: 'Garden room' })
   const changes = screen.getByRole('region', { name: 'Plan changes' })
-  expect(within(changes).getByRole('status')).toBeVisible()
+  if (status === 'uncertain') expect(within(changes).queryByRole('status')).not.toBeInTheDocument()
+  else expect(within(changes).getByRole('status')).toBeVisible()
+  expect(screen.queryByText('Press Enter to send. Use Shift+Enter for a new line.')).not.toBeInTheDocument()
   expect(screen.getAllByRole('textbox', { name: 'Ask for changes' })).toHaveLength(1)
   expect(heading.compareDocumentPosition(changes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   if (status === 'uncertain' || status === 'blocked') {
@@ -98,9 +100,9 @@ test('saved options show sources and selection snapshots survive a follow-up and
   })
   const page = render(<ConnectedPlanningPage id="plan-a" />)
   expect(await screen.findByRole('heading', { name: 'Garden room' })).toBeVisible()
-  await user.click(screen.getByText('Garden room sources and details'))
+  await user.click(screen.getByText('Budget sources and details'))
   expect(screen.getAllByText('USD 200')[0]).toBeVisible()
-  const evidence = screen.getByText('Garden room sources and details').parentElement!
+  const evidence = screen.getByText('Budget sources and details').parentElement!
   expect(within(evidence).getByRole('link', { name: 'Published source' })).toHaveAttribute('href', 'https://example.com/rates')
   expect(within(evidence).getByText('Confirm your date.')).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Choose Garden room' }))

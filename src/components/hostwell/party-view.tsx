@@ -141,7 +141,7 @@ export function PartyView({
                 badge={
                   <div className="flex h-12 w-11 flex-col items-center border border-line-strong lg:h-[52px] lg:w-12">
                     <span className="w-full bg-ink py-0.5 text-center font-mono text-[11px] leading-[14px] font-semibold tracking-[0.08em] text-white">
-                      {date ? MONTHS[date.month] : '—'}
+                      {date ? MONTHS[date.month] : 'TBD'}
                     </span>
                     <span className="pt-0.5 text-[18px] leading-[22px] font-bold lg:pt-[3px] lg:text-[20px] lg:leading-6">
                       {date?.day ?? '?'}
