@@ -298,6 +298,23 @@ describe('refund reconciliation', () => {
     expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
   })
 
+  it('retries when initial persistence wins between refund and approval lookups', async () => {
+    const { deps, store, stripe, session, payment, approval } = await awaitingPayment()
+    await store.markPaymentPaid(session.id, 'pi_test_1')
+    const refund = { id: 're_between_reads', status: 'succeeded', payment_intent: 'pi_test_1', metadata: { paymentId: payment.paymentId, approvalId: approval.approvalId } }
+    Object.assign(stripe.refunds, { retrieve: async () => refund })
+    const lookup = store.getPaymentByRefundId.bind(store)
+    vi.spyOn(store, 'getPaymentByRefundId').mockImplementationOnce(async id => {
+      const before = await lookup(id)
+      await store.setRefund(payment.paymentId, { refundId: refund.id, refundState: 'pending', refundReason: 'customer_cancellation' })
+      return before
+    })
+    const delivery = signed('refund.updated', refund)
+    await expect(handleStripeWebhook(deps, delivery.payload, delivery.header)).rejects.toThrow('Refund is awaiting initial persistence')
+    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('refund_updated')
+    expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
+  })
+
   it('preserves a reconciled terminal refund when a cached create response is persisted later', async () => {
     const { deps, store, stripe, payment, refundId, eventId } = await pendingRefund()
     Object.assign(stripe.refunds, {
@@ -306,7 +323,7 @@ describe('refund reconciliation', () => {
     })
     const delivery = signed('refund.failed', { id: refundId })
     await handleStripeWebhook(deps, delivery.payload, delivery.header)
-    await issueFinalRefund(deps, eventId)
+    expect(await issueFinalRefund(deps, eventId)).toMatchObject({ ok: true, refundState: 'failed' })
     expect(store.payments.get(payment.paymentId)).toMatchObject({ refundId, refundState: 'failed', refundReason: 'late_or_revoked' })
   })
 

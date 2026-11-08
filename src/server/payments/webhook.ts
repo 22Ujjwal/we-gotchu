@@ -76,7 +76,7 @@ async function dispatchStripeEvent(deps: Deps, event: { type: string; created: n
       const approvalId = incoming.metadata?.approvalId
       const pending = approvalId && await deps.store.getPaymentByApproval(approvalId)
       const intent = typeof incoming.payment_intent === 'string' ? incoming.payment_intent : incoming.payment_intent?.id
-      if (pending && pending.state === 'paid' && !pending.refundId &&
+      if (pending && pending.state === 'paid' && (!pending.refundId || pending.refundId === incoming.id) &&
           pending.paymentId === incoming.metadata?.paymentId && intent && pending.paymentIntentId === intent) {
         throw new Error('Refund is awaiting initial persistence; retry delivery')
       }
@@ -200,5 +200,7 @@ export async function issueFinalRefund(deps: Deps, eventId: string): Promise<Fin
   const amount = Math.max(0, payment.amount - retainedFees)
   if (amount === 0) return { ok: false, reason: 'nothing_to_refund' }
   const r = await refund(deps, payment, amount, 'customer_cancellation')
-  return { ok: true, refundId: r.id, refundState: refundState(r), amount, retainedFees }
+  // The idempotent create response may predate a webhook reconciliation.
+  const recorded = await deps.store.getPaymentByRefundId(r.id)
+  return { ok: true, refundId: r.id, refundState: recorded?.refundState ?? refundState(r), amount, retainedFees }
 }
