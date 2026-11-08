@@ -76,6 +76,7 @@ The backend changes are deliberately limited to these needs.
 - Store gains optional researchCheckpoints methods, implemented by the database store.
 - ResearchPort.startResearch may return a null session ID until discovery completes.
 - Result publication and lease release accept the claimed lease timestamp as a fence.
+- Final research status updates also check the brief revision so an old request cannot stop a new run.
 - Checkpoint writes reject expired leases, stale revisions, and canceled events atomically.
 - Cancellation failures produce safe customer progress instead of only a server log.
 - Dependency wiring chooses real research by default and simulation only with RESEARCH_MODE=simulated.
@@ -101,7 +102,7 @@ All candidate examples retain simulated evidence mode.
 These fixtures are never production fallbacks.
 
 Run the repository test, typecheck, and build scripts with Bun 1.4.4.
-The complete suite currently contains 158 tests across 13 files.
+The complete suite currently contains 159 tests across 13 files.
 The final PR handoff records the exact tested commit and remote check state.
 Live deployment, chosen-model quality, real application latency, and the combined ticket02 detail-provider path remain unverified.
 
