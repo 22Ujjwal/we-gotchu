@@ -1,11 +1,14 @@
 # Planning persistence and HTTP API
 
 Planning conversations have their own IDs and database table.
-They do not create transaction events, plans, approvals, or payments.
+Research and selection do not create transaction records.
+The explicit prepare_payment command links a complete selected offer to the existing transaction event and plan.
+Approval and Checkout still use the existing transaction API.
 The HTTP bodies and returned views use `src/agent/planning/contract.ts`.
 
 - `POST /api/planning` accepts `{ requestId, message }` and returns a view with status 201.
-- `GET /api/planning/$id` loads the owned conversation and reads its existing hosted session once.
+- `GET /api/planning/$id?saved=1` restores the owned saved conversation without contacting the provider.
+- `GET /api/planning/$id` refreshes the owned conversation from its existing hosted session.
 - `POST /api/planning/$id` accepts the shared message or selection command.
 
 Every operation requires the existing customer authentication function.
@@ -61,3 +64,108 @@ Run `npm test -- src/server/planning src/server/db/store.test.ts src/agent/plann
 The tests use migrated PGlite and injected fake agents, including a file-backed close-and-reopen test.
 They do not call a live provider or a hosted database.
 The lead owns generated route registration, combined application checks, and browser verification.
+
+## Venue inquiry drafts
+
+The `prepare_inquiry` command creates a draft for the saved selected venue when research is ready.
+The `save_inquiry` command requires the conversation version, inquiry ID and exact draft revision.
+Draft creation and editing never invoke the planner or email provider.
+The existing JSON conversation record stores the optional inquiry; old records remain valid.
+
+Draft text uses the customer's messages in order and asks for availability, capacity, total costs, deposits and cancellation terms.
+Prefilled contacts must appear in both a published fact and its source excerpt.
+An absent or ambiguous contact stays empty and can be entered manually.
+Changing the recipient removes the old source attribution.
+
+New customer messages and venue changes mark the saved draft stale.
+The customer must explicitly replace an outdated draft.
+Revision conflicts retain local editor text instead of silently adopting another tab's baseline.
+The approved-send boundary is described below.
+The real mail adapter, inbound interpretation and supplier commitments are not connected yet.
+
+## Approved inquiry sends
+
+`SupplierMailTransport` in `supplier-mail.ts` is the transport interface for Ujjwal's adapter.
+Inject it as `PlanningDeps.mail`; the runtime currently leaves it unset.
+The HTTP projection advertises `canSendInquiry` only when that dependency is present.
+
+The `send_inquiry` command includes the inquiry ID, expected draft revision, conversation version and request ID.
+The server loads the approved recipient, subject and text from the saved draft rather than accepting replacement fields in the send request.
+It saves approval and pending status before calling `sendInquiry` once.
+The adapter receives `requestId`, `conversationId`, `inquiryId`, `draftRevision`, `to`, `subject` and `text`.
+
+Accepted results require `messageId`, nullable `threadId` and ISO `acceptedAt`.
+Failed results require `code` and `reason`; the customer sees a generic rejection message.
+Uncertain results require `operationId` and may include message and thread IDs.
+A malformed response, thrown error or timeout remains uncertain and is never automatically resent.
+The server can retry database settlement without retrying the provider write.
+A pending send left by a crashed request becomes uncertain after its saved deadline on a subsequent read.
+
+The editor locks the approved message once a send has been attempted.
+The customer can explicitly replace a rejected inquiry; its previous draft and send result remain in the record's inquiry history.
+An uncertain send cannot be replaced automatically.
+Reloaded pending sends trigger read-only status checks until the application records an outcome.
+Provider acceptance is not delivery or a supplier reply.
+
+The next integration step is to inject the verified real adapter and run an approved controlled-inbox send.
+Read-only provider reconciliation, inbound correlation, reply interpretation and offer display remain separate incomplete work.
+No real provider send occurred during controlled implementation verification.
+
+## Restore before refresh
+
+The browser first requests the saved view so a provider outage cannot hide an existing plan.
+Working research and pending inquiry sends continue with normal polling after restoration.
+Completed plans can be explicitly refreshed with Check for research updates.
+A failed refresh keeps the restored proposal visible and shows an error.
+Saved-state reads still require the same customer ownership check.
+
+The stage-three browser attempt at `eb8938a` stopped at initial loading with a reported 503.
+A later read-only probe found the saved conversation ready at version 9 and sequence 160, with a proposal, selected venue and no pending write.
+Both provider GETs succeeded during that later probe, so the earlier 503's underlying cause remains unconfirmed.
+The controlled regression reproduced the separate application weakness that provider refresh failure blocked returning saved work.
+This change removes that dependency; it does not claim to fix or explain a provider outage.
+
+## Supplier transport and reply processing
+
+The runtime composes Ujjwal's supplier transport when AGENTMAIL_API_KEY, AGENTMAIL_INBOX_ID and AGENTMAIL_WEBHOOK_SECRET are present.
+Migration 0003_supplier_mail adds durable send operations and inbound receipts.
+Apply committed migrations separately before hosting; startup does not migrate Neon.
+
+POST /api/supplier-mail/webhook verifies the provider signature before receiving mail.
+Its awaited application callback saves a normalized reply and its pending interpretation state in one conversation compare-and-set.
+The receipt ID, provider message ID and original provider reference remain attached to that entry.
+Repeated callbacks return the stored reply without creating another pending job.
+Missing plain text is retained as a failed interpretation rather than a fabricated offer.
+
+GET /api/planning/reply-jobs requires Authorization: Bearer CRON_SECRET.
+It processes up to five durable reply jobs concurrently using the configured NAIVE_REPLY_MODEL or NAIVE_PLANNING_MODEL.
+After a successful signed webhook receipt, the runtime registers the same work with Vercel waitUntil so it can continue after the HTTP response.
+The server function has a 60-second runtime budget; the configured model transport has a 45-second request timeout.
+The committed Vercel Cron schedule invokes recovery daily at 06:00 UTC, within Hobby scheduling limits.
+Set CRON_SECRET in the hosting environment so scheduled requests authenticate.
+An interrupted invocation with no later webhook may wait until the daily recovery run, and a batch handles at most five jobs.
+This is a bounded recovery mechanism, not a guarantee of immediate recovery or draining an arbitrarily large backlog.
+Hosted invocation and browser-closed processing still require runtime verification before release.
+Processing uses an expiring lease and token-checked settlement so a late result cannot replace a newer worker's result.
+Failed interpretation retains the original reply; retries must operate on that saved entry, never resend an inquiry.
+
+The model receives supplier text as data, has no tools, and returns classified facts with verbatim supporting excerpts.
+The UI shows quoted facts and missing information, and never treats this extraction as a booking or a complete payment amount.
+Check for venue replies reads saved state only.
+The live model check used controlled supplier text and sent no email.
+Recipient delivery, signed hosted receipt, and hosted scheduling remain separate verification gates.
+
+A failed nonempty reply offers Retry reply summary.
+This command records its request ID and changes that saved reply back to pending interpretation.
+The server registers background processing after the retry is saved; the daily recovery job remains a fallback.
+Repeating the same command does not enqueue another logical reply or send another inquiry.
+
+
+## Uncertain inquiry recovery
+
+Check send status reads the durable mail operation using the original request ID and verifies its conversation and inquiry identity.
+It never calls the send endpoint.
+A saved provider acceptance or rejection updates the conversation without changing the approved content.
+A missing operation or an uncertain operation without a known provider message remains uncertain.
+The application does not treat absence as proof that nothing was sent.
+Saved-only page restoration does not perform provider reconciliation.

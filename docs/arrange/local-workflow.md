@@ -105,6 +105,11 @@ The cost is rewriting the event document and less convenient cross-event reporti
 Relational offer tables would be preferable if that reporting or much larger event histories becomes a requirement.
 The payment receipt table is separate because global uniqueness must hold across event documents.
 
+The migration history preserves main migrations 0000 through 0004 and places the ARRANGE migrations after them.
+Migration 0009 repairs older local ARRANGE databases that already applied later timestamps before main's supplier-mail tables and paid-at column existed.
+It creates only missing tables and the missing column.
+Upgrade tests cover both histories, repeated migration, and preservation of existing records.
+
 ## Before a real-provider run
 
 The local scripts do not read `.env.arrange-live` and do not apply `naive up`.

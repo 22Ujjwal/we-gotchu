@@ -1,3 +1,29 @@
+## Saved planning adopts Leo's venue layout, 2026-11-08
+
+Local branch: `integrate/leo-main-preserve-local`. Main baseline remains `4f312b9`.
+Commits: `e907561` extracts shared receipt styling; `4d57ee8` connects saved planning to the photo, description, extras and paper estimate layout. No push, PR or deployment for these changes.
+
+The selected page no longer renders the redundant Updated event heading or beige arrangement card. Real selected items feed the receipt. Missing totals, fees and cancellation terms remain unconfirmed; no fixture prices or inferred money amounts are used. Email and the existing guarded arrange action sit beneath the receipt. Follow-up questions remain beside the changes form. Approval, payment and supplier contracts are unchanged.
+
+Verification: 104 focused tests across planning-chat (50), connected-journey (28), photo and planning-image hooks (26); typecheck and production build pass. Planning-chat was rerun after restoring follow-up questions. Native Chrome screenshot confirms the real saved Pearl photo, shared paper receipt and aligned extras. Browser navigation was attempted but no transition was observed in this run; controlled navigation tests pass. No fresh mobile screenshot or successful arrangement submission is claimed.
+
+The saved local event remains uncertain and has no structured brief metadata. Arrange and extras remain disabled by existing guards. No real provider research, supplier contact, booking, purchase or payment occurred. Tony's newer unmerged flow changes remain outside this branch.
+
+## Latest: Leo main integration, 2026-11-08
+
+Branch: `integrate/leo-main-preserve-local`, local only; no PR or push.
+Tested merge: `a31d85a67b0b08a0f8da9b7f8881fb11a5b54a4d`.
+Merged main baseline: `4f312b946846bd1b52db194d882f3e676ba147bc` (PR #74).
+Rollback branch: `integrate/agent-connect-tony` at `971208e`.
+
+Leo's new arranging screen, event page, demo fixture photos and party route match main exactly. Existing authenticated planning, image retrieval/retry, concise copy, saved-selection fix and agent-connect work remain on the integration branch. The only textual merge conflict was additive `.env.example` settings; both sets were retained. No new product copy or layout changes were introduced for the merge.
+
+Verification: 777 application tests (72 files), 31 tooling tests, typecheck and build passed; frozen dependency installation passed. All 12 fixture photo paths exist. Native Chrome accessibility inspection after reload retained the selected local venue and arrangement controls. Screenshot capture returned blank, so fresh visual alignment and mobile verification remain pending. No email, supplier, payment, migration, deployment or hosted configuration action occurred.
+
+Demo fixtures remain separate from authenticated saved planning. Demo email and final booking email were not sent in verification. Hosted agents have not been updated with local prompt changes. Tony's newer `feat/planning-company-actions` changes through `df2a1e4` are not included; coordinate before integrating them. Next: visual review when browser capture is usable, then user-authorized push/PR.
+
+Earlier status entries below are historical evidence, not claims about this merge.
+
 ## Venue images — 2026-11-08
 
 Branch: `feat/venue-images`, baseline `5eafbcb`; [draft PR #61](https://github.com/22Ujjwal/we-gotchu/pull/61), pushed but not merged or deployed.
@@ -144,3 +170,45 @@ Known preexisting limit: expiration eligibility reads and event-status update ar
 Research-finalization recovery is a third separate commit on this branch. Polling reuses saved terminal results and any persisted plan to finish interrupted status writes, without rerunning providers. It rechecks cancellation and brief revisions; no schema or Tony-owned files change. Existing limits remain: canceled events can retain an inert plan if cancellation races the save, and progress messages can be lost after a successful status write. Status cannot be revived by these retries.
 
 Final combined verification: 397 application tests, 25 coordination tests, typecheck, production build, and diff check pass. Both payment and recovery reviews found no introduced blockers. Earlier isolated runs hit missing DOM dependencies/initialization timeouts; the clean combined install and two-worker run passed without changing timeouts. These three commits are on branch, not yet deployed.
+
+## External agent connection — local branch, 2026-11-08
+
+Owner: Ujjwal. Updated: 2026-11-08T08:42:40-08:00. Branch `feat/agent-connect`; no PR, push, merge or deployment. Baseline cached main `b986ab636725029fc6c1b694a1c34494a42a7bca`. Tested implementation `4b5f95c4ff115ec59e18c1c061cf57d83dd80d6a`. Older entries above retain their original evidence and do not describe this branch's deployment.
+
+Implemented customer-scoped planning tools and MCP/JSON handler factories, reusing existing planning persistence. Agents can create/poll/refine/toggle saved selections and return a customer review link. No inquiry approval/sending, payment or booking authority. Provider behavior in tests is simulated. No hosted endpoint is mounted.
+
+Verified: 557 application tests (single worker), 25 coordination tests, root typecheck and Vercel build; separately 4 official MCP client tests, package typecheck/build and frozen install. No existing planning/frontend/internal MCP/root config/dependency/schema/migration edits. No production configuration or provider calls.
+
+Handoff and exact commits: [agent-connect.md](../agent-connect.md). Interface/configuration/client recipe: [integration README](../../../integrations/arrange-agent-connect/README.md). Needs durable customer enrollment/revocation and admission, coordinated runtime/routes/CI, and hosted/client-specific verification before public availability. Tony's evolving planner contract must be reconciled before integration; his current frontend work is not blocked. Independent review found one blocking cleanup-timeout issue, reproduced and fixed in `4b5f95c`; one minor authority metadata wording issue is deferred in the handoff. The full single-worker rerun passed after an earlier parallel run hit two existing database test timeouts. Next: integration review with Tony and customer enrollment/admission design; keep local pending publication permission.
+
+## Planning UI and backend integration — 2026-11-08T09:20:16-08:00
+
+Owner: Ujjwal. Branch `integrate/agent-connect-tony`, local only; PR not published. Includes Tony `8a06de34bcc359fab8f8d9b0387f51c5e2305377` and main `ba3f747e1d856f4f461fa696b2380ad616ad950b`. Tested implementation `ee61df14e8badba9d0989e6be90287ed8ecb0400`. This supersedes the prior uncommitted/17-failure rehearsal state for this integration branch. Main and production have not been changed.
+
+Fixed hidden inquiry/status/recovery controls, restored selected-option handling, aligned arrangement buttons with backend delivery guards, connected async venue images with four-photo cap/attribution, and handled broken image URLs/source changes. Preserved Leo's visual style and combined main's activity dial with Tony's planning submission; fixed live progress wiring and partial brief loading. No provider/payment behavior or credentials changed.
+
+Verified: 732 application tests, 31 tooling tests, 5 MCP client tests, typechecks and Vercel/SDK builds pass. Parallel implementation agents plus a separate reviewer; no blocking review issue remained. Desktop/mobile fixture screenshots cover actual components/hooks, controlled API responses, loaded fonts, normal/reduced-motion transitions, approval gates, uncertainty recovery and image fallbacks. This is local controlled UI evidence, not hosted Clerk/Naive/supplier/payment success.
+
+Commits: `2051c67`, `44b1ae2`, `ee61df1`. [Verification and screenshot locations](../../testing/ui-integration-verification.md). Local screenshots/report are preserved in `.scratch/verification/ui-integration/`. Deferred minor: a transient image API failure needs reload to retry while the venue source is unchanged. Root/source CI and backend ownership/approval checks remain active.
+
+Next: user/team review of the local combined branch, then publication when authorized and a separate hosted signed-in research-only verification. Do not represent these fixtures as confirmed availability or booking. No outreach, real charges, hosted migration, push or deployment occurred.
+
+## Photo retry follow-up — 2026-11-08
+
+Branch `integrate/agent-connect-tony`, implementation `7cc8679`, local only; no PR/push/deployment. Transient venue image failures retry twice, then expose Retry photos. Successful photos are preserved; polling does not restart requests and scope cleanup cancels work. This resolves the earlier deferred reload-only recovery limitation.
+
+Verified: 741 application tests, 31 tooling tests, typecheck, build and independent review pass. The real local homepage and Clerk sign-in rendered in Chrome. Authenticated research/image verification is pending user sign-in, not a claimed pass. Local server remains available for that handoff at localhost:3000 with an isolated planning DB; no supplier/payment actions or hosted configuration changes. Next: complete signed-in browser verification before publication. [Evidence and limitations](../../testing/ui-integration-verification.md).
+
+### Local live verification update
+
+Clerk sign-in, research-only creation, a real partial proposal and browser-reload restoration now verified on `02d4fe5`. El Lopo venue lead and paper plates displayed with explicit unknowns; missing photo did not block the proposal. Live image recovery and changed-brief behavior were not exercised. No provider commitments or payment actions. [Detailed evidence and limits](../../testing/ui-integration-verification.md). Branch remains local; no push or PR.
+
+### UI cleanup and photo-source diagnosis
+
+Local branch only. `12c7e32` removes repeated planning narration and centers content; `f2aaa17` fixes decorated-name image extraction only when the page corroborates business and city. 758 combined tests, typecheck/build passed before the final small copy sweep. Live Pearl rooftop extraction and image bytes verified; final in-page image render and new mobile captures remain unverified. A subsequent planner name-only revision returned uncertain; no blind resend. [Verification details](../../testing/ui-integration-verification.md). No push/deploy.
+
+### Customer flow and agent connection final check
+
+Customer history removed; research recovery sits beside Ask for changes rather than above venue options. Native Chrome screenshot now confirms real Pearl photo rendered in card and no top update/history clutter. 763 application tests, 31 tooling tests, root typecheck/Vercel build pass. Separately 5 MCP client tests/54 assertions and 34 gateway tests pass, with SDK typecheck/build. No live external assistant client or hosted external endpoint.
+
+Nine-step workflow audit identifies remaining controlled-only automation, manual-control overlap, awaiting-reply refresh, venue count and final booking-status/receipt gaps. See [complete audit](../../testing/customer-workflow-audit.md). Local only; no push or deployment.

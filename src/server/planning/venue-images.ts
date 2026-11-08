@@ -37,6 +37,14 @@ export function extractVenueImages(html: string, source: string, venueName: stri
   const titles = [...elements.filter(e => e.tagName === 'title').map(text), ...metadata.filter(a => ['og:title', 'og:site_name'].includes(a.property)).map(a => a.content ?? '')]
   const candidates: Array<{ url: string; evidence: VenueImage['evidence']; description: string | null; rank: number }> = []
   const pageIdentified = titles.some(title => matches(title, venueName))
+  // Planner labels may append a location and a trailing assessment. This alias
+  // requires a title matching the business and a caption naming business AND
+  // location before considering business-matched room captions on this page.
+  // It never unlocks metadata or structured-image extraction.
+  const decorated = venueName.match(/^(.+?)\s+[—–-]\s+([^()]+?)(?:\s+\([^()]*\))?$/)
+  const captionName = decorated && titles.some(title => matches(title, decorated[1]))
+    && elements.some(element => element.tagName === 'img' && matches(attrs(element).alt ?? '', `${decorated[1]} ${decorated[2].trim()}`))
+    ? decorated[1] : null
   let identified = pageIdentified
   // Only image fields belonging to the named business, not arbitrary nested article/product objects.
   const inspect = (value: unknown, depth = 0): void => {
@@ -58,10 +66,10 @@ export function extractVenueImages(html: string, source: string, venueName: stri
   for (const script of elements.filter(e => e.tagName === 'script' && attrs(e).type === 'application/ld+json')) {
     try { inspect(JSON.parse(text(script))) } catch { /* malformed metadata is not fatal */ }
   }
-  if (!identified) return []
+  if (!identified && !captionName) return []
   for (const element of elements.filter(e => e.tagName === 'img')) {
     const a = attrs(element)
-    if (matches(a.alt ?? '', venueName) && room.test(a.alt ?? '') && !(Number(a.width) > 0 && Number(a.width) < 300) && !(Number(a.height) > 0 && Number(a.height) < 180)) {
+    if (((identified && matches(a.alt ?? '', venueName)) || (captionName && matches(a.alt ?? '', captionName))) && room.test(a.alt ?? '') && !(Number(a.width) > 0 && Number(a.width) < 300) && !(Number(a.height) > 0 && Number(a.height) < 180)) {
       candidates.push({ url: a['data-src'] || a.src || '', evidence: 'caption', description: a.alt, rank: 0 })
     }
   }

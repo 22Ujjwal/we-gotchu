@@ -4,7 +4,7 @@ import { createTestPlanningRepository } from '../db/client'
 import type { PlanningDeps } from './service'
 
 let deps: PlanningDeps
-vi.mock('./runtime', () => ({ getPlanningDeps: () => deps }))
+vi.mock('./runtime', () => ({ getPlanningDeps: () => deps, dispatchPlanningReplies: vi.fn() }))
 vi.mock('@tanstack/react-router', () => ({ createFileRoute: () => (options: unknown) => ({ options }) }))
 import { Route as collectionRoute } from '../../routes/api/planning'
 import { Route as itemRoute } from '../../routes/api/planning.$id'

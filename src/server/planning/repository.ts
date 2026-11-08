@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
-import type { PlanningOption, PlanningView } from '../../agent/planning/contract'
+import type { PlanningInquiry, PlanningOption, PlanningView } from '../../agent/planning/contract'
 import { planningConversations, schema } from '../db/schema'
 
 export type PendingWrite = {
@@ -22,8 +22,18 @@ export type PlanningRecord = {
   pending: PendingWrite | null
   requests: Record<string, string>
   view: PlanningView
+  paymentHistory?: import('../../agent/planning/offer-contract').PlanningPaymentLink[]
+  inquiryHistory?: PlanningInquiry[]
+  companyFollowups?: Record<string, { content: { recipient: string; subject: string; text: string }; status: string }>
+  companyReplyTurns?: Record<string, { sessionId?: string }>
+  companySession?: { id: string; arrangementId: string }
+  notifications?: Record<string, { to: string; subject: string; text: string; status: 'uncertain' | 'accepted' | 'failed'; messageId?: string }>
 }
+export type ReplyJob = { customerId: string; conversationId: string; inquiryId: string; replyId: string }
 export interface PlanningRepository {
+  getById(id: string): Promise<PlanningRecord | null>
+  pendingArrangements?(limit: number): Promise<PlanningRecord[]>
+  pendingReplyJobs(limit: number, now: number): Promise<ReplyJob[]>
   get(customerId: string, id: string): Promise<PlanningRecord | null>
   insert(record: PlanningRecord): Promise<PlanningRecord>
   compareAndSet(before: PlanningRecord, after: PlanningRecord): Promise<PlanningRecord | null>
@@ -32,6 +42,28 @@ export interface PlanningRepository {
 export function createPlanningRepository(db: PgDatabase<PgQueryResultHKT, typeof schema>): PlanningRepository {
   const table = planningConversations
   return {
+    async pendingArrangements(limit) {
+      const rows = await db.select().from(table).where(sql`${table.data}->'view'->'arrangement'->>'status' IN ('requested', 'preparing', 'awaiting_reply')`)
+        .limit(Math.max(1, Math.min(5, limit)))
+      return rows.map(row => ({ ...row.data, revision: row.revision }))
+    },
+    // Internal webhook/job lookup; customer HTTP handlers must use the owner-scoped get below.
+    async getById(id) {
+      const [row] = await db.select().from(table).where(eq(table.id, id))
+      return row ? { ...row.data, revision: row.revision } : null
+    },
+    async pendingReplyJobs(limit, now) {
+      const count = Math.max(1, Math.min(25, Math.floor(limit)))
+      const rows = await db.select({ data: table.data }).from(table).where(sql`
+        jsonb_path_exists(${table.data}, '$.**.replies[*] ? (@.status == "received" || (@.status == "processing" && @.lease.expiresAt <= $now))'::jsonpath,
+          jsonb_build_object('now', ${now}::bigint))
+      `).limit(count)
+      return rows.flatMap(({ data }) => [data.view.inquiry, ...(data.inquiryHistory ?? [])].flatMap(inquiry =>
+        inquiry?.replies?.filter(reply => reply.status === 'received'
+          || (reply.status === 'processing' && (reply.lease?.expiresAt ?? 0) <= now))
+          .map(reply => ({ customerId: data.customerId, conversationId: data.id, inquiryId: inquiry.id, replyId: reply.id })) ?? []
+      )).slice(0, count)
+    },
     async get(customerId, id) {
       const [row] = await db.select().from(table).where(and(eq(table.id, id), eq(table.customerId, customerId)))
       return row ? { ...row.data, revision: row.revision } : null

@@ -1,6 +1,6 @@
 {
-  "id": "5649b995-f363-4bbe-9d2d-7ca5cd0638f8",
-  "prevId": "20bf463f-a39a-4781-b010-ed7d7cd64b39",
+  "id": "1f1d6e8f-3970-4b30-9f1d-8e6160a471ae",
+  "prevId": "47bbd3a4-6e25-4926-b9c3-b896e9f37c8f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -241,12 +241,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "payment_operation_id": {
-          "name": "payment_operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "recipient": {
           "name": "recipient",
@@ -555,51 +549,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.arrange_payment_events": {
-      "name": "arrange_payment_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "event_id": {
-          "name": "event_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fingerprint": {
-          "name": "fingerprint",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "arrange_payment_events_event_id_arrange_events_id_fk": {
-          "name": "arrange_payment_events_event_id_arrange_events_id_fk",
-          "tableFrom": "arrange_payment_events",
-          "tableTo": "arrange_events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1052,6 +1001,12 @@
         "payment_intent_id": {
           "name": "payment_intent_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -1563,6 +1518,123 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supplier_mail_operations": {
+      "name": "supplier_mail_operations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "supplier_mail_operations_request_id_key": {
+          "name": "supplier_mail_operations_request_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "request_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supplier_mail_receipts": {
+      "name": "supplier_mail_receipts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completed": {
+          "name": "completed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_until": {
+          "name": "lease_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "supplier_mail_receipts_key_key": {
+          "name": "supplier_mail_receipts_key_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "key"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

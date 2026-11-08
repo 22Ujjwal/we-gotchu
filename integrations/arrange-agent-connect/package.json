@@ -1,0 +1,17 @@
+{
+  "name": "arrange-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated Arrange agent gateway integration candidate; no hosted enrollment or real bookings",
+  "scripts": {
+    "test": "bun test mcp.test.mjs planning-journey.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "bun build mcp.mjs --target=node --outdir=dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
+    "@modelcontextprotocol/server": "2.4.0",
+    "zod": "4.6.7"
+  }
+}

@@ -57,3 +57,31 @@ Work ticket 01 first; ticket 02 starts after its blocker passes.
 
 - [01: Deliver a useful proposal with one planner](../../.scratch/single-planner/issues/01-deliver-useful-proposal.md).
 - [02: Keep customer choices through changes and return visits](../../.scratch/single-planner/issues/02-preserve-choices-and-return.md).
+
+## Stage three: selected venue inquiries
+
+Tony approved three local tickets to move from a saved venue selection to an inquiry and a supplier reply on the same conversation.
+This stage extends the earlier planning milestone, which deferred supplier contact; it does not authorize live outreach or purchases by itself.
+Prepare the email integration prerequisites while stage two is reviewed, then implement the tickets in dependency order.
+Use the existing email integration if it supports sending, reply correlation, and inbound processing; coordinate that decision with Ujjwal before adding another provider.
+Tony owns planning, inquiry approval, reply interpretation, and customer UI.
+Ujjwal owns supplier-mail transport and inbound handling under the [shared handoff](../research/stage-three-team-handoff.md).
+Agree on the small interface before parallel implementation; integrate in ticket order.
+Venue images remain independent work.
+
+- [01: Prepare an inquiry for the selected venue](../../.scratch/venue-inquiries/issues/01-prepare-selected-venue-inquiry.md).
+- [02: Send and track the approved inquiry](../../.scratch/venue-inquiries/issues/02-send-and-track-approved-inquiry.md).
+- [03: Turn a supplier reply into an updated offer](../../.scratch/venue-inquiries/issues/03-turn-supplier-reply-into-offer.md).
+
+## Deferred presentation work
+
+- [Live research paper slips](../../.scratch/specs/live-research-slips.md) preserves Tony's direction for adapting the receipt animation to actual company activity and findings.
+This is a deferred design note, not an active ticket or a blocker for venue inquiries.
+
+## Remaining stages: parallel implementation handoff
+
+Tony approved publishing the complete stages-three-through-five handoff for independent work by Ujjwal.
+The [handoff index](../handoffs/remaining-stages/README.md) defines work blocks, ownership, interfaces, implementation sequence and verification gates.
+Ujjwal starts with mail transport and can prepare payment and hosting work while Tony implements planning and customer UI.
+The existing stage-three tickets remain the vertical customer acceptance slices.
+Stages four and five use the handoff work blocks until separately tracked implementation tickets are needed.

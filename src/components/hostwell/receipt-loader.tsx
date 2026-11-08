@@ -34,7 +34,7 @@ export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 
   title?: string
   label?: string
   activity?: string
-  brief?: Brief
+  brief?: Partial<Brief>
 } = {}) {
   const [percent, setPercent] = useState(0)
   const done = useRef(onDone)
@@ -62,8 +62,8 @@ export function ReceiptLoader({ onDone, title = 'Finding your setting', label = 
     { name: 'Venue hire', paper: 'invoice', task: 'Looking up local venues', subtitle: brief?.area || 'Local venues', rows: [['Seats needed', brief?.guests || 'TBD'], ['Setting', brief?.vibe || 'Any']], footer: 'Check listings' },
     { name: 'Supply desk', paper: 'notepad', task: 'Looking up supplies', subtitle: brief?.needs || 'Requested items', rows: [['Pack size', 'Check'], ['Unit price', 'Check']], footer: 'Request estimate' },
     { name: 'Venue details', paper: 'thermal', task: 'Checking supplier pages', subtitle: 'Supplier listing', rows: [['Capacity', 'Verify'], ['Availability', 'Verify']], footer: 'Check the source' },
-    { name: 'Terms', paper: 'invoice', task: 'Reading cancellation terms', subtitle: 'Cancellation policy', rows: [['Window', 'Verify'], ['Max. loss', brief ? '$' + brief.canLose : 'TBD']], footer: 'Review terms' },
-    { name: 'Estimate', paper: 'card', task: 'Checking the budget', subtitle: 'Cost worksheet', rows: [['Budget', brief ? '$' + brief.budget : 'TBD'], ['Total', 'Pending']], footer: 'Check missing fees' },
+    { name: 'Terms', paper: 'invoice', task: 'Reading cancellation terms', subtitle: 'Cancellation policy', rows: [['Window', 'Verify'], ['Max. loss', brief?.canLose?.trim() ? '$' + brief.canLose : 'Not specified']], footer: 'Review terms' },
+    { name: 'Estimate', paper: 'card', task: 'Checking the budget', subtitle: 'Cost worksheet', rows: [['Budget', brief?.budget ? '$' + brief.budget : 'TBD'], ['Total', 'Pending']], footer: 'Check missing fees' },
     { name: 'Shortlist', paper: 'notepad', task: 'Ranking the options', subtitle: 'Venue ranking', rows: [['Compare', 'Fit'], ['Flag', 'Gaps']], footer: 'Rank candidates' },
   ]
   const stage = Math.min(slips.length - 1, Math.floor(percent * slips.length / 100))

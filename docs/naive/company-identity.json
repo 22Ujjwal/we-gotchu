@@ -1,0 +1,8 @@
+{
+  "name": "Arrange",
+  "description": "Arrange coordinates the customer's selected event, asks suppliers for complete terms and brings the confirmed offer back for customer approval. Controlled rehearsals do not reserve venues or accept charges.",
+  "metadata": {
+    "application": "we-gotchu",
+    "purpose": "controlled-arrangement-rehearsal"
+  }
+}
