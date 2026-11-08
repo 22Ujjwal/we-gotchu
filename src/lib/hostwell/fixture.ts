@@ -99,12 +99,12 @@ export const venues: Array<Venue> = [
     freeCancellationUntil: '01 Dec 23:59',
   },
   {
-    id: 'brlo-brwhouse',
-    name: 'BRLO Brwhouse',
+    id: 'brownhouse-studio',
+    name: 'Brownhouse Studio',
     neighbourhood: 'Kreuzberg',
-    photo: '/venues/brlo-brwhouse.jpg',
+    photo: '/venues/brownhouse-studio.jpg',
     photos: [1, 2, 3, 4].map((i) =>
-      i === 1 ? '/venues/brlo-brwhouse.jpg' : `/venues/brlo-brwhouse-${i}.jpg`,
+      i === 1 ? '/venues/brownhouse-studio.jpg' : `/venues/brownhouse-studio-${i}.jpg`,
     ),
     total: 842.6,
     cardFeatures: [
@@ -122,7 +122,7 @@ export const venues: Array<Venue> = [
     ],
     venueLine: {
       qty: 1,
-      item: 'BRLO Brwhouse',
+      item: 'Brownhouse Studio',
       amount: 720,
       notes: ['Sat 12 Dec, 19:00–23:00', 'Private area, 4 tables'],
       noteAmount: 'incl.',

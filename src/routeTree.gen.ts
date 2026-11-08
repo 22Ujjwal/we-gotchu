@@ -26,6 +26,7 @@ import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiArrangeEventsRouteImport } from './routes/api/arrange.events'
 import { Route as ApiArrangeMcpRouteImport } from './routes/api/arrange.mcp'
+import { Route as ApiDemoQuotesReadyRouteImport } from './routes/api/demo.quotes-ready'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 import { Route as ApiPlanningIdRouteImport } from './routes/api/planning.$id'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
@@ -124,6 +125,11 @@ const ApiArrangeMcpRoute = ApiArrangeMcpRouteImport.update({
   path: '/api/arrange/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDemoQuotesReadyRoute = ApiDemoQuotesReadyRouteImport.update({
+  id: '/api/demo/quotes-ready',
+  path: '/api/demo/quotes-ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/api/arrange/events': typeof ApiArrangeEventsRouteWithChildren
   '/api/arrange/mcp': typeof ApiArrangeMcpRoute
+  '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/api/arrange/events': typeof ApiArrangeEventsRouteWithChildren
   '/api/arrange/mcp': typeof ApiArrangeMcpRoute
+  '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/api/arrange/events': typeof ApiArrangeEventsRouteWithChildren
   '/api/arrange/mcp': typeof ApiArrangeMcpRoute
+  '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/arrange/events'
     | '/api/arrange/mcp'
+    | '/api/demo/quotes-ready'
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/stripe/webhook'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/arrange/events'
     | '/api/arrange/mcp'
+    | '/api/demo/quotes-ready'
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/stripe/webhook'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/arrange/events'
     | '/api/arrange/mcp'
+    | '/api/demo/quotes-ready'
     | '/api/events/$id'
     | '/api/planning/$id'
     | '/api/stripe/webhook'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   ApiArrangeEventsRoute: typeof ApiArrangeEventsRouteWithChildren
   ApiArrangeMcpRoute: typeof ApiArrangeMcpRoute
+  ApiDemoQuotesReadyRoute: typeof ApiDemoQuotesReadyRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ArrangeEventsEventIdRoute: typeof ArrangeEventsEventIdRoute
   ApiArrangeAgentmailWebhookRoute: typeof ApiArrangeAgentmailWebhookRoute
@@ -523,6 +536,13 @@ declare module '@tanstack/react-router' {
       path: '/api/arrange/mcp'
       fullPath: '/api/arrange/mcp'
       preLoaderRoute: typeof ApiArrangeMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/demo/quotes-ready': {
+      id: '/api/demo/quotes-ready'
+      path: '/api/demo/quotes-ready'
+      fullPath: '/api/demo/quotes-ready'
+      preLoaderRoute: typeof ApiDemoQuotesReadyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events/$id': {
@@ -694,6 +714,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   ApiArrangeEventsRoute: ApiArrangeEventsRouteWithChildren,
   ApiArrangeMcpRoute: ApiArrangeMcpRoute,
+  ApiDemoQuotesReadyRoute: ApiDemoQuotesReadyRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ArrangeEventsEventIdRoute: ArrangeEventsEventIdRoute,
   ApiArrangeAgentmailWebhookRoute: ApiArrangeAgentmailWebhookRoute,
