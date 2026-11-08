@@ -110,3 +110,12 @@ test('the correction waits for a turn after the corrective message', async () =>
   expect(await ranker.recommend(research, [], signal, true)).toEqual({ candidateIds: ['venue:hall'] })
   expect(polls).toBe(2)
 })
+
+test('product discovery includes the occasion as well as supplies and guest count', async () => {
+  const { fetcher, requests } = transport()
+  await createDiscovery({ apiKey: 'test', fetch: fetcher })(input, new AbortController().signal)
+  const search = requests.find(r => r.body.endpoint === '/v1/search')!.body as any
+  expect(search.input.body.query).toContain(input.brief.eventType)
+  expect(search.input.body.query).toContain(String(input.brief.headcount))
+  for (const need of input.brief.supplyNeeds) expect(search.input.body.query).toContain(need)
+})
