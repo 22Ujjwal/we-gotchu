@@ -3,7 +3,7 @@
 Owner: Leo.
 Updated: 2026-11-08T01:05:00Z.
 Baseline: main at a54e054 (merge of PR #10).
-Branch and PR: frontend/leo-app-shell; PR link is recorded in the PR description and the handoff reply.
+Branch and PR: frontend/leo-app-shell, [PR #12](https://github.com/22Ujjwal/we-gotchu/pull/12).
 Availability: on branch.
 Tested commit: d3db7e6 (app shell); this status commit changes documentation only.
 
