@@ -167,10 +167,18 @@ function Card({ receipt: r, timezone }: { receipt: ReceiptDoc; timezone: string 
 
 /** A receipt drawn on the paper that suits it. */
 export function ReceiptPaper({ receipt, timezone, startsAt }: { receipt: ReceiptDoc; timezone: string; startsAt: string }): ReactNode {
-  switch (receipt.style) {
-    case 'thermal': return <Thermal receipt={receipt} timezone={timezone} />
-    case 'notepad': return <Notepad receipt={receipt} timezone={timezone} />
-    case 'invoice': return <Invoice receipt={receipt} timezone={timezone} startsAt={startsAt} />
-    case 'card': return <Card receipt={receipt} timezone={timezone} />
-  }
+  const paper = (() => {
+    switch (receipt.style) {
+      case 'thermal': return <Thermal receipt={receipt} timezone={timezone} />
+      case 'notepad': return <Notepad receipt={receipt} timezone={timezone} />
+      case 'invoice': return <Invoice receipt={receipt} timezone={timezone} startsAt={startsAt} />
+      case 'card': return <Card receipt={receipt} timezone={timezone} />
+    }
+  })()
+  return <div className="flex max-w-full flex-col items-center gap-2">
+    {receipt.mode && receipt.mode !== 'live' && <p className="max-w-[300px] text-center text-sm text-receipt-muted">
+      {receipt.mode === 'test' ? 'Sandbox receipt. Test payment.' : 'Simulated receipt. No real booking or purchase.'}
+    </p>}
+    {paper}
+  </div>
 }
