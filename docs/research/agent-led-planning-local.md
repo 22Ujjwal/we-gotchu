@@ -162,3 +162,31 @@ Do not call this a capacity error or approve unrelated actions automatically.
 The next investigation is the provider's approval semantics and how the app reports blocked specialist work.
 No new research create was submitted to work around the wait.
 Procurement recommendations are recorded separately in procurement-path.md and are not an accepted product-scope change.
+
+## Explicit research approval fix
+
+Implementation c10379ca22af1fb0c3419523cadb3f6959d108e7 adds the blocked state and per-call approval cards.
+The bundled SDK 0.12.3 source `core/src/people-data.ts` explains that external MCP reads set read_people and subsequent outbound calls require a person to approve each call.
+Saved allow permissions do not override this rule.
+No provider policy or data classification was changed.
+
+The adapter reads the coordinator's immediate child sessions through the SDK threads endpoint.
+It exposes only research requests, binds decisions to the exact session, call and arguments, and rechecks the pending request before confirmation.
+The authenticated service persists an explicit allow/deny command and uses the SDK scope=call confirmation.
+It never approves on a GET or retries an uncertain confirmation.
+Unsupported tools and questions remain blocked for operator attention.
+The application does not promise unattended research under this provider policy.
+
+At this implementation head, 446 tests in 41 files, typecheck, production build and whitespace checks passed.
+The live read of the existing browser session ses_z8wqq8qpe26gkv5xczver8a8wn returned blocked with three tool inspections: channel3 /v1/search, litescrape /google/maps, and context.dev /web/scrape/markdown.
+No confirmation was sent by the implementation session.
+Terra's desktop browser check displayed these three approval cards, retained them and the brief after reload, and observed GET-only planning traffic with no new create.
+It observed no 429 during that check.
+Live approval activation, final options, selection and follow-up remain unverified until Tony chooses the pending calls.
+The browser test owns its temporary server and is waiting for that human action.
+
+A fresh agent inventory contains Tom, Maya, Sam and Ujjwal's ping-only agent, with no duplicate research agent to delete.
+The ping test remains unfinished in Ujjwal's handoff, so its agent was preserved.
+One-off diagnostic scripts were archived as ignored text files; JSON evidence and credentials were preserved.
+PR50 is merged on origin/main at 86be4d5 with successful checks, but has not been integrated into this frozen local browser-test head.
+Its Stripe refund webhook activation remains a separate hosted setup step.
