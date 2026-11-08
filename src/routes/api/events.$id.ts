@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getDeps } from '../../server/events/deps'
+import { getRequestDeps } from '../../server/events/local-runtime'
 import { ApiError, handle, json } from '../../server/events/errors'
 import { getEventView } from '../../server/events/service'
 
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/api/events/$id')({
           if (afterSequence !== undefined && (!Number.isInteger(afterSequence) || afterSequence < 0)) {
             throw new ApiError(422, 'invalid_input', 'afterSequence must be a non-negative integer.')
           }
-          return json(await getEventView(getDeps(), params.id, afterSequence))
+          return json(await getEventView(await getRequestDeps(), params.id, afterSequence))
         }),
     },
   },

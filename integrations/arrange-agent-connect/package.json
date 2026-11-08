@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Isolated Arrange agent gateway integration candidate; no hosted enrollment or real bookings",
   "scripts": {
-    "test": "bun test mcp.test.mjs",
+    "test": "bun test mcp.test.mjs planning-journey.test.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "bun build mcp.mjs --target=node --outdir=dist"
   },

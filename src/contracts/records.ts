@@ -141,6 +141,7 @@ export type ResearchResult = z.infer<typeof ResearchResult>
 // A bookable proposal derived from a ResearchResult by the backend.
 // This is the glossary's "Event plan", not a booking confirmation or an approval.
 export const Plan = z.object({
+  planningOffer: z.object({ conversationId: Id, offerId: Id, revision: z.number().int().positive(), expiresAt: Timestamp.nullable() }).optional(),
   planId: Id,
   eventId: Id,
   contractVersion: z.literal(CONTRACT_VERSION),
@@ -225,6 +226,7 @@ export const Payment = z.object({
   approvalId: Id,
   checkoutSessionId: Id,
   paymentIntentId: Id.nullable(),
+  paidAt: Timestamp.optional(),
   amount: Minor,
   currency: Currency,
   state: z.enum(['pending', 'paid', 'expired']),

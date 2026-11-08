@@ -1,3 +1,5 @@
+import { createOfferRepository } from '../planning/offer-repository'
+import { createSupplierMailRepositories } from '../planning/mail-repository'
 import { createPlanningRepository } from '../planning/repository'
 import { fileURLToPath } from 'node:url'
 import { Pool } from '@neondatabase/serverless'
@@ -46,7 +48,12 @@ export async function createTestStore(): Promise<Store> {
 
 // Isolated from the transaction Store so planning never creates payment records.
 export function createNeonPlanningRepository(databaseUrl: string) {
-  return createPlanningRepository(neonDb(databaseUrl).db)
+  return createNeonPlanningStorage(databaseUrl).repository
+}
+
+export function createNeonPlanningStorage(databaseUrl: string) {
+  const { db, pool } = neonDb(databaseUrl)
+  return { repository: createPlanningRepository(db), offers: createOfferRepository(db), store: createStore(db), mail: createSupplierMailRepositories(db), close: () => pool.end() }
 }
 
 export function createTestPlanningRepository(dataDir?: string) {
@@ -66,7 +73,7 @@ async function openPglitePlanningRepository(dataDir?: string) {
   try {
     const db = drizzle({ client, schema })
     await migrate(db, { migrationsFolder })
-    return { repository: createPlanningRepository(db), close: () => client.close() }
+    return { repository: createPlanningRepository(db), offers: createOfferRepository(db), store: createStore(db), mail: createSupplierMailRepositories(db), close: () => client.close() }
   } catch (error) {
     await client.close()
     throw error

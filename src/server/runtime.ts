@@ -20,9 +20,11 @@ export function getStore(): Store {
   return store
 }
 
-export function setStoreForTests(next: Store | null): void {
+export function configureStore(next: Store | null): void {
   store = next
 }
+
+export const setStoreForTests = configureStore
 
 let simulated: SimulatedSupplierAdapter | null = null
 
@@ -39,6 +41,8 @@ export function getExecutionDeps(): ExecutionDeps {
   return {
     store: getStore(),
     adapterFor: getSupplierAdapter,
+    // Payment approval and supplier execution must evaluate expiry against the same clock.
+    now: () => getDeps().now(),
     // When every commitment is canceled, issue the customer's refund once.
     onAllCanceled: async (eventId) => {
       await issueFinalRefund(getDeps(), eventId)
