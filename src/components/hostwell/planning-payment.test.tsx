@@ -64,3 +64,31 @@ test('keeps cancellation recovery available while supplier settlement is unfinis
   await userEvent.setup().click(screen.getByRole('button', { name: 'Continue cancellation' }))
   await waitFor(() => expect(requests.filter(request => request.startsWith('POST'))).toEqual([`POST /api/events/${link.eventId}/cancel`]))
 })
+
+test.each([
+  ['executing', 'Simulated booking is in progress.'],
+  ['booked', 'Simulated booking complete.'],
+  ['partially_booked', 'Simulated booking is partially complete.'],
+  ['failed', 'Simulated booking could not be completed.'],
+] as const)('shows %s separately from payment and links the saved receipts', async (status, message) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ...bookedEvent, event: { ...bookedEvent.event, status } })))
+  render(<PlanningPayment link={link} identity="customer" stale={false} />)
+  expect(await screen.findByText(message)).toBeVisible()
+  expect(screen.getByText('Simulated payment recorded.')).toBeVisible()
+  expect(screen.getByRole('link', { name: 'View receipts' })).toHaveAttribute('href', `/events/${link.eventId}/receipts`)
+})
+
+test('does not link receipts before a confirmed payment', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(planReadyEvent)))
+  render(<PlanningPayment link={link} identity="customer" stale={false} />)
+  await screen.findByText('No payment recorded.')
+  expect(screen.queryByRole('link', { name: 'View receipts' })).not.toBeInTheDocument()
+})
+
+test('does not link receipts when payment belongs to another approval', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ ...bookedEvent,
+    payment: { ...bookedEvent.payment, approvalId: 'other-approval' } })))
+  render(<PlanningPayment link={link} identity="customer" stale={false} />)
+  await screen.findByText('Simulated payment recorded.')
+  expect(screen.queryByRole('link', { name: 'View receipts' })).not.toBeInTheDocument()
+})

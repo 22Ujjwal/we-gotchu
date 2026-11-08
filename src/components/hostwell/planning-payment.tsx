@@ -14,6 +14,14 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
   const matches = view?.plan?.planId === link.planId && view.plan.revision === link.planRevision
   const canApprove = matches && !stale && !view?.event.cancelRequestedAt
     && ['plan_ready', 'awaiting_payment'].includes(view?.event.status ?? '') && view?.payment?.state !== 'paid'
+  const receiptReady = matches && view?.approval?.planId === link.planId
+    && view.payment?.approvalId === view.approval?.approvalId && view.payment?.state === 'paid'
+  const bookingStatus = view && ({
+    executing: 'Simulated booking is in progress.',
+    booked: 'Simulated booking complete.',
+    partially_booked: 'Simulated booking is partially complete.',
+    failed: 'Simulated booking could not be completed.',
+  } as Record<string, string>)[view.event.status]
   const total = view?.plan && formatPaymentAmount(view.plan.total, view.plan.currency)
   return <section aria-label="Sandbox payment" className="flex flex-col gap-4 border border-sand p-5">
     <h2 className="text-[26px] font-light">Sandbox payment</h2>
@@ -25,6 +33,10 @@ export function PlanningPayment({ link, identity, stale, onRelease, onCheckout =
         : view.payment?.state === 'pending' ? <p role="status">Payment is pending. We wait for the payment provider's confirmation.</p>
           : view.payment?.state === 'expired' ? <p role="status">The previous Checkout expired without a confirmed payment.</p>
             : <p>No payment recorded.</p>}
+      {receiptReady && <>
+        {bookingStatus && <p role="status">{bookingStatus}</p>}
+        <a className="underline" href={`/events/${encodeURIComponent(link.eventId)}/receipts`}>View receipts</a>
+      </>}
       {view.payment?.refundState !== undefined && view.payment.refundState !== 'none' && <p>Sandbox refund: {view.payment.refundState}.</p>}
       {canApprove && <>
         <p>Selected plan total: {total}</p>
