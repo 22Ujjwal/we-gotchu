@@ -40,6 +40,25 @@ describe('planning runtime storage boundary', () => {
     await runtime.close()
   })
 
+  it('resumes offer preparation for an already interpreted arrangement reply', async () => {
+    const record = { id: 'conversation', customerId: 'alice', view: {
+      arrangement: { status: 'awaiting_reply' },
+      inquiry: { id: 'inquiry', replies: [{ id: 'reply', status: 'ready' }] },
+    } }
+    const repository = { pendingArrangements: vi.fn().mockResolvedValue([record]), get: vi.fn().mockResolvedValue(record) }
+    const offers = { save: vi.fn() }
+    const generate = vi.fn()
+    factories.local.mockResolvedValue({ repository, offers, close: factories.close })
+    factories.generator.mockReturnValue(generate)
+    factories.worker.mockResolvedValue({ processed: 0 })
+    const runtime = createPlanningRuntime({ NODE_ENV: 'development', PLANNING_LOCAL_DB_DIR: '.scratch/runtime-test',
+      NAIVE_COMPANY_AGENT_ID: 'agent', NAIVE_API_KEY: 'configured', PLANNING_TOOLS_SECRET: 'configured' })
+    await runtime.processReplies()
+    expect(factories.prepareOffer).toHaveBeenCalledExactlyOnceWith(repository, offers, generate,
+      { customerId: 'alice', conversationId: 'conversation', inquiryId: 'inquiry', replyId: 'reply' })
+    await runtime.close()
+  })
+
   it('opens one explicitly configured development database without touching Neon or the provider', async () => {
     const runtime = createPlanningRuntime({ NODE_ENV: 'development', PLANNING_LOCAL_DB_DIR: '.scratch/local-planning-db', DATABASE_URL: 'postgres://unused.invalid/db' })
     const [first, second] = await Promise.all([runtime.getDeps(), runtime.getDeps()])
