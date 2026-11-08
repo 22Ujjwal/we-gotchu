@@ -42,8 +42,8 @@ describe('stripe webhook', () => {
   it('marks paid, moves to executing, and calls onPaymentConfirmed once (duplicate ignored)', async () => {
     const { deps, store, session, payment, eventId, confirmed } = await awaitingPayment()
     const { payload, header } = signed('checkout.session.completed', session)
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('paid')
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('paid')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('duplicate')
     expect(confirmed).toEqual([{ eventId, approvalId: payment.approvalId, paymentId: payment.paymentId }])
     expect(store.payments.get(payment.paymentId)?.state).toBe('paid')
     expect(store.events.get(eventId)?.status).toBe('executing')
@@ -75,7 +75,7 @@ describe('stripe webhook', () => {
     expect(outcomes.filter((result) => result.status === 'rejected')).toHaveLength(1)
     expect(store.events.get(eventId)?.status).toBe('executing')
     expect(store.payments.get(payment.paymentId)?.refundId).toBeNull()
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('duplicate')
     expect(confirmed).toHaveLength(1)
     expect(stripe.refundCalls).toHaveLength(0)
   })
@@ -83,7 +83,7 @@ describe('stripe webhook', () => {
   it('does not mark a mismatched amount as paid', async () => {
     const { deps, store, session, payment, confirmed } = await awaitingPayment()
     const { payload, header } = signed('checkout.session.completed', { ...session, amount_total: session.amount_total - 1 })
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('mismatch')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('mismatch')
     expect(store.payments.get(payment.paymentId)?.state).toBe('pending')
     expect(confirmed).toHaveLength(0)
   })
@@ -92,7 +92,7 @@ describe('stripe webhook', () => {
     const { deps, store, stripe, session, payment, eventId, confirmed } = await awaitingPayment()
     await cancel(deps, eventId)
     const { payload, header } = signed('checkout.session.completed', session)
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('refunded_late_or_revoked')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('refunded_late_or_revoked')
     expect(confirmed).toHaveLength(0)
     expect(stripe.refundCalls).toHaveLength(1)
     expect(stripe.refundCalls[0].idempotencyKey).toBe(`${payment.paymentId}:refund`)
@@ -110,9 +110,9 @@ describe('stripe webhook', () => {
 
     await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('connection lost')
     expect(store.payments.get(payment.paymentId)?.state).toBe('paid')
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('refunded_late_or_revoked')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('refunded_late_or_revoked')
     expect(store.payments.get(payment.paymentId)?.refundId).toBeTruthy()
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('duplicate')
     expect(create).toHaveBeenCalledTimes(2)
     expect(create.mock.calls[1]).toEqual(create.mock.calls[0])
     expect(stripe.refundCalls[0].params.amount).toBe(payment.amount)
@@ -123,7 +123,7 @@ describe('stripe webhook', () => {
     const { deps, stripe, session, approval, confirmed } = await awaitingPayment()
     const late = Math.floor(Date.parse(approval.expiresAt) / 1000) + 1
     const { payload, header } = signed('checkout.session.completed', session, late)
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('refunded_late_or_revoked')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('refunded_late_or_revoked')
     expect(confirmed).toHaveLength(0)
     expect(stripe.refundCalls).toHaveLength(1)
   })
@@ -136,9 +136,9 @@ describe('stripe webhook', () => {
     await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('status unavailable')
     expect(store.payments.get(payment.paymentId)?.state).toBe('expired')
     expect(store.events.get(eventId)?.status).toBe('awaiting_payment')
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('expired')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('expired')
     expect(store.events.get(eventId)?.status).toBe('plan_ready')
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('duplicate')
     expect(store.progress.filter(p => p.message === 'Checkout expired without payment.')).toHaveLength(1)
     expect(confirmed).toHaveLength(0)
     expect(stripe.refundCalls).toHaveLength(0)
@@ -161,7 +161,7 @@ describe('stripe webhook', () => {
       if (state === 'paid') await store.markPaymentPaid(session.id, 'pi_test_1')
       const previousStatus = event.status
       const { payload, header } = signed('checkout.session.expired', { ...session, payment_status: 'unpaid' })
-      expect(await handleStripeWebhook(deps, payload, header)).toBe('expired')
+      expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('expired')
       expect(store.events.get(eventId)?.status).toBe(previousStatus)
       expect(store.progress.filter(p => p.message === 'Checkout expired without payment.')).toHaveLength(0)
     },
@@ -170,7 +170,7 @@ describe('stripe webhook', () => {
   it('marks an expired session and returns the event to plan_ready', async () => {
     const { deps, store, session, payment, eventId } = await awaitingPayment()
     const { payload, header } = signed('checkout.session.expired', { ...session, payment_status: 'unpaid' })
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('expired')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('expired')
     expect(store.payments.get(payment.paymentId)?.state).toBe('expired')
     expect(store.events.get(eventId)?.status).toBe('plan_ready')
   })
@@ -203,9 +203,9 @@ describe('interrupted payment delivery', () => {
       return original(args)
     }
     await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('execution unavailable')
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('paid')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('paid')
     expect(confirmed).toHaveLength(1)
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('duplicate')
   })
 
   it('retries a failed refund after marking the payment paid', async () => {
@@ -219,7 +219,7 @@ describe('interrupted payment delivery', () => {
       return original(...args)
     }
     await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('refund unavailable')
-    expect(await handleStripeWebhook(deps, payload, header)).toBe('refunded_late_or_revoked')
+    expect((await handleStripeWebhook(deps, payload, header)).outcome).toBe('refunded_late_or_revoked')
     expect(stripe.refundCalls).toHaveLength(1)
   })
 })
@@ -243,9 +243,9 @@ describe('refund reconciliation', () => {
     const { deps, store, stripe, payment, refundId } = await pendingRefund()
     Object.assign(stripe.refunds, { retrieve: async () => ({ id: refundId, status, payment_intent: 'pi_test_1' }) })
     const delivery = signed(type, { id: refundId, status: 'pending' })
-    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('refund_updated')
+    expect((await handleStripeWebhook(deps, delivery.payload, delivery.header)).outcome).toBe('refund_updated')
     expect(store.payments.get(payment.paymentId)).toMatchObject({ refundState: expected, refundReason: 'late_or_revoked', state: 'paid' })
-    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('duplicate')
+    expect((await handleStripeWebhook(deps, delivery.payload, delivery.header)).outcome).toBe('duplicate')
     expect(stripe.refundCalls).toHaveLength(1)
   })
 
@@ -283,7 +283,7 @@ describe('refund reconciliation', () => {
     release()
     await assertion
     expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
-    expect(await handleStripeWebhook(deps, older.payload, older.header)).toBe('refund_updated')
+    expect((await handleStripeWebhook(deps, older.payload, older.header)).outcome).toBe('refund_updated')
   })
 
   it('retries our refund update received before initial refund persistence', async () => {
@@ -294,7 +294,7 @@ describe('refund reconciliation', () => {
     const delivery = signed('refund.updated', refund)
     await expect(handleStripeWebhook(deps, delivery.payload, delivery.header)).rejects.toThrow('Refund is awaiting initial persistence')
     await store.setRefund(payment.paymentId, { refundId: refund.id, refundState: 'pending', refundReason: 'late_or_revoked' })
-    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('refund_updated')
+    expect((await handleStripeWebhook(deps, delivery.payload, delivery.header)).outcome).toBe('refund_updated')
     expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
   })
 
@@ -311,7 +311,7 @@ describe('refund reconciliation', () => {
     })
     const delivery = signed('refund.updated', refund)
     await expect(handleStripeWebhook(deps, delivery.payload, delivery.header)).rejects.toThrow('Refund is awaiting initial persistence')
-    expect(await handleStripeWebhook(deps, delivery.payload, delivery.header)).toBe('refund_updated')
+    expect((await handleStripeWebhook(deps, delivery.payload, delivery.header)).outcome).toBe('refund_updated')
     expect(store.payments.get(payment.paymentId)?.refundState).toBe('succeeded')
   })
 

@@ -507,7 +507,7 @@ it('does not let expiration overwrite an approval created during status repair',
   const payload = JSON.stringify({ id: `stripe_${event.eventId}`, type: 'checkout.session.expired',
     created: Math.floor(Date.now() / 1000), data: { object: { id: checkoutSessionId } } })
   const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET })
-  expect(await handleStripeWebhook(deps, payload, signature)).toBe('expired')
+  expect((await handleStripeWebhook(deps, payload, signature)).outcome).toBe('expired')
   const current = (await store.getEventView(event.eventId))!
   expect(current.approval?.approvalId).toBe(`${approvalId}_new`)
   expect(current.payment?.state).toBe('pending')

@@ -280,3 +280,12 @@ it('repairs a saved stale answer at the same completed sequence without sending 
   expect((await getPlanning(deps, before.id)).version).toBe(repaired.version)
   expect(agent.send).not.toHaveBeenCalled()
 })
+
+it('restores saved work without requiring the hosted research provider', async () => {
+  const saved = await ready()
+  vi.mocked(agent.read).mockClear()
+  vi.mocked(agent.read).mockRejectedValue(new Error('Provider unavailable'))
+  expect(await getPlanning(deps, saved.id, { savedOnly: true })).toEqual(saved)
+  expect(agent.read).not.toHaveBeenCalled()
+  await expect(getPlanning(deps, saved.id)).rejects.toMatchObject({ status: 503 })
+})

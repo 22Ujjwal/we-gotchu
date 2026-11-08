@@ -1,3 +1,5 @@
+import type { SendOperation } from '../email/supplier-inquiries/types'
+import type { IncomingReceipt } from '../email/supplier-inquiries/incoming-types'
 import type { PlanningRecord } from '../planning/repository'
 import type { ResearchCheckpoint } from '../research-checkpoint'
 import { bigint, bigserial, boolean, check, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core'
@@ -107,6 +109,7 @@ export const payments = pgTable('payments', {
     .references(() => approvals.id),
   checkoutSessionId: text('checkout_session_id').notNull().unique('payments_checkout_session_id_unique'),
   paymentIntentId: text('payment_intent_id'),
+  paidAt: ts('paid_at'),
   amount: bigint('amount', { mode: 'number' }).notNull(),
   currency: text('currency').notNull(),
   state: text('state').notNull(),
@@ -162,4 +165,21 @@ export const planningConversations = pgTable('planning_conversations', {
   data: jsonb('data').$type<PlanningRecord>().notNull(),
 }, (t) => [unique('planning_customer_create_unique').on(t.customerId, t.createRequestId)])
 
-export const schema = { planningConversations, events, runs, researchResults, plans, approvals, payments, attempts, progressEntries, stripeEvents }
+export const supplierMailOperations = pgTable('supplier_mail_operations', {
+  id: text('id').primaryKey(),
+  requestId: text('request_id').notNull().unique('supplier_mail_operations_request_id_key'),
+  data: jsonb('data').$type<SendOperation>().notNull(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+export const supplierMailReceipts = pgTable('supplier_mail_receipts', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull().unique('supplier_mail_receipts_key_key'),
+  data: jsonb('data').$type<IncomingReceipt>().notNull(),
+  completed: boolean('completed').notNull().default(false),
+  leaseToken: text('lease_token'),
+  leaseUntil: ts('lease_until'),
+  outcome: jsonb('outcome'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+})
+
+export const schema = { supplierMailOperations, supplierMailReceipts, planningConversations, events, runs, researchResults, plans, approvals, payments, attempts, progressEntries, stripeEvents }

@@ -223,6 +223,9 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
   if (!plan || plan.planId !== planId || plan.revision !== planRevision || event.planRevision !== planRevision) {
     throw new ApiError(409, 'stale_plan', 'The plan changed since you loaded it. Reload and review it again.')
   }
+  if (plan.planningOffer && !(await deps.store.validatePlanOffer?.(plan, deps.now()))) {
+    throw new ApiError(409, 'stale_offer', 'The selected offer changed or expired. Review it again.')
+  }
   const assessed = assessPlanForApproval(plan)
   if (!assessed.ok) throw new ApiError(422, assessed.errorCode, `The plan cannot be approved: ${assessed.reason}.`)
   if (event.status !== 'plan_ready' && event.status !== 'awaiting_payment') {
@@ -234,6 +237,10 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
   if (open && open.payment.state === 'pending') {
     const session = await deps.stripe.checkout.sessions.retrieve(open.payment.checkoutSessionId)
     if (session.url) return { ...open, checkoutUrl: session.url }
+  }
+
+  if (plan.planningOffer?.expiresAt && Date.parse(plan.planningOffer.expiresAt) < now.getTime() + APPROVAL_TTL_MS) {
+    throw new ApiError(422, 'offer_expires_soon', 'This quote expires before the payment window ends. Request an extended quote before paying.')
   }
 
   // Approval and Checkout share one expiry, whole seconds because Stripe uses unix seconds.
@@ -252,6 +259,7 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
   }
   const metadata = { approvalId: approval.approvalId, eventId, planRevision: String(plan.revision) }
   const base = deps.config.appUrl.replace(/\/$/, '')
+  const returnPath = plan.planningOffer ? `/planning/${encodeURIComponent(plan.planningOffer.conversationId)}` : `/events/${eventId}`
   const session = await deps.stripe.checkout.sessions.create(
     {
       mode: 'payment',
@@ -266,8 +274,8 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
         },
       ],
       expires_at: expiresAtSec,
-      success_url: `${base}/events/${eventId}?checkout=success`,
-      cancel_url: `${base}/events/${eventId}?checkout=canceled`,
+      success_url: `${base}${returnPath}?checkout=success`,
+      cancel_url: `${base}${returnPath}?checkout=canceled`,
       client_reference_id: eventId,
       metadata,
       payment_intent_data: { metadata },

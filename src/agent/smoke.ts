@@ -9,12 +9,12 @@ import { createDetailEnricher } from '../suppliers/details'
 if (process.env.RESEARCH_LIVE_SMOKE !== '1') throw new Error('Set RESEARCH_LIVE_SMOKE=1 to enable paid read-only research')
 const apiKey = process.env.NAIVE_API_KEY
 const monidKey = process.env.MONID_API_KEY
-if (!apiKey || !monidKey) throw new Error('NAIVE_API_KEY and MONID_API_KEY are required')
+if (!apiKey || !monidKey || !process.env.NAIVE_RESEARCH_AGENT_ID) throw new Error('NAIVE_API_KEY, MONID_API_KEY and NAIVE_RESEARCH_AGENT_ID are required')
 const runId = `smoke-${randomUUID()}`
 const checkpointPath = process.env.RESEARCH_CHECKPOINT_PATH
 if (!checkpointPath) throw new Error('RESEARCH_CHECKPOINT_PATH is required for recovery evidence')
 const ranker = createNaiveRanker({
-  apiKey, model: process.env.NAIVE_MODEL ?? 'openai/gpt-4.1-nano',
+  apiKey, agentId: process.env.NAIVE_RESEARCH_AGENT_ID,
   checkpoint: async checkpoint => writeFile(checkpointPath, JSON.stringify({ runId, ...checkpoint }, null, 2), { mode: 0o600 }),
 })
 let result: ResearchResult | undefined

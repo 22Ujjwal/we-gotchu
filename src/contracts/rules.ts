@@ -170,7 +170,8 @@ export function paymentCoversApproval(payment: Payment, approval: Approval, now:
     return { ok: false, errorCode: 'not_allowed', reason: 'amount_mismatch' }
   }
   if (approval.revokedAt !== null) return { ok: false, errorCode: 'not_allowed', reason: 'revoked' }
-  if (now.getTime() >= new Date(approval.expiresAt).getTime()) return { ok: false, errorCode: 'not_allowed', reason: 'expired' }
+  const authorizedAt = payment.paidAt ? Date.parse(payment.paidAt) : now.getTime()
+  if (authorizedAt >= new Date(approval.expiresAt).getTime()) return { ok: false, errorCode: 'not_allowed', reason: 'expired' }
   return { ok: true }
 }
 

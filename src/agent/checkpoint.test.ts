@@ -10,7 +10,7 @@ async function setup() {
   const { event, run } = await store.createEvent({ customerId: 'customer', brief: planReadyEvent.event.brief })
   const checkpoint: ResearchCheckpoint = {
     version: 0, input: { contractVersion: CONTRACT_VERSION, eventId: event.eventId, runId: run.runId, briefRevision: 1, brief: event.brief },
-    stage: 'discovery', evidence: null, result: null, agentId: null, naiveSessionId: null,
+    stage: 'discovery', evidence: null, result: null, naiveSessionId: null,
     lastSequence: 0, correctionsUsed: 0, correctionAfter: null, expiresAt: new Date(Date.now() + 120000).toISOString(),
   }
   await store.researchCheckpoints!.initialize(checkpoint)
@@ -62,7 +62,7 @@ test('result publication rejects an older lease and a canceled event', async () 
 
 test('late cleanup failures cannot erase confirmed cleanup for the same resources', async () => {
   const { run } = await setup()
-  await store.researchCheckpoints!.recordCleanup(run.runId, { sessionId: 'session', agentId: 'agent', confirmed: true })
-  await store.researchCheckpoints!.recordCleanup(run.runId, { sessionId: 'session', agentId: 'agent', confirmed: false })
-  expect((await store.researchCheckpoints!.read(run.runId))!.cleanup).toMatchObject({ confirmed: true, sessionStopped: true, agentDeleted: true })
+  await store.researchCheckpoints!.recordCleanup(run.runId, { sessionId: 'session', confirmed: true })
+  await store.researchCheckpoints!.recordCleanup(run.runId, { sessionId: 'session', confirmed: false })
+  expect((await store.researchCheckpoints!.read(run.runId))!.cleanup).toMatchObject({ confirmed: true, sessionStopped: true })
 })

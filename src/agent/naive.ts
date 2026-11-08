@@ -1,32 +1,27 @@
 import type { Candidate, ResearchInput, Run } from '../contracts'
-import { pause } from './http'
+import { setTimeout } from 'node:timers/promises'
 import { createResearchSession, RESEARCH_BUDGET_MICRO_USD } from './session'
 
-export type RuntimeCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | 'correctionsUsed'> & { agentId: string | null }
+export type RuntimeCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | 'correctionsUsed'>
 
 // Standalone execution waits here; application polling uses the same single-request client directly.
 export function createNaiveRanker(options: {
   apiKey: string
-  model: string
+  agentId: string
   fetch?: typeof fetch
   checkpoint?: (state: RuntimeCheckpoint) => void | Promise<void>
 }) {
   const client = createResearchSession(options)
-  const state: RuntimeCheckpoint = { agentId: null, naiveSessionId: null, lastSequence: 0, correctionsUsed: 0 }
+  const state: RuntimeCheckpoint = { naiveSessionId: null, lastSequence: 0, correctionsUsed: 0 }
   let runId: string | undefined
   let sessionStopped = false
-  let agentDeleted = false
   const save = () => options.checkpoint?.({ ...state })
   const recommend = async (input: ResearchInput, candidates: Candidate[], signal: AbortSignal, correction: boolean): Promise<unknown> => {
     if (runId && runId !== input.runId) throw new Error('A runtime instance cannot be shared between runs')
     runId = input.runId
-    if (!state.agentId) {
-      state.agentId = await client.createAgent(input, signal)
-      await save()
-    }
     let minimumSequence = state.lastSequence
     if (!state.naiveSessionId) {
-      state.naiveSessionId = await client.start(input, candidates, state.agentId, signal)
+      state.naiveSessionId = await client.start(input, candidates, signal)
       await save()
     } else if (correction) {
       if (state.correctionsUsed >= 1) throw new Error('Correction limit reached')
@@ -47,7 +42,7 @@ export function createNaiveRanker(options: {
         if (!session.stop_reason || !['end_turn', 'error'].includes(session.stop_reason)) throw new Error('Naive session requires intervention')
         return session.stop_reason === 'error' ? null : session.structured_output
       }
-      await pause(signal)
+      await setTimeout(1000, undefined, { signal })
     }
     throw new Error('Naive polling bound exceeded')
   }
@@ -56,10 +51,6 @@ export function createNaiveRanker(options: {
     if (state.naiveSessionId && !sessionStopped) {
       try { await client.cancel(state.naiveSessionId, AbortSignal.timeout(7500)); sessionStopped = true }
       catch { failures.push('Session cleanup could not be verified.') }
-    }
-    if (state.agentId && !agentDeleted) {
-      try { await client.deleteAgent(state.agentId, AbortSignal.timeout(7500)); agentDeleted = true }
-      catch { failures.push('Evaluation definition cleanup could not be verified.') }
     }
     return failures
   }

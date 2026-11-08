@@ -25,3 +25,17 @@ export const researchConsumerFixtures = {
   failure: { ...result, outcome: 'failed', candidates: [], warnings: ['Research failed. Revise the brief to retry.'] } satisfies ResearchResult,
   canceled: { ...result, outcome: 'canceled', warnings: ['Research stopped. No supplier booking or purchase was canceled.'] } satisfies ResearchResult,
 }
+
+export function sdkSessionResponse(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value
+  const response = value as Record<string, unknown>
+  if ('accepted_seq' in response) return { session_id: 'ses_00000000000000000000000001', status: 'running', ...response }
+  if (typeof response.id !== 'string' || !response.id.startsWith('ses_')) return value
+  return { object: 'session', agent_id: 'agt_00000000000000000000000001', agent_version: 1,
+    deployment_id: null, identity_id: null, computer_id: null, parent_session_id: null, root_session_id: null,
+    thread_role: null, window: 'immediate', status: 'queued', stop_reason: null,
+    budget_micro_usd: 500000, consumed_micro_usd: 0,
+    token_usage: { input: 0, cache_write: 0, cache_read: 0, output: 0, reasoning: 0 }, pending_actions: [],
+    output_schema: null, structured_output: null, last_seq: 0, metadata: {}, started_at: null, ended_at: null,
+    created_at: '2026-11-08T00:00:00Z', ...response }
+}

@@ -20,9 +20,11 @@ export function getStore(): Store {
   return store
 }
 
-export function setStoreForTests(next: Store | null): void {
+export function configureStore(next: Store | null): void {
   store = next
 }
+
+export const setStoreForTests = configureStore
 
 let simulated: SimulatedSupplierAdapter | null = null
 
@@ -39,17 +41,11 @@ export function getExecutionDeps(): ExecutionDeps {
   return {
     store: getStore(),
     adapterFor: getSupplierAdapter,
+    // Payment approval and supplier execution must evaluate expiry against the same clock.
+    now: () => getDeps().now(),
     // When every commitment is canceled, issue the customer's refund once.
     onAllCanceled: async (eventId) => {
       await issueFinalRefund(getDeps(), eventId)
-    },
-    // Every supplier confirmed: send the "It's happening" email the arranging screen promised.
-    onAllBooked: async (eventId, approval) => {
-      const { notifications, store } = getDeps()
-      if (!notifications?.allSet) return
-      const [event, plan] = await Promise.all([store.getEvent(eventId), store.getPlan(eventId)])
-      if (!event || !plan || plan.revision !== approval.planRevision) return
-      await notifications.allSet({ customerId: event.customerId, eventId, approvalId: approval.approvalId, brief: event.brief, plan })
     },
   }
 }

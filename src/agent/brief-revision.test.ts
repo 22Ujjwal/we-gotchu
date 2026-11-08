@@ -20,11 +20,10 @@ function setup() {
     return evidence
   })
   const session: ResearchSession = {
-    createAgent: vi.fn(async input => `agent:${input.runId}`),
     start: vi.fn(async input => input.runId),
     poll: vi.fn(async sessionId => ({ id: sessionId, status: 'completed', stop_reason: 'end_turn',
       last_seq: 1, structured_output: { candidateIds: inputs.get(sessionId) } })),
-    correct: vi.fn(async () => 2), cancel: vi.fn(async () => {}), deleteAgent: vi.fn(async () => {}),
+    correct: vi.fn(async () => 2), cancel: vi.fn(async () => {}),
   }
   const research = createResearchIntegration({ store, providers: { discover, session } })
   const { deps } = makeDeps({ store, research, now: () => new Date() })

@@ -182,7 +182,7 @@ function EventSessionPage({ eventId, identity, email, onCheckout, signIn, paid, 
       venue={venue}
       brief={settings.brief}
       order={settings.order(venue)}
-      disabled={!bookable || session.pending || !!session.error}
+      disabled={session.pending || !!session.error || (!bookable && !email)}
       error={error}
       back={
         <button
@@ -196,6 +196,21 @@ function EventSessionPage({ eventId, identity, email, onCheckout, signIn, paid, 
       onArrange={() => {
         setError('')
         setQuoting(true)
+        if (!bookable) {
+          fetch(`/api/events/${encodeURIComponent(eventId)}/arrange`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ candidateId: venue.id, briefRevision: event.briefRevision, customerEmail: email }),
+          }).then(async response => {
+            const result = await response.json()
+            if (!response.ok) throw new Error(result.message ?? 'Could not request the arrangement.')
+            if (active.current) window.location.assign(result.url)
+          }).catch(cause => {
+            if (!active.current) return
+            setQuoting(false)
+            setError(cause instanceof Error ? cause.message : 'Could not confirm the request. Please refresh before retrying.')
+          })
+          return
+        }
         const shown = new Promise((resolve) => setTimeout(resolve, quoteScreenMs))
         Promise.all([session.approve(), shown]).then(
           ([url]) => { if (active.current) onCheckout(url) },

@@ -1,7 +1,8 @@
+import type Stripe from 'stripe'
 import type { Payment } from '../../contracts'
 import type { Deps } from '../events/deps'
 import { ApiError } from '../events/errors'
-import type { CheckoutSessionLike, RefundLike } from './stripe'
+import type { CheckoutSession, Refund } from './stripe'
 
 // Stripe webhook handling and refunds (contract 0.4, Approval and payment). Server-only.
 
@@ -16,18 +17,18 @@ export type WebhookOutcome =
   | 'expired'
   | 'ignored'
 
-function refundState(r: RefundLike): Payment['refundState'] {
+function refundState(r: Refund): Payment['refundState'] {
   if (r.status === 'succeeded') return 'succeeded'
   if (r.status === 'failed' || r.status === 'canceled') return 'failed'
   return 'pending'
 }
 
-function paymentIntentId(session: CheckoutSessionLike): string | null {
+function paymentIntentId(session: CheckoutSession): string | null {
   if (!session.payment_intent) return null
   return typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id
 }
 
-async function refund(deps: Deps, payment: Payment, amount: number, reason: string): Promise<RefundLike> {
+async function refund(deps: Deps, payment: Payment, amount: number, reason: string): Promise<Refund> {
   if (!payment.paymentIntentId) throw new Error(`payment ${payment.paymentId} has no payment intent to refund`)
   const r = await deps.stripe.refunds.create(
     {
@@ -43,7 +44,7 @@ async function refund(deps: Deps, payment: Payment, amount: number, reason: stri
 }
 
 /** Verifies and processes one Stripe webhook delivery. Throws ApiError 400 on a bad signature. */
-export async function handleStripeWebhook(deps: Deps, rawBody: string, signature: string | null): Promise<WebhookOutcome> {
+export async function handleStripeWebhook(deps: Deps, rawBody: string, signature: string | null): Promise<{ outcome: WebhookOutcome; event: Stripe.Event }> {
   const secret = deps.config.stripeWebhookSecret
   if (!secret) throw new ApiError(500, 'webhook_not_configured', 'STRIPE_WEBHOOK_SECRET is not set.')
   if (!signature) throw new ApiError(400, 'invalid_signature', 'Missing Stripe-Signature header.')
@@ -58,15 +59,15 @@ export async function handleStripeWebhook(deps: Deps, rawBody: string, signature
   // lets Stripe's retry run again. Every step below is idempotent on its own
   // (conditional payment update, refund idempotency key), so a duplicate
   // delivery that races in does no extra work.
-  if (await deps.store.hasStripeEvent(event.id)) return 'duplicate'
+  if (await deps.store.hasStripeEvent(event.id)) return { outcome: 'duplicate', event }
   const outcome = await dispatchStripeEvent(deps, event)
   const fresh = await deps.store.recordStripeEvent(event.id)
-  return fresh ? outcome : 'duplicate'
+  return { outcome: fresh ? outcome : 'duplicate', event }
 }
 
-async function dispatchStripeEvent(deps: Deps, event: { type: string; created: number; data: { object: unknown } }): Promise<WebhookOutcome> {
+async function dispatchStripeEvent(deps: Deps, event: Stripe.Event): Promise<WebhookOutcome> {
   if (event.type === 'refund.updated' || event.type === 'refund.failed') {
-    const incoming = event.data.object as RefundLike
+    const incoming = event.data.object
     if (!incoming || typeof incoming.id !== 'string') return 'mismatch'
     const payment = await deps.store.getPaymentByRefundId(incoming.id)
     if (!payment) {
@@ -92,11 +93,11 @@ async function dispatchStripeEvent(deps: Deps, event: { type: string; created: n
     }
     return 'refund_updated'
   }
-  if (event.type === 'checkout.session.completed') {
-    return onCheckoutCompleted(deps, event.data.object as CheckoutSessionLike, new Date(event.created * 1000))
+  if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+    return onCheckoutCompleted(deps, event.data.object, new Date(event.created * 1000))
   }
   if (event.type === 'checkout.session.expired') {
-    const session = event.data.object as CheckoutSessionLike
+    const session = event.data.object
     await deps.store.markPaymentExpired(session.id)
     // Retry repair even when a prior delivery already persisted expiration.
     const eventId = await deps.store.repairExpiredCheckout(session.id)
@@ -106,7 +107,7 @@ async function dispatchStripeEvent(deps: Deps, event: { type: string; created: n
   return 'ignored'
 }
 
-async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, paidAt: Date): Promise<WebhookOutcome> {
+async function onCheckoutCompleted(deps: Deps, session: CheckoutSession, paidAt: Date): Promise<WebhookOutcome> {
   const payment = await deps.store.getPaymentByCheckoutSession(session.id)
   if (!payment) return 'unknown_session'
   const approval = await deps.store.getApproval(payment.approvalId)
@@ -129,16 +130,19 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
 
   const intentId = paymentIntentId(session)
   if (!intentId) return 'mismatch'
-  const changed = await deps.store.markPaymentPaid(session.id, intentId)
+  const changed = await deps.store.markPaymentPaid(session.id, intentId, paidAt)
   const paid = changed ?? await deps.store.getPaymentByCheckoutSession(session.id)
   if (!paid || paid.state !== 'paid' || paid.paymentIntentId !== intentId) return 'already_processed'
+  const confirmedPaidAt = paid.paidAt ? new Date(paid.paidAt) : paidAt
   // This durable receipt is written only after the handoff finishes. A paid row
   // alone is not evidence that execution or a refund was delivered.
   const receipt = `${paid.paymentId}:paid-handoff`
   if (await deps.store.hasStripeEvent(receipt)) return 'already_processed'
   const current = await deps.store.getEvent(approval.eventId)
   if (!current) throw new Error('Paid event was not found')
-  const late = approval.revokedAt !== null || paidAt.getTime() >= new Date(approval.expiresAt).getTime()
+  const plan = await deps.store.getPlan(approval.eventId)
+  const staleOffer = !!plan?.planningOffer && (plan.planId !== approval.planId || !(await deps.store.validatePlanOffer?.(plan, confirmedPaidAt)))
+  const late = staleOffer || approval.revokedAt !== null || confirmedPaidAt.getTime() >= new Date(approval.expiresAt).getTime()
   const started = ['executing', 'booked', 'partially_booked', 'failed'].includes(current.status)
   const moved = !late && !current.cancelRequestedAt &&
     (started || await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'executing'))
@@ -148,29 +152,35 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
     // fresh state; do not acknowledge this delivery or invoke either handoff.
     throw new Error('Payment event changed during handoff; retry delivery')
   }
-  if (!moved) {
-    // An interrupted handoff may have already committed suppliers before cancel.
-    const attempts = await deps.store.listAttempts(approval.eventId)
-    if (attempts.some(a => a.kind === 'commit' && ['running', 'pending', 'unknown', 'succeeded'].includes(a.state))) {
-      const result = await issueFinalRefund(deps, approval.eventId)
-      if (!result.ok) throw new Error('Payment cancellation is awaiting supplier settlement')
-    } else {
-      await refund(deps, paid, paid.amount, 'late_or_revoked')
-    }
-    await deps.store.recordStripeEvent(receipt)
-    await deps.store.appendProgress(approval.eventId, 'system', 'Payment cancellation refund was requested.')
-    return 'refunded_late_or_revoked'
-  }
+  if (!moved) return settleUnapprovedPayment(deps, approval.eventId, paid, receipt, staleOffer)
   if (changed) await deps.store.appendProgress(approval.eventId, 'system', `Payment confirmed (${paid.mode}).`)
   // Hooks must be idempotent by approval/payment identity because delivery is at least once.
-  await onPaymentConfirmed(deps, { eventId: approval.eventId, approvalId: approval.approvalId, paymentId: paid.paymentId })
+  await deps.hooks.onPaymentConfirmed({ eventId: approval.eventId, approvalId: approval.approvalId, paymentId: paid.paymentId })
+  if (plan?.planningOffer && !(await deps.store.validatePlanOffer?.(plan, confirmedPaidAt))) {
+    return settleUnapprovedPayment(deps, approval.eventId, paid, receipt, true)
+  }
   await deps.store.recordStripeEvent(receipt)
   return 'paid'
 }
 
-/** Hook point: starts the execution session for a paid approval. Wired later via Deps.hooks. */
-export async function onPaymentConfirmed(deps: Deps, input: { eventId: string; approvalId: string; paymentId: string }): Promise<void> {
-  await deps.hooks.onPaymentConfirmed(input)
+async function settleUnapprovedPayment(deps: Deps, eventId: string, paid: Payment, receipt: string, staleOffer: boolean): Promise<WebhookOutcome> {
+  if (staleOffer) {
+    await deps.store.requestCancel(eventId, deps.now())
+    await deps.store.revokeApprovals(eventId, deps.now())
+  }
+  // An interrupted handoff may already have committed suppliers before the offer changed.
+  const attempts = await deps.store.listAttempts(eventId)
+  if (attempts.some(attempt => attempt.kind === 'commit' && ['running', 'pending', 'unknown', 'succeeded'].includes(attempt.state))) {
+    if (staleOffer) await deps.hooks.startSupplierCancellation({ eventId, paidApprovalIds: [paid.approvalId] })
+    const result = await issueFinalRefund(deps, eventId)
+    if (!result.ok) throw new Error('Payment cancellation is awaiting supplier settlement')
+  } else {
+    await refund(deps, paid, paid.amount, 'late_or_revoked')
+    if (staleOffer) await deps.store.setEventStatus(eventId, ['canceling'], 'canceled')
+  }
+  await deps.store.recordStripeEvent(receipt)
+  await deps.store.appendProgress(eventId, 'system', 'Payment cancellation refund was requested.')
+  return 'refunded_late_or_revoked'
 }
 
 export type FinalRefundResult =

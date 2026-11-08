@@ -1,5 +1,5 @@
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
-import { usd } from '#/lib/hostwell/fixture'
+import { paymentFractionDigits } from '#/lib/payment-money'
 import type { Order } from '#/lib/hostwell/store'
 
 const bars: Array<[number, number]> = [
@@ -49,11 +49,14 @@ export function Receipt({
   venue,
   order,
   brief,
+  currency = 'usd',
 }: {
-  venue: Venue
+  venue: Pick<Venue, 'freeCancellationUntil'>
   order: Order
   brief: Brief
+  currency?: string
 }) {
+  const usd = (amount: number) => amount.toFixed(paymentFractionDigits(currency))
   const firstName = brief.occasion.split(/['’]s\b|\s/)[0]
   const age = brief.occasion.match(/\d+\w*/)?.[0]
   const greeting = age ? `Happy ${age}, ${firstName}!` : `Enjoy, ${firstName}!`
@@ -67,12 +70,12 @@ export function Receipt({
       <div className="flex flex-col gap-3 bg-receipt px-7 pt-[30px] pb-[22px] font-mono text-[15px] leading-[21px] text-receipt-ink">
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-[18px] font-bold tracking-[0.22em]">
-            HOSTWELL
+            ARRANGE
           </span>
-          <span className="text-receipt-muted">Event purchasing · Berlin</span>
+          <span className="text-receipt-muted">{brief.area}</span>
         </div>
         <Rule />
-        <Row left="QTY ITEM" right="USD" muted />
+        <Row left="QTY ITEM" right={currency.toUpperCase()} muted />
         {order.lines.map((l) => (
           <div key={l.item} className="flex flex-col gap-0.5">
             <Row
@@ -95,14 +98,14 @@ export function Receipt({
         ))}
         <Rule />
         <div className="flex flex-col gap-1">
-          <Row left="Subtotal" right={usd(order.subtotal)} />
+          <Row left="Subtotal" right={order.subtotal === null ? 'Quote needed' : usd(order.subtotal)} />
           {order.vat !== null && <Row left="VAT" right={usd(order.vat)} />}
-          <Row left="Service fee" right="0.00" />
+          {order.total !== null && <Row left="Service fee" right="0.00" />}
         </div>
         <Rule solid />
         <div className="flex items-baseline justify-between font-bold">
-          <span className="text-[16px]">ESTIMATED TOTAL USD</span>
-          <span className="text-[20px] leading-6">{usd(order.total)}</span>
+          <span className="text-[16px]">{`${order.total === null ? 'TOTAL' : 'ESTIMATED TOTAL'} ${currency.toUpperCase()}`}</span>
+          <span className="text-[20px] leading-6">{order.total === null ? 'Quote needed' : usd(order.total)}</span>
         </div>
         <Rule solid />
         {venue.freeCancellationUntil && (

@@ -1,6 +1,7 @@
+import type Stripe from 'stripe'
 import type { Approval, Attempt, Brief, Event, EventView, Payment, Plan, ProgressEntry, ResearchResult, Run } from '../../contracts'
 import { ApprovalCanceledError, type Store } from '../store'
-import { createStripeAdapter, type CheckoutCreateParams, type CheckoutSessionLike, type RefundCreateParams, type StripeLike } from '../payments/stripe'
+import { createStripeAdapter, type CheckoutSession, type StripeLike } from '../payments/stripe'
 import type { Deps, ResearchPort } from './deps'
 import { simulatedResearchPort } from './simulatedResearch'
 
@@ -187,7 +188,11 @@ export class MemoryStore implements Store {
   }
   async findOpenApproval(eventId: string, planRevision: number, now: Date) {
     const a = [...this.approvals.values()].find(
-      (x) => x.eventId === eventId && x.planRevision === planRevision && x.revokedAt === null && new Date(x.expiresAt) > now,
+      (x) => {
+        const paid = [...this.payments.values()].find(p => p.approvalId === x.approvalId && p.state === 'paid')
+        return x.eventId === eventId && x.planRevision === planRevision && x.revokedAt === null
+          && (new Date(x.expiresAt) > now || !!paid?.paidAt && Date.parse(paid.paidAt) < Date.parse(x.expiresAt))
+      },
     )
     if (!a) return null
     const payment = [...this.payments.values()].find((p) => p.approvalId === a.approvalId)!
@@ -224,11 +229,12 @@ export class MemoryStore implements Store {
     const p = [...this.payments.values()].find((x) => x.approvalId === approvalId)
     return p ? { ...p } : null
   }
-  async markPaymentPaid(checkoutSessionId: string, paymentIntentId: string) {
+  async markPaymentPaid(checkoutSessionId: string, paymentIntentId: string, paidAt?: Date) {
     const p = [...this.payments.values()].find((x) => x.checkoutSessionId === checkoutSessionId)
-    if (!p || p.state !== 'pending') return null
+    if (!p || p.state !== 'pending' && !(p.state === 'paid' && p.paymentIntentId === paymentIntentId && paidAt && !p.paidAt)) return null
     p.state = 'paid'
     p.paymentIntentId = paymentIntentId
+    if (paidAt) p.paidAt = paidAt.toISOString()
     return { ...p }
   }
   async markPaymentExpired(checkoutSessionId: string) {
@@ -276,7 +282,7 @@ export class MemoryStore implements Store {
     const approval = this.approvals.get(attempt.approvalId)
     const payment = [...this.payments.values()].find(p => p.approvalId === attempt.approvalId)
     if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status) ||
-        !approval || approval.revokedAt || new Date(approval.expiresAt) <= now || approval.planRevision !== event.planRevision ||
+        !approval || approval.revokedAt || new Date(approval.expiresAt) <= (payment?.paidAt ? new Date(payment.paidAt) : now) || approval.planRevision !== event.planRevision ||
         !approval.actionIds.includes(attempt.actionId) || !payment || payment.state !== 'paid') return null
     return this.insertAttempt(attempt)
   }
@@ -308,23 +314,23 @@ export class MemoryStore implements Store {
 export const WEBHOOK_SECRET = 'whsec_test_fake_secret_for_unit_tests'
 
 export class FakeStripe implements StripeLike {
-  sessions = new Map<string, CheckoutSessionLike>()
-  createCalls: { params: CheckoutCreateParams; idempotencyKey: string }[] = []
+  sessions = new Map<string, CheckoutSession>()
+  createCalls: { params: Stripe.Checkout.SessionCreateParams; idempotencyKey: string }[] = []
   expired: string[] = []
-  refundCalls: { params: RefundCreateParams; idempotencyKey: string }[] = []
+  refundCalls: { params: Stripe.RefundCreateParams; idempotencyKey: string }[] = []
   private real = createStripeAdapter(undefined)
   checkout = {
     sessions: {
-      create: async (params: CheckoutCreateParams, opts: { idempotencyKey: string }) => {
+      create: async (params: Stripe.Checkout.SessionCreateParams, opts: { idempotencyKey: string }) => {
         this.createCalls.push({ params, idempotencyKey: opts.idempotencyKey })
         const id = `cs_test_${this.createCalls.length}`
-        const s: CheckoutSessionLike = {
+        const s: CheckoutSession = {
           id,
           url: `https://checkout.stripe.test/${id}`,
-          expires_at: params.expires_at,
-          amount_total: params.line_items.reduce((sum, l) => sum + l.price_data.unit_amount * l.quantity, 0),
-          currency: params.line_items[0].price_data.currency,
-          metadata: params.metadata,
+          expires_at: params.expires_at!,
+          amount_total: params.line_items!.reduce((sum, l) => sum + l.price_data!.unit_amount! * l.quantity!, 0),
+          currency: params.line_items![0].price_data!.currency,
+          metadata: params.metadata as Stripe.Metadata,
           payment_status: 'unpaid',
           payment_intent: null,
         }
@@ -339,10 +345,10 @@ export class FakeStripe implements StripeLike {
     },
   }
   refunds = {
-    retrieve: async (_id: string): Promise<import('../payments/stripe').RefundLike> => { throw new Error('Refund not found') },
-    create: async (params: RefundCreateParams, opts: { idempotencyKey: string }) => {
+    retrieve: async (_id: string): Promise<import('../payments/stripe').Refund> => { throw new Error('Refund not found') },
+    create: async (params: Stripe.RefundCreateParams, opts: { idempotencyKey: string }) => {
       this.refundCalls.push({ params, idempotencyKey: opts.idempotencyKey })
-      return { id: `re_test_${this.refundCalls.length}`, status: 'pending' }
+      return { id: `re_test_${this.refundCalls.length}`, status: 'pending' as const, payment_intent: params.payment_intent ?? null, metadata: (params.metadata ?? null) as Stripe.Metadata | null }
     },
   }
   webhooks = {
