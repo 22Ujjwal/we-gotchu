@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { replyInterpretationSchema, supplierMessageSchema, type SupplierReply } from '../../agent/planning/reply-contract'
+import { hasSourceExcerpt, replyInterpretationSchema, supplierMessageSchema, type SupplierReply } from '../../agent/planning/reply-contract'
 import type { PlanningInquiry } from '../../agent/planning/contract'
 import { ApiError } from '../events/errors'
 import type { PlanningRecord, PlanningRepository } from './repository'
@@ -65,7 +65,7 @@ export async function recordSupplierReply(repository: PlanningRepository, target
     if (!reply) throw new ApiError(404, 'not_found', 'Reply not found.')
     if (reply.status === 'ready') return
     for (const fact of interpretation.facts) {
-      if (!reply.message.text.includes(fact.quote)) throw new ApiError(422, 'unsupported_evidence', 'The source excerpt is absent from the supplier reply.')
+      if (!hasSourceExcerpt(reply.message.text, fact.quote)) throw new ApiError(422, 'unsupported_evidence', 'The source excerpt is absent from the supplier reply.')
     }
     const result: SupplierReply = { ...reply, status: 'ready', interpretation, lease: undefined, error: undefined }
     if (await repository.compareAndSet(record, updated(record, { ...inquiry,

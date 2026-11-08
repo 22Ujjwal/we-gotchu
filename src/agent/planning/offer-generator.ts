@@ -2,12 +2,13 @@ import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { selectedOfferSchema, type SelectedOffer } from './offer-contract'
 import type { PlanningRecord } from '../../server/planning/repository'
+import { hasSourceExcerpt } from './reply-contract'
 import { paymentFractionDigits } from '../../lib/payment-money'
 
 export const supplierOfferInputSchema = selectedOfferSchema.omit({ id: true, revision: true, inquiryId: true, replyId: true,
   contextMessageIds: true, mode: true, lines: true }).extend({
   lines: z.array(selectedOfferSchema.shape.lines.element.omit({ option: true, sourceReplyId: true, sourceQuotes: true })
-    .extend({ optionId: z.string().min(1), sourceQuotes: z.array(z.string().min(8)).min(1) })).min(1),
+    .extend({ optionId: z.string().min(1), sourceQuotes: z.array(z.string().trim().min(1)).min(1) })).min(1).describe('Interpret the supplier wording and calculate prices from quoted rates when needed. Amounts are integer currency minor units. Use 0 for explicitly included, waived, free or inapplicable charges; no deposit means amount 0 and treatment included. Keep genuinely unknown costs null. Do not count included costs twice. Explain derived prices in quantityDescription and cite the original wording in sourceQuotes.'),
 })
 export function validateSupplierOffer(record: PlanningRecord, input: unknown): SelectedOffer {
   const inquiry = record.view.inquiry
@@ -33,19 +34,10 @@ export function validateSupplierOffer(record: PlanningRecord, input: unknown): S
     const supplierReplies = inquiry.replies ?? []
     const evidence = [...supplierReplies.map(item => item.message.text),
       ...(option.kind === 'supply' ? option.facts.map(fact => fact.quote) : [])]
-    if (line.sourceQuotes.some(quote => !evidence.some(source => source.includes(quote)))) throw new Error('Offer quotation is not in the saved evidence.')
-    const amounts = [line.unitAmount, line.tax, line.delivery, line.fees, line.deposit?.amount]
-    if (amounts.some(amount => amount != null && amount > 0 && !quotesContainAmount(line.sourceQuotes, amount, extracted.currency))) {
-      throw new Error('Offer amount is not in the quoted evidence.')
-    }
-    // Missing charges must not become free merely because extraction supplied zero.
-    if (!quotesContainAmount(line.sourceQuotes, 0, extracted.currency)) {
-      for (const field of ['unitAmount', 'tax', 'delivery', 'fees'] as const) {
-        if (line[field] === 0) line[field] = null
-      }
-      if (line.deposit.amount === 0) line.deposit = { amount: null, treatment: 'unknown' }
-    }
-    const sourceReply = [...supplierReplies].reverse().find(item => line.sourceQuotes.every(quote => item.message.text.includes(quote)))
+    if (line.sourceQuotes.some(quote => !evidence.some(source => hasSourceExcerpt(source, quote)))) throw new Error('Offer quotation is not in the saved evidence.')
+    // The coordinator interprets prices and inclusion wording; the app checks source,
+    // arithmetic, budget and approval without requiring literal currency tokens.
+    const sourceReply = [...supplierReplies].reverse().find(item => line.sourceQuotes.every(quote => hasSourceExcerpt(item.message.text, quote)))
     return { ...line, option, sourceReplyId: sourceReply?.id ?? null }
   })
   return selectedOfferSchema.parse({ ...extracted, lines, id: record.view.offer?.id ?? `offer_${randomUUID()}`,

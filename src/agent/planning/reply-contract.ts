@@ -23,3 +23,9 @@ export const supplierReplySchema = z.object({
   lease: z.object({ token: text, expiresAt: z.number().int() }).optional(),
 }).strict()
 export type SupplierReply = z.infer<typeof supplierReplySchema>
+
+export function hasSourceExcerpt(source: string, excerpt: string): boolean {
+  const normalize = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim()
+  const quote = normalize(excerpt)
+  return !!quote && normalize(source).includes(quote)
+}
