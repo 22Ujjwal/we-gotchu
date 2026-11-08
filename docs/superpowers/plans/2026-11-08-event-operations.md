@@ -22,28 +22,28 @@ Preserve all frozen files and ownership boundaries in the spec. No real external
 ### Task 1: Recovery preview
 Files: src/server/operations/recovery.ts and recovery.test.ts.
 Interface: export previewRecovery(input), consuming EventView and disruption; return non-mutating affected/preserved/reconcile action IDs, research brief, candidate comparisons and approval requirement. Implementer documents exact type in handoff.
-- [ ] Write tests for unavailable venue + dependent supplies + unrelated action, unknown attempts, stale/canceled input, headcount revision, unknown costs and immutable input; run red.
-- [ ] Implement minimal preview with existing contracts; no writes or research calls.
-- [ ] Run focused tests/typecheck and commit only owned files.
+- [x] Write tests for unavailable venue + dependent supplies + unrelated action, unknown attempts, stale/canceled input, headcount revision, unknown costs and immutable input; run red.
+- [x] Implement minimal preview with existing contracts; no writes or research calls.
+- [x] Run focused tests/typecheck and commit only owned files.
 
 ### Task 2: Invitation preparation and Luma boundary
 Files: src/server/operations/invitations.ts and invitations.test.ts.
 Interface: export prepareInvitation(input, now) and createLumaInvitation(prepared, key, fetcher). Distinguish future/due/expired and Partiful manual handoff. No implicit sending or retries.
-- [ ] Write tests for fixed schedule, invalid times/timezone, pending venue, future/expired publication, exact Luma payload/response, rejected and ambiguous POST, Partiful handoff; run red.
-- [ ] Implement validation and provider adapter against official docs. No credential or network use in tests.
-- [ ] Run focused tests/typecheck and commit only owned files.
+- [x] Write tests for fixed schedule, invalid times/timezone, pending venue, future/expired publication, exact Luma payload/response, rejected and ambiguous POST, Partiful handoff; run red.
+- [x] Implement validation and provider adapter against official docs. No credential or network use in tests.
+- [x] Run focused tests/typecheck and commit only owned files.
 
 ### Task 3: Recurring occurrences
 Files: src/server/operations/recurrence.ts and recurrence.test.ts.
 Interface: export generateOccurrences(series, now) returning bounded fresh occurrence briefs, due times, stable keys and DST issues. Internal Series type owns weekly/monthly configuration.
-- [ ] Write tests for weekly wall time across DST, gap/fold, monthly 31st, pause, skip, end date, limits, invalid input and preservation of unchanged brief; run red.
-- [ ] Implement using Intl with no new library; explicit issues for ambiguous/nonexistent times.
-- [ ] Run focused tests/typecheck and commit only owned files.
+- [x] Write tests for weekly wall time across DST, gap/fold, monthly 31st, pause, skip, end date, limits, invalid input and preservation of unchanged brief; run red.
+- [x] Implement using Intl with no new library; explicit issues for ambiguous/nonexistent times.
+- [x] Run focused tests/typecheck and commit only owned files.
 
 ### Task 4: Demonstration and integration handoff
 Files: scripts/event-operations-demo.ts, docs/team/event-operations-integration.md, docs/team/status/ujjwal.md.
-- [ ] Read all module exports and compose a deterministic no-network scenario with simulated fixture.
-- [ ] Run scenario and verify recovery scope, invitation state, and occurrence times by hand.
-- [ ] Review module boundaries and perform independent whole-branch review.
-- [ ] Run full application/coordination tests, typecheck, build, diff/frozen-file checks; record exact evidence.
-- [ ] Keep commits local; document pending storage, scheduled dispatch, UI, provider access and Tony's handback. Request permission before any remote push.
+- [x] Read all module exports and compose a deterministic no-network scenario with simulated fixture.
+- [x] Run scenario and verify recovery scope, invitation state, and occurrence times by hand.
+- [x] Review module boundaries and perform independent whole-branch review.
+- [x] Run full application/coordination tests, typecheck, build, diff/frozen-file checks; record exact evidence.
+- [x] Keep commits local; document pending storage, scheduled dispatch, UI, provider access and Tony's handback. Request permission before any remote push.
