@@ -249,3 +249,14 @@ Tests cover a refused approve for budgetFit `unknown`, a refused execute_action 
 
 The following 0.2 items are deferred, not rejected: Idempotency-Key with body hashing, plan editing routes, cancellation quotes with their own expiry, `awaiting_input`, supplier recovery records, separate CancellationApproval and Refund records, supplier messages and their approval, judging late payment by provider completion time, and fixtures for every refusal.
 Naive's call-scoped `ask` confirmation should be revisited before real money is used.
+
+### Optional event end time (on branch: fix/agentmail-send-key)
+
+`Brief.endsAt` is an optional UTC ISO timestamp, strictly after `startsAt`.
+Existing briefs without it remain accepted. The frontend preserves the host's
+`till` field; an earlier clock time means the next calendar day. The API stores
+it in the existing brief JSON, so no database migration is needed. Customer
+quote emails show the full range, timezone, and elapsed duration when present.
+Consumers: Leo's brief adapter/reload flow, Tony's research input, and Ujjwal's
+API/email modules. No supplier communication or booking authorization changes.
+This is a proposed compatible addition on the branch, not a deployed contract.

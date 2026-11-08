@@ -1,3 +1,20 @@
+## Email send key and full event duration — 2026-11-08
+
+Branch: `fix/agentmail-send-key`; baseline `776cd5b`; pending PR, not merged or deployed.
+Fixes the invalid AgentMail send key and preserves optional event `endsAt` from
+Leo's form through the API/reload into the customer email. Includes timezone,
+end date and elapsed duration. Existing events remain supported. No migration,
+provider send, vendor outreach, payment change, or changes to email retry/copy.
+Touches Leo's brief adapter solely to retain the already-entered end time;
+frontend and research consumers should review this compatible contract addition.
+Independent review found no functional blockers against the integrated baseline.
+Focused email/adapter/event tests: 41 passed. Typecheck, Vercel build and all
+25 coordination tests passed. Full application suite: 483 passed.
+Code commits: `995b878` (send key), `f7facec` (event duration).
+The prior receipts formatting failure was addressed in latest main before integration.
+Next: review the compatible adapter/contract addition with Leo/Tony; no merge or
+production deployment is part of this handoff.
+
 # Ujjwal's status
 
 ## Latest checkpoint — sandbox payment/refund verified
