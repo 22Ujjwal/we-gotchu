@@ -217,3 +217,17 @@ describe('simulated adapter env', () => {
     expect(simulatedOptionsFromEnv('nonsense')).toEqual({})
   })
 })
+
+describe('cancellation ordering', () => {
+  it('refuses a commitment when cancellation wins after the initial authorization check', async () => {
+    const { store, execute, commit } = setup()
+    const claim = store.claimCommit.bind(store)
+    vi.spyOn(store, 'claimCommit').mockImplementationOnce(async (attempt, now) => {
+      await store.requestCancel(EVENT, NOW)
+      return claim(attempt, now)
+    })
+    expect(await execute(VENUE)).toMatchObject({ ok: false, reason: 'authorization_changed' })
+    expect(commit).not.toHaveBeenCalled()
+    expect(await store.listAttempts(EVENT)).toEqual([])
+  })
+})

@@ -251,7 +251,7 @@ async function settleExecution(store: Store, eventId: string, approval: Approval
   return (await store.getEvent(eventId))?.status ?? null
 }
 
-async function settleCancellation(deps: ExecutionDeps, eventId: string): Promise<EventStatus | null> {
+export async function settleCancellation(deps: ExecutionDeps, eventId: string): Promise<EventStatus | null> {
   const { store } = deps
   const attempts = await store.listAttempts(eventId)
   const commits = attempts.filter((a) => a.kind === 'commit' && a.state === 'succeeded')
@@ -259,9 +259,12 @@ async function settleCancellation(deps: ExecutionDeps, eventId: string): Promise
   const allCanceled =
     !open &&
     commits.every((c) => attempts.some((a) => a.kind === 'cancel' && a.executionKey === cancelKey(c.approvalId, c.actionId) && a.state === 'succeeded'))
-  if (allCanceled && (await store.setEventStatus(eventId, ['canceling'], 'canceled'))) {
-    await store.appendProgress(eventId, 'system', 'Every commitment is canceled.')
+  if (allCanceled && (await store.getEvent(eventId))?.status === 'canceling') {
+    // Keep cancellation retryable until the idempotent refund handoff succeeds.
     if (deps.onAllCanceled) await deps.onAllCanceled(eventId)
+    if (await store.setEventStatus(eventId, ['canceling'], 'canceled')) {
+      await store.appendProgress(eventId, 'system', 'Every commitment is canceled.')
+    }
   }
   return (await store.getEvent(eventId))?.status ?? null
 }
@@ -304,10 +307,11 @@ export async function executeAction(deps: ExecutionDeps, input: { eventId: strin
   }
   const { action, approval, adapter } = checked.ctx
 
-  const claimed = await claimAttempt(
-    store,
+  const claimed = await store.claimCommit(
     newAttempt({ event, actionId: action.actionId, approvalId: approval.approvalId, kind: 'commit', executionKey: commitKey(approval.approvalId, action.actionId), mode: adapter.mode, now }),
+    (deps.now ?? (() => new Date()))(),
   )
+  if (!claimed) return refuse('authorization_changed', 'Cancellation or approval changed before the commitment started.')
   if (claimed.replayed) {
     return { ok: true, attempt: claimed.attempt, replayed: true, eventStatus: (await store.getEvent(event.eventId))?.status ?? null }
   }
