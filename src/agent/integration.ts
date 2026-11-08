@@ -13,6 +13,7 @@ export type IntegrationProviders = {
 }
 
 class LostLease extends Error {}
+class CheckpointWriteFailed extends Error {}
 
 // Longer than previous-run cleanup plus checkpoint initialization during a brief revision.
 const MISSING_CHECKPOINT_GRACE_MS = 60_000
@@ -76,12 +77,15 @@ export function createResearchIntegration(options: {
       const signal = AbortSignal.timeout(Math.min(stepMs, leaseMs))
       const save = async (patch: Partial<ResearchCheckpoint>, message?: string) => {
         const next = { ...c!, ...patch }
-        if (!await checkpoints.save(run, c!.version, next, message)) throw new LostLease()
+        let saved: boolean
+        try { saved = await checkpoints.save(run, c!.version, next, message) }
+        catch { throw new CheckpointWriteFailed('Research checkpoint write could not be confirmed') }
+        if (!saved) throw new LostLease()
         c = { ...next, version: c!.version + 1 }
       }
-      const finish = async (warning: string) => {
+      const finish = async (warning: string, processed: Partial<ResearchCheckpoint> = {}) => {
         const result = await validate(c!, async () => { throw new Error('No usable ranking') })
-        await save({ result: { ...result, warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
+        await save({ ...processed, result: { ...result, warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
       }
       // Provider calls are awaited, bounded and never detached from the request.
       const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -139,14 +143,14 @@ export function createResearchIntegration(options: {
             await save({ stage: 'uncertain' })
             const agentId = await bounded(() => session.createAgent(c!.input, signal))
             try { await save({ agentId, stage: 'session' }) }
-            catch (error) { await discard(null, agentId); throw error }
+            catch (error) { if (error instanceof LostLease) await discard(null, agentId); throw error }
             return running
           }
           case 'session': {
             await save({ stage: 'uncertain' })
             const sessionId = await bounded(() => session.start(c!.input, rankingCandidates(c!.evidence!.candidates), c!.agentId!, signal))
             try { await save({ naiveSessionId: sessionId, stage: 'ranking' }, 'Comparing the retrieved candidates.') }
-            catch (error) { await discard(sessionId, c.agentId); throw error }
+            catch (error) { if (error instanceof LostLease) await discard(sessionId, c.agentId); throw error }
             return running
           }
           case 'ranking': {
@@ -162,20 +166,25 @@ export function createResearchIntegration(options: {
             if (snapshot.id !== c.naiveSessionId) throw new Error('Session identity mismatch')
             if (snapshot.last_seq < c.lastSequence) return running
             const advanced = snapshot.last_seq > c.lastSequence
-            await save({ lastSequence: snapshot.last_seq, sessionStopped: ['completed', 'failed', 'cancelled'].includes(snapshot.status) }, advanced ? 'Research comparison progress saved.' : undefined)
+            // The cursor commits with the outcome, so a crash cannot acknowledge unprocessed work.
+            const processed = { lastSequence: snapshot.last_seq,
+              sessionStopped: ['completed', 'failed', 'cancelled'].includes(snapshot.status) }
             if ((snapshot.consumed_micro_usd ?? 0) > RESEARCH_BUDGET_MICRO_USD) {
-              await finish('Research reached its usage limit; only retrieved evidence is shown.')
+              await finish('Research reached its usage limit; only retrieved evidence is shown.', processed)
               return running
             }
-            if (['running', 'queued'].includes(snapshot.status)) return running
+            if (['running', 'queued'].includes(snapshot.status)) {
+              await save(processed, advanced ? 'Research comparison progress saved.' : undefined)
+              return running
+            }
             if (snapshot.status === 'cancelled') {
               const result = await validate(c, async () => null)
-              await save({ result: { ...result, outcome: 'canceled', recommendations: [],
+              await save({ ...processed, result: { ...result, outcome: 'canceled', recommendations: [],
                 warnings: [...result.warnings, 'Research stopped. No supplier booking or purchase was canceled.'] }, stage: 'cleanup' })
               return running
             }
             if (!['idle', 'completed'].includes(snapshot.status) || snapshot.stop_reason !== 'end_turn') {
-              await finish('The research provider stopped without a valid completion; retry with a revised brief.')
+              await finish('The research provider stopped without a valid completion; retry with a revised brief.', processed)
               return running
             }
             if (c.correctionAfter !== null && snapshot.last_seq <= c.correctionAfter) return running
@@ -185,9 +194,9 @@ export function createResearchIntegration(options: {
               return snapshot.structured_output
             })
             if (invalid && canSendCorrection({ ...run, correctionsUsed: c.correctionsUsed })) {
-              await save({ stage: 'correcting' })
+              await save({ ...processed, stage: 'correcting' })
             } else {
-              await save({ result, stage: 'cleanup' }, 'Research evidence validated; final costs remain unconfirmed.')
+              await save({ ...processed, result, stage: 'cleanup' }, 'Research evidence validated; final costs remain unconfirmed.')
             }
             return running
           }
@@ -220,6 +229,8 @@ export function createResearchIntegration(options: {
         }
       } catch (error) {
         if (error instanceof LostLease) return running
+        // A lost acknowledgement may hide a committed write. Re-read it on the next request.
+        if (error instanceof CheckpointWriteFailed) throw error
         try { await finish(c.stage === 'uncertain'
           ? 'A provider operation has an uncertain outcome. It was not retried; reconciliation is needed.'
           : 'A research step failed. Saved evidence is retained; retry with a revised brief.') }
