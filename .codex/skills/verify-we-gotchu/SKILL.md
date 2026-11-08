@@ -8,7 +8,7 @@ description: Verify the real local We Gotchu web app, including planning submiss
 ## Launch
 
 Read package.json and .github/workflows/ci.yml; use the installed Bun version that supports the frozen lockfile.
-Run `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test --maxWorkers 2`, `node --test tools/team-coordination/*.test.mjs` and `bun run build` before a shipping check.
+Run `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test --maxWorkers 2`, `node --test tools/team-coordination/*.test.mjs tools/local-rehearsal/*.test.mjs` and `bun run build` before a shipping check.
 Do not confuse these checks with live provider verification.
 Use the existing ignored .env.local without printing its contents.
 Local planning needs Clerk configuration, NAIVE_API_KEY, NAIVE_PLANNING_AGENT_ID and PLANNING_LOCAL_DB_DIR=.scratch/local-planning-db.

@@ -1,8 +1,9 @@
 # Local journey rehearsal
 
 This is a manual local verification procedure, not a cron job or deployment setup.
-Live mail, model and payment checks remain deferred until Tony resumes them.
-Do not run the worker against the current saved database before then.
+The controlled local model and sandbox payment checks have run; their results are in the [integration checkpoint](../../docs/handoffs/remaining-stages/local-integration-checkpoint.md).
+The external mail reply check is deferred until a different team-controlled recipient is approved.
+Do not create another self-send to substitute for that check.
 
 ## Start the application
 
@@ -48,7 +49,9 @@ Do not copy authorization headers, cookies or credentials into evidence.
 
 First verify saved research and selection through the actual signed-in application.
 Approve only the exact controlled inquiry to the approved test address.
-The approved address is also the sending inbox, so self-send is not independent recipient-delivery proof.
+Use a different team-controlled recipient for the external reply check.
+The earlier approved address was also the sending inbox, so that self-send is not independent recipient-delivery proof.
+An incoming copy with the exact outgoing message ID must create no reply or interpretation job.
 Record provider acceptance separately from inbox receipt.
 Close the browser before the controlled reply arrives.
 Run the local worker and verify the saved reply reaches ready without any customer page read.
@@ -63,7 +66,9 @@ Payment proof requires the signed webhook and saved payment state, not the retur
 Supplier execution must remain visibly simulated.
 Reload the conversation and compare the linked event and payment.
 
-Use separate controlled records for failed payment and abandoned Checkout.
+A declined or abandoned Checkout can remain reusable.
+Reconcile its provider state before another submission and record whether the same test session was reused.
+Never submit again merely because the app still says pending.
 Test changed selections before approval and while Checkout is open.
 An invalidated payment must not commit suppliers and must enter the existing cancellation/refund handling.
 A refund request is not proof of refund completion.
@@ -71,12 +76,16 @@ After cancellation settles, verify a revised offer can replace the old link with
 
 ## Current evidence and remaining gates
 
-Stage 4 at `5158e98` passed 625 application tests, 25 coordination tests, typecheck and build.
-Those tests include migrated local storage, controlled signed payment webhooks and simulated execution.
-They are not real provider or browser acceptance.
-The local runner has three controlled transport tests covering sequential calls, authorization, local-only targets and failure handling.
-No live worker invocation has been performed.
+The combined application at `c18416fd37145864717498b09446d2dc5bf302e7` passed 629 application tests, 31 tooling tests, typecheck and build.
+The payment browser check verified an explicit decline, abandonment and same-session reuse, successful sandbox payment, signed webhook redelivery and saved paid state after reload.
+The app recorded exactly one simulated supplier action.
+The self-send check verified acceptance, inbox receipt and exclusion of the outgoing-message echo from reply jobs.
+A separate synthetic reply has a delivery receipt but no observed incoming-message webhook.
+An independent external reply, browser-closed interpretation of that reply and a continuous mail-to-payment journey remain unverified.
 
-The next live run still needs mail webhook setup, actual inbox inspection and reply, real model offer extraction, browser Checkout, payment webhook delivery and reload verification.
+Temporary provider endpoints and local signing overrides used for the checks were cleaned up.
+Do not reuse a stopped forwarding URL.
+Before another sandbox payment, run the payment preflight, verify the test key and endpoint signing secret privately, and confirm forwarding reaches the intended handler.
+The payment recipe explains recovery without duplicate payment attempts.
 No deployment is authorized.
-Keep stage branches separate and publish their PRs only after the agreed local checks finish.
+The stage branches disable automatic previews and remain separate PRs.
