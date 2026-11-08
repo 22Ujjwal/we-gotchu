@@ -2,7 +2,7 @@
 
 Owner: Ujjwal.
 Updated: 2026-11-07T20:44:25-08:00
-Baseline: main `38516c9d6d820ea6965d4aac76677c9d40c5950f`.
+Baseline: main `779ca423a09cf47dbf838e35ea77e5a78368391b`.
 Branch: [docs/neon-setup](https://github.com/22Ujjwal/we-gotchu/tree/docs/neon-setup); status-only PR pending publication.
 Availability: Neon database and migrations live-verified; research configuration deployed; shared Clerk claim/sign-in and Stripe setup still pending.
 
@@ -10,7 +10,7 @@ Availability: Neon database and migrations live-verified; research configuration
 
 App: https://we-gotchu.vercel.app
 MCP: https://we-gotchu.vercel.app/api/mcp
-Production was redeployed after database connection; deployment `dpl_5tzhZQVy7ggx47MzWHpJQKkYW2eT` is READY.
+Production was redeployed after database connection; deployment `dpl_5tzhZQVy7ggx47MzWHpJQKkYW2eT` is READY, serving commit `779ca423a09cf47dbf838e35ea77e5a78368391b`. The deployed commit uses the same migrations and $0.50 session cap verified here.
 
 Neon resource `we-gotchu-db` is on Free (`free_v3`) in iad1, connected to this project's production environment. Optional Neon Auth is disabled because the app uses Clerk. DATABASE_URL is configured in production and ignored local configuration; no connection values are published.
 Both committed migrations were applied: initial tables and runs.research_checkpoint. Verified two migration ledger entries, nine public tables, and the checkpoint column. A transaction wrote and read a probe event, then rolled back; its absence was confirmed afterward.
