@@ -136,9 +136,14 @@ Repeated callbacks return the stored reply without creating another pending job.
 Missing plain text is retained as a failed interpretation rather than a fabricated offer.
 
 GET /api/planning/reply-jobs requires Authorization: Bearer CRON_SECRET.
-It processes one durable reply job per invocation using the configured NAIVE_REPLY_MODEL or NAIVE_PLANNING_MODEL.
-Configure a supported scheduler to invoke it without a customer browser.
-The route itself does not install a scheduler.
+It processes up to five durable reply jobs concurrently using the configured NAIVE_REPLY_MODEL or NAIVE_PLANNING_MODEL.
+After a successful signed webhook receipt, the runtime registers the same work with Vercel waitUntil so it can continue after the HTTP response.
+The server function has a 60-second runtime budget; the configured model transport has a 45-second request timeout.
+The committed Vercel Cron schedule invokes recovery daily at 06:00 UTC, within Hobby scheduling limits.
+Set CRON_SECRET in the hosting environment so scheduled requests authenticate.
+An interrupted invocation with no later webhook may wait until the daily recovery run, and a batch handles at most five jobs.
+This is a bounded recovery mechanism, not a guarantee of immediate recovery or draining an arbitrarily large backlog.
+Hosted invocation and browser-closed processing still require runtime verification before release.
 Processing uses an expiring lease and token-checked settlement so a late result cannot replace a newer worker's result.
 Failed interpretation retains the original reply; retries must operate on that saved entry, never resend an inquiry.
 
