@@ -1,12 +1,12 @@
 import { z } from 'zod'
-import { planningOptionSchema, planningProposalSchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
+import { planningOptionSchema, planningProposalSchema, planningApprovalSchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
 
 const viewSchema: z.ZodType<PlanningView> = z.object({
   id: z.string().min(1), version: z.number().int().nonnegative(),
-  status: z.enum(['working', 'ready', 'failed', 'uncertain']),
+  status: z.enum(['working', 'ready', 'failed', 'uncertain', 'blocked']),
   messages: z.array(z.object({ id: z.string(), role: z.enum(['user', 'assistant']), text: z.string(), createdAt: z.string() })),
   proposal: planningProposalSchema.nullable(), selections: z.array(planningOptionSchema),
-  progress: z.string().nullable(), error: z.string().nullable(),
+  progress: z.string().nullable(), error: z.string().nullable(), approvals: z.array(planningApprovalSchema).optional(),
 })
 export type PlanningCreate = { requestId: string; message: string }
 export class PlanningApiError extends Error {
