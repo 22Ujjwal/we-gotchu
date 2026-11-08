@@ -79,6 +79,9 @@ function missingKey(): never {
 
 /** Wraps the real Stripe SDK. Webhook verification works without a secret key. */
 export function createStripeAdapter(secretKey: string | undefined): StripeLike {
+  if (secretKey?.startsWith('sk_live_') || secretKey?.startsWith('rk_live_')) {
+    throw new Error('Stripe payments are sandbox-only; use a test key instead of a live STRIPE_SECRET_KEY.')
+  }
   const client = secretKey ? new Stripe(secretKey) : null
   const webhooks = Stripe.webhooks
   return {
