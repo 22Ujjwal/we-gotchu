@@ -51,7 +51,7 @@ export interface PlanningAgent {
   start(input: { conversationId: string; requestId: string; message: string }): Promise<{ sessionId: string; sequence: number }>
   send(input: { sessionId: string; requestId: string; message: string; selections: PlanningOption[] }): Promise<{ sequence: number }>
   confirm?(input: { sessionId: string; approvalId: string; decision: 'allow' | 'deny' }): Promise<void>
-  read(input: { sessionId: string; afterSequence: number; approvalId?: string }): Promise<{
+  read(input: { sessionId: string; afterSequence: number; completedSequence?: number; approvalId?: string }): Promise<{
     status: PlanningView['status']; sequence: number; proposal: PlanningProposal | null; progress: string | null; error: string | null; approvals?: PlanningApproval[]; activity?: PlanningActivity[]
     confirmation?: { id: string; state: 'pending' | 'closed' }
   }>
