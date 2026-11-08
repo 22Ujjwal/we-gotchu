@@ -229,3 +229,28 @@ Implementation head 7773a815895df9b3812b94d395f2debf75d6dcb5 passed `bun run tes
 The unchanged coordination suite passed all 25 tests earlier in this work with `node --test tools/team-coordination/*.test.mjs`.
 The browser evidence is local only; nothing was pushed or deployed.
 The temporary verification tab and server were closed after the check.
+
+## Supported native public research proof
+
+The official tools documentation at https://usenaive.ai/docs/capabilities/tools.md confirms that flagged sessions require individual review for external MCP calls even when a tool is allowed.
+The data documentation at https://usenaive.ai/docs/capabilities/data.md separately documents unattended native data_run with an explicit allow policy.
+A fresh public-research test used this supported native path without reclassifying external data, approving pending calls, or changing the existing team.
+
+Proof 2d41467b-6eb3-42aa-9cdc-bd68932c828c created temporary session ses_1vhef0yt1vxbm9zfa8qvc4y25h.
+It completed data_search, data_describe, data_run and web_search.
+The data run returned ten Oakland business listings, and web search returned public paper-plate listings with prices in some results.
+The session ended idle with end_turn at sequence 56.
+The collected 55 events contained zero tool.confirm events.
+Reported session consumption was 6876 micro USD.
+Session cancellation and temporary-agent deletion were acknowledged.
+This proves a bounded native-tool research path, not a full team proposal, selection, follow-up or browser flow.
+It does not prove that direct Monid MCP can run unattended.
+
+The first diagnostic attempt failed while reading events because its limit of 1000 exceeded the API maximum of 100.
+Its own session was stopped and agent deleted before the corrected test.
+The successful proof used limit 100; it did not retry an uncertain write.
+Older proof scripts requesting 1000 events need pagination before their event capture can be relied on.
+
+The existing named team and paused browser conversation were left unchanged.
+Tony was asked whether the demo should switch to native public research or retain direct Monid pending provider support.
+No switch, new team test, Terra session, push or deployment was performed while that choice remained pending.
