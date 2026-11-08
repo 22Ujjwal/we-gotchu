@@ -73,3 +73,17 @@ test('rejects a fabricated customer budget or cancellation allowance', async () 
       .rejects.toThrow('Customer spending limit is not in the saved request.')
   }
 })
+
+test('retains supplier evidence when the quoted package includes selected supplies', async () => {
+  const current = structuredClone(record)
+  const supply = { ...venue, id: 'plates', kind: 'supply' as const, name: '24 plates', facts: [], unknowns: ['Retail delivery unknown'] }
+  current.view.selections.push(supply)
+  const quote = 'USD 200 for the room, including USD 50 deposit. One pack of 24 plates costs USD 3.47, including delivery. Both are fully refundable.'
+  current.view.inquiry!.replies![0].message.text = quote
+  const value = { ...extracted, lines: [
+    { ...extracted.lines[0], sourceQuotes: [quote] },
+    { ...extracted.lines[0], optionId: 'plates', unitAmount: 347, deposit: { amount: 0, treatment: 'included' }, sourceQuotes: [quote] },
+  ] }
+  const result = await createOfferGenerator(client(value), 'model')(current)
+  expect(result.lines[1]).toMatchObject({ option: supply, sourceReplyId: 'reply', unitAmount: 347, sourceQuotes: [quote] })
+})
