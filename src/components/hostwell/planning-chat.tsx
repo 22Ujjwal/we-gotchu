@@ -95,7 +95,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   }
   return <div className={`flex w-full flex-col gap-8 ${id ? 'max-w-[1400px]' : 'max-w-[900px]'}`}>
     {!id && <h1 className="text-[34px] leading-tight font-light tracking-[-0.02em] lg:text-[56px]">What are you planning?</h1>}
-    {!id && <p className="text-[18px] leading-7 text-stone">Tell us about the occasion, place, budget, and anything you need. Rough dates are fine. We can work out the details together.</p>}
+    {!id && <p className="text-[18px] leading-7 text-stone">Add your occasion, location, budget and any supplies you need.</p>}
     {session.loading && <p role="status">Loading your plan...</p>}
     {notice && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center">
       <p role="alert" tabIndex={-1} ref={alert}>{notice}</p>

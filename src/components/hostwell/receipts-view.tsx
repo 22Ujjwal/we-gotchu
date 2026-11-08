@@ -92,7 +92,7 @@ export function ReceiptDetailView({ data, receipt, Link }: { data: Receipts; rec
             <ReceiptPaper receipt={receipt} timezone={data.timezone} startsAt={data.startsAt} />
           </div>
           <section className="flex w-full min-w-0 flex-1 flex-col">
-            <h2 className="m-0 pb-6 text-[22px] leading-7 font-semibold">What the agent did</h2>
+            <h2 className="m-0 pb-6 text-[22px] leading-7 font-semibold">Activity</h2>
             <Timeline entries={receipt.timeline} timezone={data.timezone} />
           </section>
         </div>
