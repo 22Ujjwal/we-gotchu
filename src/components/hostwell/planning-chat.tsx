@@ -1,4 +1,5 @@
 import { usePlanningImages } from '../../lib/hostwell/planning-images'
+import { ProposalSummary } from './proposal-summary'
 import { PlanningArrangement } from './planning-arrangement'
 import { SettingsView } from './settings-view'
 import { ReceiptLoader } from './receipt-loader'
@@ -68,6 +69,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     || !!offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now())
   const offerCosts = offer && calculateOfferCosts(offer)
   const venueOptions = [...options.values()].filter(option => option.kind === 'venue')
+  const supplyOptions = [...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id))
   const venueCards = venueOptions.map(option => ({ id: option.id, name: option.name, photos: (venueImages[option.id] ?? []).map(image => image.url),
     photoCredit: <>{(venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[13px] underline">Photo source: {image.attribution.text}</a>)}</>,
     evidence: <details className="text-[15px] leading-6"><summary className="cursor-pointer underline">{option.name} sources and details</summary>
@@ -89,40 +91,29 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       <Button type="submit" disabled={!!blocked || !draft.trim()} className="self-start px-8 py-[17px] text-[18px]">{session.pending ? 'Saving...' : id ? 'Send message' : 'Plan my event'}</Button>
     </form>
   if (id && view?.status === 'working' && !view.proposal && !view.inquiry && !view.selections.length && !notice) {
-    return <div className="w-full"><ReceiptLoader brief={view.brief} label={view.progress || 'Research in progress'} activity={view.progress || 'Finding options for your event.'} />
-      <p role="status" className="text-center text-stone">{view.progress || 'Finding options for your event.'}</p></div>
+    return <div className="w-full"><ReceiptLoader brief={view.brief} label={view.progress || 'Research in progress'} activity={view.progress || 'Finding options for your event.'} /></div>
   }
   return <div className={`flex w-full flex-col gap-8 ${id ? 'max-w-[1400px]' : 'max-w-[900px]'}`}>
     {!id && <h1 className="text-[34px] leading-tight font-light tracking-[-0.02em] lg:text-[56px]">What are you planning?</h1>}
     {!id && <p className="text-[18px] leading-7 text-stone">Tell us about the occasion, place, budget, and anything you need. Rough dates are fine. We can work out the details together.</p>}
     {session.loading && <p role="status">Loading your plan...</p>}
-    {notice && <div className="flex flex-col gap-3">
+    {notice && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center">
       <p role="alert" tabIndex={-1} ref={alert}>{notice}</p>
-      {id && <Button className="self-start px-6 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>{session.uncertain ? 'Check saved status' : 'Refresh plan'}</Button>}
+      {id && <Button className="px-6 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>{session.uncertain ? 'Check saved status' : 'Refresh plan'}</Button>}
       {session.error?.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/planning')}`}>Sign in again</a>}
     </div>}
     {view && <>
-      {view.messages.length > 2 && <details className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Conversation history</summary><section aria-label="Conversation" className="flex flex-col gap-4">
-        {view.messages.slice(1).map(message => <div key={message.id} className={`border-l-2 pl-4 ${message.role === 'user' ? 'border-sand' : 'border-gold'}`}>
-          <p className="text-[14px] font-semibold text-stone">{message.role === 'user' ? 'You' : 'Arrange'}</p>
-          <p className="whitespace-pre-wrap text-[18px] leading-7">{message.text}</p>
-        </div>)}
-      </section></details>}
-      <p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
+      {view.status !== 'ready' && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center"><p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
         : view.status === 'blocked' ? "Research is paused for our team's review."
         : view.status === 'failed' ? 'We could not finish this research. Send a message to try again.'
           : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
-            : 'Your options are ready to explore.'}</p>
-      {!!view.activity?.length && <details open={view.status === 'blocked' || view.status === 'uncertain'} className="mx-auto w-full max-w-[900px]"><summary className="cursor-pointer underline">Research activity</summary><section aria-label="Your planning team" className="flex flex-col gap-3">
-        {view.activity.map((item, index) => <div key={`${item.name}:${index}`} className="border-l-2 border-sand pl-4">
-          <p className="text-[16px] font-semibold">{item.name}</p>
-          <p className="text-[16px] text-stone">{item.detail}</p>
-        </div>)}
-      </section></details>}
-      {view.canReviewResearch && ['blocked', 'uncertain'].includes(view.status) && <details className="flex flex-col gap-4">
+            : null}</p>
+        {view.status === 'uncertain' && <Button className="px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
+        {view.status === 'blocked' && !(view.canReviewResearch && view.approvals?.length) && <Button className="px-5 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for research updates</Button>}
+      </div>}
+      {view.canReviewResearch && !!view.approvals?.length && ['blocked', 'uncertain'].includes(view.status) && <details className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
         <summary className="cursor-pointer underline">Operator review for local testing</summary>
         <p className="my-3">This is an internal research review, not a customer decision. Review the exact request before allowing or declining this one call.</p>
-        {!view.approvals?.length && <p>This request needs operator attention. No research call can be approved here.</p>}
         {view.approvals?.map(approval => <div key={approval.id} className="flex flex-col gap-3 border border-sand p-4">
           <p>{approval.tool === 'monid.monid_discover' ? 'Find a research source'
             : approval.tool === 'monid.monid_inspect' ? "Check a research source's inputs"
@@ -137,7 +128,6 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         </div>)}
         <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Check research status</Button>
       </details>}
-      {view.status === 'uncertain' && <Button className="self-start px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
 
       {view.inquiry?.delivery?.status === 'uncertain' && <section aria-label="Inquiry send status" className="flex flex-col gap-3 border-l-2 border-gold pl-4">
         <p role="status">We could not confirm whether your inquiry was sent. Check the saved send status before making another request.</p>
@@ -146,23 +136,18 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry?.delivery && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
         onClick={() => void session.refreshSaved()}>Check for venue replies</Button>}
-      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && !answerAlreadyShown && <div className="flex flex-col gap-3 text-[18px] leading-7">
-        <p>{view.proposal.summary}</p>
-        {view.proposal.nextQuestion && <p>{view.proposal.nextQuestion}</p>}
-      </div>}
+      {view.proposal && (!venueCards.length || !browsingSettings && view.selections.some(option => option.kind === 'venue')) && !answerAlreadyShown && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
       {!!venueCards.length && (browsingSettings || !view.selections.some(option => option.kind === 'venue')) && <SettingsView embedded brief={view.brief} featured={venueCards[0]} others={venueCards.slice(1)}
-        disabled={!!blocked} editBrief={<a href="/" className="underline">Plan another event</a>}
-        summary={<div className="max-w-[760px] text-center text-[18px] leading-7"><p>{view.proposal?.summary}</p>
-          {view.proposal?.nextQuestion && <p className="mt-3">{view.proposal.nextQuestion}</p>}
-        </div>}
+        disabled={!!blocked} editBrief={null}
+        summary={view.proposal && <ProposalSummary summary={view.proposal.summary} nextQuestion={view.proposal.nextQuestion} />}
         followup={messageForm} onChoose={optionId => {
           setBrowsingSettings(false)
           if (selected.has(optionId)) return
           void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId })
         }} />}
       {canRetryPhotos && <Button className="self-start px-5 py-3" onClick={retryPhotos}>Retry photos</Button>}
-      {!view.selections.some(option => option.kind === 'venue') && options.size > 0 && <section aria-label="Supplies and sources" className="mx-auto grid w-full max-w-[1000px] gap-5 md:grid-cols-2">
-        {[...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id)).map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
+      {!view.selections.some(option => option.kind === 'venue') && supplyOptions.length > 0 && <section aria-label="Supplies and sources" className={`mx-auto grid w-full gap-5 ${supplyOptions.length === 1 ? 'max-w-[760px]' : 'max-w-[1000px] md:grid-cols-2'}`}>
+        {supplyOptions.map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
       {!browsingSettings && <PlanningArrangement images={venueImages} customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
@@ -187,11 +172,16 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           onClick={() => void session.submit({ kind: 'prepare_inquiry', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
           {view.inquiry?.delivery?.status === 'failed' ? 'Prepare a replacement inquiry' : view.inquiry ? 'Replace outdated inquiry draft' : 'Prepare venue inquiry'}
         </Button>}
-      <Button className="self-start px-5 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for research updates</Button>
-      <p className="text-[14px] leading-6 text-stone">Selections save your preferences. Send a message when you want us to research changes. Nothing is booked or purchased.</p>
     </>}
     {(!id || !venueCards.length) && messageForm}
-    {id && <a href="/" className="self-start text-[16px] underline">Plan another event</a>}
+    {view && <>
+      {view.messages.length > 2 && <details className="mx-auto w-full max-w-[760px]"><summary className="cursor-pointer underline">Conversation history</summary><section aria-label="Conversation" className="flex flex-col gap-4">
+        {view.messages.slice(1).map(message => <div key={message.id} className={`border-l-2 pl-4 ${message.role === 'user' ? 'border-sand' : 'border-gold'}`}>
+          <p className="text-[14px] font-semibold text-stone">{message.role === 'user' ? 'You' : 'Arrange'}</p>
+          <p className="whitespace-pre-wrap text-[18px] leading-7">{message.text}</p>
+        </div>)}
+      </section></details>}
+    </>}
   </div>
 }
 function PlanningOptionCard({ option, selected, disabled, onSelect }: { option: PlanningOption; selected: boolean; disabled: boolean; onSelect: () => void }) {

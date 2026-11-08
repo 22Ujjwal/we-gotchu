@@ -28,10 +28,23 @@ test('initial research dial follows saved progress as polling updates arrive', a
   await act(async () => {})
   const loader = screen.getByRole('region', { name: 'Checking Oakland venue capacity.' })
   expect(within(loader).getByRole('status')).toHaveTextContent('Checking Oakland venue capacity.')
+  expect(screen.getAllByRole('status')).toHaveLength(1)
   saved = { ...saved, version: 2, progress: 'Comparing venue cancellation terms.' }
   await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
   expect(within(loader).getByRole('status')).toHaveTextContent('Comparing venue cancellation terms.')
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+})
+
+test('ready proposals keep choices visible without routine status, activity or reset links', async () => {
+  http(() => Response.json(view({ activity: [{ name: 'Maya', status: 'done', detail: 'Checked venue sources.' }] })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByRole('button', { name: 'Choose Garden room' })).toBeEnabled()
+  expect(screen.queryByText('Your options are ready to explore.')).not.toBeInTheDocument()
+  expect(screen.queryByText('Research activity')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Selections save your preferences/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Plan another event' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Check for research updates' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Select Paper plates' })).toBeEnabled()
 })
 
 test('keyboard intake sends natural language once and opens the saved conversation', async () => {
@@ -333,15 +346,16 @@ test('paused research shows the exact request and only an explicit decision send
   await waitFor(() => expect(commands).toEqual([{ kind: 'confirm', requestId: expect.any(String), expectedVersion: 1, approvalId: 'approval-1', decision: 'allow' }]))
 })
 
-test.each(['blocked', 'uncertain'] as const)('shows team activity in %s state without exposing tool reviews to customers', async status => {
-  http(() => Response.json(view({ status, proposal: null, canReviewResearch: false,
+test.each(['blocked', 'uncertain'] as const)('keeps %s recovery without team narration or empty operator controls', async status => {
+  http(() => Response.json(view({ status, proposal: null, canReviewResearch: true,
     activity: [{ name: 'Maya', status: 'blocked', detail: 'Paused for an internal research review.' },
       { name: 'Tom', status: 'waiting', detail: 'Waiting for research teammates.' }],
-    approvals: [{ id: 'private-call', tool: 'monid.monid_run', arguments: { query: 'private-input' } }] })))
+    approvals: [] })))
   render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByRole('region', { name: 'Your planning team' })).toBeVisible()
-  expect(screen.getByText('Maya')).toBeVisible()
-  expect(screen.getByText('Waiting for research teammates.')).toBeVisible()
+  expect(await screen.findByRole('button', { name: status === 'blocked' ? 'Check for research updates' : 'Check for an update' })).toBeEnabled()
+  expect(screen.queryByRole('region', { name: 'Your planning team' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Research activity')).not.toBeInTheDocument()
+  expect(screen.queryByText('Operator review for local testing')).not.toBeInTheDocument()
   expect(screen.queryByText(/private-input/)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve this research call' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
@@ -490,12 +504,12 @@ test('a reloaded pending inquiry checks saved status without resending', async (
   expect(reads).toBe(2)
 })
 
-test('restores the saved plan first and retains it when an explicit research refresh fails', async () => {
+test('restores a blocked saved plan first and retains it when an explicit research refresh fails', async () => {
   const paths: string[] = []
   http(request => {
     const url = new URL(request.url)
     paths.push(url.pathname + url.search)
-    return url.searchParams.get('saved') === '1' ? Response.json(view({ selections: [venue] }))
+    return url.searchParams.get('saved') === '1' ? Response.json(view({ status: 'blocked', selections: [venue] }))
       : Response.json({ errorCode: 'provider_unavailable' }, { status: 503 })
   })
   render(<ConnectedPlanningPage id="plan-a" />)
