@@ -132,3 +132,19 @@ test('settles a research acknowledgement after a concurrent venue reply without 
   expect(saved.view.inquiry?.replies?.[0].message).toEqual(incoming)
   expect(send).toHaveBeenCalledTimes(1)
 })
+
+
+test('starts a bounded reply batch concurrently and saves each result once', async () => {
+  const { processReplyJobs } = await import('./reply-worker')
+  await acceptIncomingReply(db.repository, target, incoming)
+  await acceptIncomingReply(db.repository, target, { ...incoming, messageId: 'reply-2' })
+  let release!: () => void
+  const gate = new Promise<void>(resolve => { release = resolve })
+  const interpret = vi.fn(async () => { await gate; return question })
+  const run = processReplyJobs(db.repository, interpret, 2)
+  try {
+    await vi.waitFor(() => expect(interpret).toHaveBeenCalledTimes(2), { timeout: 1000 })
+  } finally { release(); await run }
+  expect(await db.repository.pendingReplyJobs(10, Date.now())).toEqual([])
+  expect((await db.repository.getById('conversation'))?.view.inquiry?.replies?.map(reply => reply.status)).toEqual(['ready', 'ready'])
+})
