@@ -73,3 +73,26 @@ test('a disconnected session read resumes from disk after service replacement', 
   expect(session.start).toHaveBeenCalledTimes(1)
   expect(discover).toHaveBeenCalledTimes(1)
 })
+
+test('an interrupted outcome write cannot advance the processed sequence or lose the ranking', async () => {
+  const { eventId, runId } = await startRanking()
+  const checkpoints = store.researchCheckpoints!
+  const save = checkpoints.save.bind(checkpoints)
+  let interrupted = false
+  vi.spyOn(checkpoints, 'save').mockImplementation(async (run, version, checkpoint, message) => {
+    if (checkpoint.stage === 'cleanup') {
+      interrupted = true
+      throw new Error('database disconnected before commit')
+    }
+    return save(run, version, checkpoint, message)
+  })
+  await getEventView(deps, eventId)
+  expect(interrupted).toBe(true)
+  expect(await checkpoints.read(runId)).toMatchObject({ stage: 'ranking', lastSequence: 0, result: null })
+  await restart()
+  const completed = await finish(eventId)
+  expect(completed.run!.lastSequence).toBe(7)
+  expect(completed.researchResult!.recommendations).toHaveLength(discoveryFixture.candidates.length)
+  expect(completed.progress.filter(p => p.message === 'Research evidence validated; final costs remain unconfirmed.')).toHaveLength(1)
+  expect(session.start).toHaveBeenCalledTimes(1)
+})
