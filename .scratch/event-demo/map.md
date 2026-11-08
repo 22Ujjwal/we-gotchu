@@ -13,7 +13,8 @@ Stop at documentation ready to share; do not implement the application.
 Use the agreed scope in docs/adr and vocabulary in GLOSSARY.md.
 Use grilling and domain-modeling for human decisions and research for external facts.
 The tracker is local Markdown, as no tracker has been configured.
-Research is performed in isolated research branches; those branches are evidence and are not merged.
+Research was performed in isolated branches.
+Tony subsequently requested consolidation, so both reports are preserved on main before temporary remote branch removal.
 Implementation proposals remain drafts until the team approves them.
 Time is not a planning constraint.
 The service is free, three options are a demo example rather than a product limit, and the Naive SDK and OpenAI credits must both be evaluated.
@@ -32,6 +33,6 @@ The requested documentation finish condition is met; human decision tickets stay
 
 ## Out of scope
 
-Application implementation, live bookings, charges, invitations, deployments, and merging research branches are outside this documentation effort.
+Application implementation, live bookings, charges, invitations, deployments, are outside this documentation effort.
 Negotiation and invitation management remain optional future extensions.
 Long-term monetization and market validation are outside this map.
