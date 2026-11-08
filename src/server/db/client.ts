@@ -1,3 +1,4 @@
+import { createSupplierMailRepositories } from '../planning/mail-repository'
 import { createPlanningRepository } from '../planning/repository'
 import { fileURLToPath } from 'node:url'
 import { Pool } from '@neondatabase/serverless'
@@ -66,7 +67,7 @@ async function openPglitePlanningRepository(dataDir?: string) {
   try {
     const db = drizzle({ client, schema })
     await migrate(db, { migrationsFolder })
-    return { repository: createPlanningRepository(db), close: () => client.close() }
+    return { repository: createPlanningRepository(db), mail: createSupplierMailRepositories(db), close: () => client.close() }
   } catch (error) {
     await client.close()
     throw error
