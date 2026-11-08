@@ -2,6 +2,7 @@
 
 - [Research submission](research.md): homepage entry, natural-language brief, real sourced proposal.
 - [Saved conversation](saved-conversation.md): actual reload and retained proposal.
+- [Venue inquiries and replies](venue-inquiries.md): draft editing, explicit approval, received evidence and reply restoration.
 - [Existing event screens](events.md): preserved event and receipt routes, separate from planning.
 
 Run the first two for stage-one planning acceptance.
