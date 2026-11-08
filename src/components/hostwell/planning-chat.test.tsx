@@ -288,3 +288,22 @@ test('a saved assistant answer is not repeated above the option cards', async ()
   await screen.findByRole('heading', { name: 'Garden room' })
   expect(screen.getAllByText(/Two options for dinner\./)).toHaveLength(1)
 })
+
+test('paused research shows the exact request and only an explicit decision sends confirmation', async () => {
+  const commands: Record<string, unknown>[] = []
+  const paused = view({ status: 'blocked', progress: null, error: 'Research is paused for a decision.', approvals: [
+    { id: 'approval-1', tool: 'monid.monid_inspect', arguments: { provider: 'channel3', endpoint: '/v1/search' } },
+  ] })
+  http(async request => {
+    if (request.method === 'GET') return Response.json(paused)
+    commands.push(await request.json())
+    return Response.json(view({ version: 2, status: 'working', approvals: [] }))
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByText('Research needs your approval.')).toBeVisible()
+  expect(screen.getByText(/channel3/)).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
+  expect(commands).toEqual([])
+  fireEvent.click(screen.getByRole('button', { name: 'Approve this research call' }))
+  await waitFor(() => expect(commands).toEqual([{ kind: 'confirm', requestId: expect.any(String), expectedVersion: 1, approvalId: 'approval-1', decision: 'allow' }]))
+})
