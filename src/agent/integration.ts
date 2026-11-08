@@ -84,8 +84,9 @@ export function createResearchIntegration(options: {
         c = { ...next, version: c!.version + 1 }
       }
       const finish = async (warning: string, processed: Partial<ResearchCheckpoint> = {}) => {
-        const result = await validate(c!, async () => { throw new Error('No usable ranking') })
-        await save({ ...processed, result: { ...result, warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
+        // Finalization preserves saved evidence without pretending another provider call failed.
+        const result = c!.evidence ?? await validate(c!, supportedOrder)
+        await save({ ...processed, result: { ...result, recommendations: [], warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
       }
       const pendingOperation = (kind: 'agent' | 'session' | 'correction') => ({
         kind, idempotencyKey: researchOperationKey(run.runId, kind), startedAt: new Date().toISOString(),
