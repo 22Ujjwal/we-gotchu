@@ -24,7 +24,9 @@ Explain the next useful action in plain language. List only missing information 
     })
     const choice = result.choices[0]
     if (choice?.finish_reason !== 'stop' || !choice.message.content) throw new Error('Supplier reply interpretation did not finish.')
-    return replyInterpretationSchema.parse(JSON.parse(choice.message.content))
+    const content = choice.message.content.trim()
+    const json = content.match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i)?.[1] ?? content
+    return replyInterpretationSchema.parse(JSON.parse(json))
   }
 }
 
