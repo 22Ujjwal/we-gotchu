@@ -108,3 +108,27 @@ test('customer retries interpretation by queueing the saved reply without anothe
   expect(await db.repository.pendingReplyJobs(10, Date.now())).toHaveLength(1)
   expect(mail.sendInquiry).not.toHaveBeenCalled()
 })
+
+
+test('settles a research acknowledgement after a concurrent venue reply without resending', async () => {
+  const { commandPlanning } = await import('./service')
+  const before = (await db.repository.getById('conversation'))!
+  await db.repository.compareAndSet(before, { ...before, sessionId: 'session', sequence: 1 })
+  const send = vi.fn(async () => {
+    await acceptIncomingReply(db.repository, target, incoming)
+    return { sequence: 2 }
+  })
+  const deps = { repository: db.repository, requireCustomerId: async () => 'customer', agent: () => ({
+    start: vi.fn(), send, read: vi.fn(),
+  }) }
+  const result = await commandPlanning(deps, 'conversation', {
+    kind: 'message', requestId: 'research', expectedVersion: 0, message: 'Find cheaper plates',
+  })
+  const saved = (await db.repository.getById('conversation'))!
+  expect(saved.pending).toBeNull()
+  expect(saved.sequence).toBe(2)
+  expect(result.status).toBe('working')
+  expect(saved.view.inquiry?.replies).toHaveLength(1)
+  expect(saved.view.inquiry?.replies?.[0].message).toEqual(incoming)
+  expect(send).toHaveBeenCalledTimes(1)
+})
