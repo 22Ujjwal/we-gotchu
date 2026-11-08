@@ -65,3 +65,18 @@ The later expiry-window and offer-storage checks passed 33 tests.
 
 Offer generation from actual saved evidence, customer offer display, local runtime wiring, payment endpoint integration and the complete browser journey are still pending.
 No real payment or provider call occurred in these checks.
+
+## Offer extraction and customer review
+
+Offer preparation now uses the configured model to extract a structured offer from the saved reply, customer messages and selected option evidence.
+The application assigns offer identity, revision and source identity, preserves selected snapshots, and rejects quotations absent from the corresponding saved evidence.
+The customer cannot submit a payable price through this command.
+Missing required charges remain null and prevent a complete total.
+A completed request replays its saved result without another model call.
+Concurrent model calls can still perform duplicate read-only extraction, but only the current conversation version can save a result.
+
+The customer view shows quantity, quoted price, tax, delivery, fees, deposit treatment, cancellation terms, supporting wording and missing requirements.
+The review and transaction builder share the same cost calculation.
+The offer component and existing chat checks passed 33 DOM tests, and typecheck passed.
+The extractor checks used a controlled completion response, not a live model call.
+The customer approval action, local transaction runtime and real browser/payment checks remain unfinished.
