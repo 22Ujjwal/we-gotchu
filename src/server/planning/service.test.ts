@@ -137,6 +137,46 @@ describe('planning service', () => {
     expect(agent.read).toHaveBeenCalledTimes(1)
   })
 
+  it('does not let a delayed provider read overwrite a newer selection', async () => {
+    const view = await ready()
+    let finish!: (result: Awaited<ReturnType<PlanningAgent['read']>>) => void
+    let started!: () => void
+    const reading = new Promise<void>(resolve => { started = resolve })
+    vi.mocked(agent.read).mockImplementationOnce(() => {
+      started()
+      return new Promise(resolve => { finish = resolve })
+    })
+    const pendingRead = getPlanning(deps, view.id)
+    await reading
+    const selected = await commandPlanning(deps, view.id, { kind: 'select', requestId: 'cups', optionId: 'cups', expectedVersion: view.version })
+    finish({ status: 'ready', sequence: 9, proposal: { ...proposal, options: [] }, progress: null, error: null })
+    expect(await pendingRead).toEqual(selected)
+    expect((await db.repository.get('alice', view.id))?.view.selections.map(option => option.id)).toEqual(['cups'])
+  })
+
+  it('sends only one of two messages that race for the same version', async () => {
+    const view = await ready()
+    const results = await Promise.allSettled(['first', 'second'].map(requestId => commandPlanning(deps, view.id, {
+      kind: 'message', requestId, message: requestId, expectedVersion: view.version,
+    })))
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+    expect(agent.send).toHaveBeenCalledTimes(1)
+  })
+
+  it('expires an abandoned write into uncertainty without starting another session', async () => {
+    const view = await create()
+    const saved = (await db.repository.get('alice', view.id))!
+    await db.repository.compareAndSet(saved, {
+      ...saved, sessionId: null,
+      pending: { kind: 'create', requestId: 'create', message: 'Plan my party', selections: [], expiresAt: 100 },
+    })
+    expect((await getPlanning({ ...deps, now: () => 99 }, view.id)).status).toBe('working')
+    expect((await getPlanning({ ...deps, now: () => 101 }, view.id)).status).toBe('uncertain')
+    expect((await create()).status).toBe('uncertain')
+    expect(agent.start).toHaveBeenCalledTimes(1)
+    expect(agent.read).not.toHaveBeenCalled()
+  })
+
   it('records ambiguous creates without recreating on replay or GET', async () => {
     vi.mocked(agent.start).mockRejectedValue(new Error('secret provider detail'))
     const view = await create()
