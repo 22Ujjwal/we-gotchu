@@ -124,7 +124,7 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL, mat
   }
   const final = urls[2]!
   const keywords: Record<string, RegExp> = {
-    capacity: /\b(capacity|seated|standing|guests)\b/i,
+    capacity: /\b(?:capacity\s*(?:of\s*|up to\s*|:\s*)?\d+|(?:seats|accommodates)\s+(?:up to\s+)?\d+|\d+\s+(?:seated|standing|guests|people))\b/i,
     price: /\b(price|pricing|minimum|rental|rate|cost)\b|\$[0-9]/i,
     cancellation: /\b(cancel|cancellation|refund|nonrefundable)\b/i,
     delivery: /\b(delivery|shipping|pickup)\b/i,
@@ -142,7 +142,7 @@ function pageEvidence(candidate: Candidate, output: unknown, requested: URL, mat
     matchedFields.add(field)
     const excerpt = lines.join(' ').slice(0, 500)
     candidate.verification[field] = { status: 'unknown', sourceUrl: final.href,
-      note: `Unverified supplier-page excerpt: ${excerpt}. Requires review for this event; no supplier was contacted.` }
+      note: `Unverified supplier-page excerpt: ${excerpt}${/[.!?]$/.test(excerpt) ? '' : '.'} Requires review for this event; no supplier was contacted.` }
   }
   // One selected informational link, never forms, checkout, arbitrary crawl paths or off-site links.
   for (const match of page.markdown.matchAll(/\]\((https:\/\/[^\s)]+)\)/g)) {
