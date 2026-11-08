@@ -84,6 +84,7 @@ Confirmed cleanup concerns known IDs; an uncertain creation may still have produ
 Automatic resource discovery, forced-disconnect recovery, and full crash recovery remain ticket06.
 
 A running legacy record without a checkpoint terminates with a visible failed outcome and a restart instruction.
+A run younger than one minute without a checkpoint is treated as still starting, because a revised brief commits its run before the previous run is cleaned up and the new checkpoint is written.
 The real provider never receives simulated session IDs from such records.
 A legacy real session ID can be stopped on cancellation, but its missing definition identity may require reconciliation.
 

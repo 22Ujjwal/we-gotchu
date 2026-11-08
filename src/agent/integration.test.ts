@@ -313,6 +313,25 @@ for (const action of ['cancel', 'revise'] as const) {
   })
 }
 
+test('a poll during brief replacement cannot fail the new revision before its checkpoint exists', async () => {
+  let deps: ReturnType<typeof setup>['deps']
+  let eventId = ''
+  let racedView: Awaited<ReturnType<typeof getEventView>> | undefined
+  const setupResult = setup({ deleteAgent: vi.fn(async () => { racedView = await getEventView(deps, eventId) }) })
+  deps = setupResult.deps
+  const started = await createEvent(deps, researchBriefFixture)
+  eventId = started.event.eventId
+  await getEventView(deps, eventId)
+  await getEventView(deps, eventId)
+  const revised = await updateBrief(deps, eventId, 1, { location: 'Updated location' })
+  expect(racedView!.run).toMatchObject({ briefRevision: 2, state: 'running' })
+  expect(racedView!.researchResult).toBeNull()
+  expect(await store.researchCheckpoints!.read(revised.run!.runId)).not.toBeNull()
+  const completed = await finish(deps, eventId)
+  expect(completed.event.briefRevision).toBe(2)
+  expect(completed.researchResult!.warnings.join(' ')).not.toContain('no research checkpoint')
+  expect(completed.event.status).toBe('researched')
+})
 test('brief replacement after completion does not repeat confirmed cleanup', async () => {
   const { deps, session } = setup()
   const started = await createEvent(deps, researchBriefFixture)
@@ -338,7 +357,11 @@ test('legacy runs without checkpoints end visibly and never send simulated IDs t
   const { deps, session } = setup()
   const { event, run } = await store.createEvent({ customerId: 'user_alice', brief: researchBriefFixture })
   await store.setRunSession(run.runId, `sim_session_${run.runId}`)
-  const view = await getEventView(deps, event.eventId)
+  // Legacy runs predate the deploy, so they are older than the missing-checkpoint grace period.
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(Date.now() + 10 * 60_000)
+  let view: Awaited<ReturnType<typeof getEventView>>
+  try { view = await getEventView(deps, event.eventId) } finally { vi.useRealTimers() }
   expect(view.run!.state).toBe('failed')
   expect(view.researchResult!.warnings.join(' ')).toContain('checkpoint')
   await cancel(deps, event.eventId)

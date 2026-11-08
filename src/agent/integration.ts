@@ -14,6 +14,9 @@ export type IntegrationProviders = {
 
 class LostLease extends Error {}
 
+// Longer than previous-run cleanup plus checkpoint initialization during a brief revision.
+const MISSING_CHECKPOINT_GRACE_MS = 60_000
+
 export function createResearchIntegration(options: {
   store: Pick<Store, 'researchCheckpoints' | 'appendProgress'>
   providers: IntegrationProviders
@@ -53,6 +56,9 @@ export function createResearchIntegration(options: {
     async advanceResearch({ event, run }) {
       let c = await checkpoints.read(run.runId)
       if (!c) {
+        // A revised brief commits its run before the previous run's cleanup finishes and
+        // before startResearch writes the checkpoint, so a young run is still starting.
+        if (Date.now() - Date.parse(run.createdAt) < MISSING_CHECKPOINT_GRACE_MS) return running
         const result = await researchEvent({ contractVersion: CONTRACT_VERSION, eventId: run.eventId,
           runId: run.runId, briefRevision: run.briefRevision, brief: event.brief }, {
           discover: async () => ({ candidates: [], sourceChecks: [] }), recommend: async () => null,
