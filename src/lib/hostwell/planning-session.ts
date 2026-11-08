@@ -32,20 +32,23 @@ export function usePlanningSession(id?: string) {
     clearTimeout(state.current.timer)
     state.current.timer = setTimeout(() => void read(false), delay)
   }
-  async function read(manual: boolean, keepError = false, savedOnly = false) {
+  async function read(manual: boolean, keepError = false, savedOnly = false, reconcileMail = false) {
     const current = state.current
     if (!id || !current.active || current.busy) return
     const generation = cancelRead()
     if (manual) setLoading(true)
     try {
-      const next = await api.read(id, current.controller.signal, savedOnly)
+      const next = await api.read(id, current.controller.signal, savedOnly, reconcileMail)
       if (!current.active || generation !== current.generation) return
       accept(next)
       current.failures = 0
       const confirmationClosed = uncertain && 'kind' in uncertain && uncertain.kind === 'confirm'
         && next.version > uncertain.expectedVersion && next.status !== 'uncertain' && next.canReviewResearch
         && next.approvals && !next.approvals.some(approval => approval.id === uncertain.approvalId)
-      if (confirmationClosed) { setUncertain(null); setError(null) }
+      const inquiryResolved = uncertain && 'kind' in uncertain && uncertain.kind === 'send_inquiry'
+        && next.inquiry?.delivery?.requestId === uncertain.requestId
+        && ['accepted', 'failed'].includes(next.inquiry.delivery.status)
+      if (confirmationClosed || inquiryResolved) { setUncertain(null); setError(null) }
       else if (!keepError) setError(previous => previous?.uncertain ? previous : null)
       if (next.status === 'working' || next.inquiry?.delivery?.status === 'pending') schedule(2000)
       else if (next.status === 'blocked') schedule(5000)
@@ -108,5 +111,5 @@ export function usePlanningSession(id?: string) {
     }
   }
   return { view, pending, loading, error, uncertain, submit,
-    refresh: () => read(true), refreshSaved: () => read(true, false, true) }
+    refresh: () => read(true), refreshSaved: () => read(true, false, true), checkMail: () => read(true, false, false, true) }
 }

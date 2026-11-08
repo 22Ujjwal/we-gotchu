@@ -14,7 +14,9 @@ export const planningCollectionPost = (deps: PlanningDeps, request: Request) =>
 
 export const planningGet = (deps: PlanningDeps, id: string, request?: Request) =>
   handle(async () => json(present(deps, await (request && new URL(request.url).searchParams.get('saved') === '1'
-    ? getPlanning(deps, id, { savedOnly: true }) : getPlanning(deps, id)))))
+    ? getPlanning(deps, id, { savedOnly: true })
+    : request && new URL(request.url).searchParams.get('mail') === '1'
+      ? getPlanning(deps, id, { reconcileMail: true }) : getPlanning(deps, id)))))
 
 export const planningPost = (deps: PlanningDeps, id: string, request: Request) =>
   handle(async () => json(present(deps, await commandPlanning(deps, id, await readJson(request)))))

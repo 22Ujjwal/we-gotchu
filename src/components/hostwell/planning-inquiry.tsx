@@ -82,7 +82,7 @@ export function PlanningInquiryEditor({ inquiry, version, disabled, canSend = fa
       : inquiry.delivery.status === 'pending' ? 'Submitting your approved inquiry.'
       : inquiry.delivery.status === 'accepted' ? 'Email provider accepted your inquiry. Delivery and a venue reply are not confirmed yet.'
         : inquiry.delivery.status === 'failed' ? 'The inquiry was rejected by the email provider. Nothing was confirmed sent.'
-          : 'We could not confirm whether this inquiry was sent. We will not send it again automatically. Please contact the planning team to check.'}</p>}
+          : 'We could not confirm whether this inquiry was sent. We will not send it again automatically. Use Check send status to look for a saved provider result.'}</p>}
     <PlanningReplies replies={inquiry.replies ?? []} stale={stale} disabled={disabled}
       retry={replyId => { void submit({ kind: 'retry_reply', requestId: crypto.randomUUID(), expectedVersion: version, inquiryId: inquiry.id, replyId }) }} />
     {canSend && !inquiry.delivery && <div className="flex flex-col gap-4">
