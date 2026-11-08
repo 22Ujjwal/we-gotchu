@@ -222,7 +222,7 @@ test('no plan and mismatched brief revision cannot submit approval', async () =>
 
 test('reload after the research deadline reads full authoritative terminal state without restarting', async () => {
   const expired = { ...running(), run: { ...running().run!, state: 'partial' as const } }
-  const fetcher = vi.fn(async () => json(expired))
+  const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => json(expired))
   const session = setup(fetcher)
   await tick(121000)
   expect(fetcher).toHaveBeenCalledTimes(1)

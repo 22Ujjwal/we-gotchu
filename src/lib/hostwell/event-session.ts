@@ -73,7 +73,7 @@ export function createEventSession(key: EventSessionKey, api = createEventApi())
         }
       } finally {
         if (read === operation) read = undefined
-        if (current(version) && !state.pending) {
+        if (current(version) && !state.pending && ![401, 403, 404].includes(state.error?.status ?? 0)) {
           // A mutation may finish before an aborted read settles. It still needs a fresh read.
           if (mutation !== mutationVersion) schedule(1000)
           else if (nextDelay !== undefined) schedule(nextDelay)
