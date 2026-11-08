@@ -118,7 +118,7 @@ export function settingsFromView(view: EventView): Settings {
       photos: [],
       total: inPlan ? currentPlan!.total / 100 : c.priceEstimate === null ? null : c.priceEstimate / 100 + extras,
       cardFeatures: features,
-      description: c.whyChosenOrRejected,
+      description: c.whyChosenOrRejected === 'Search result for the supplied brief; supplier details remain unverified.' ? '' : c.whyChosenOrRejected,
       detailFeatures: features,
       venueLine: { qty: 1, item: c.name, amount: c.priceEstimate === null ? 'quote' : c.priceEstimate / 100 },
       vat: 0,
@@ -135,7 +135,8 @@ export function settingsFromView(view: EventView): Settings {
       return { lines, requests: [], subtotal: total, vat: null, total }
     }
     const lines = supplyLine ? [venue.venueLine, supplyLine] : [venue.venueLine]
-    const total = lines.reduce((s, l) => s + (typeof l.amount === 'number' ? l.amount : 0), 0)
+    const total = lines.every(line => typeof line.amount === 'number')
+      ? lines.reduce((sum, line) => sum + (line.amount as number), 0) : null
     return { lines, requests: [], subtotal: total, vat: null, total }
   }
 

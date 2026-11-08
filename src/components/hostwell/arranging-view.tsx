@@ -12,10 +12,10 @@ export type ArrangingItem = {
  * Shown after paying while suppliers are still being booked. Nothing here
  * updates live: it sums up the request and says the email will follow.
  */
-export function ArrangingView({ items, email }: { items: Array<ArrangingItem>; email?: string | null }) {
+export function ArrangingView({ items, email, embedded = false, message = "You'll get an email as soon as it's all set." }: { items: Array<ArrangingItem>; email?: string | null; embedded?: boolean; message?: string }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header step="party" />
+    <div className={`flex flex-col ${embedded ? 'w-full' : 'min-h-screen'}`}>
+      {!embedded && <Header step="party" />}
       <main className="flex flex-1 flex-col items-center gap-7 px-5 pt-11 pb-10 lg:gap-10 lg:px-12 lg:pt-[72px] lg:pb-16">
         <SealedEnvelope />
         <div className="flex flex-col items-center gap-1 text-center lg:gap-2.5">
@@ -23,7 +23,7 @@ export function ArrangingView({ items, email }: { items: Array<ArrangingItem>; e
             We're on it!
           </h1>
           <p className="m-0 font-body text-[16px] leading-[22px] text-receipt-muted lg:text-[18px] lg:leading-[26px]">
-            You'll get an email as soon as it's all set.
+            {message}
           </p>
         </div>
 

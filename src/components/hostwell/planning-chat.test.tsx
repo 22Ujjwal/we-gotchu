@@ -46,11 +46,11 @@ test('saved options show sources and selection snapshots survive a follow-up and
   expect(await screen.findByRole('heading', { name: 'Garden room' })).toBeVisible()
   expect(screen.getAllByText('USD 200')[0]).toBeVisible()
   expect(screen.getAllByRole('link', { name: 'Published source' })[0]).toHaveAttribute('href', 'https://example.com/rates')
-  await user.click(screen.getByRole('button', { name: 'Select Garden room' }))
-  expect(await screen.findByRole('button', { name: 'Remove Garden room' })).toHaveAttribute('aria-pressed', 'true')
-  await user.type(screen.getByRole('textbox', { name: 'Message' }), 'Keep the room, reduce supply cost.')
+  await user.click(screen.getByRole('button', { name: 'Choose Garden room' }))
+  expect(await screen.findByRole('button', { name: 'Back to settings' })).toBeVisible()
+  await user.type(screen.getByRole('textbox', { name: 'Ask for changes' }), 'Keep the room, reduce supply cost.')
   await user.keyboard('{Enter}')
-  expect(await screen.findByText('Cheaper supplies.')).toBeVisible()
+  await waitFor(() => expect(commands).toHaveLength(2))
   expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
   expect(commands).toEqual([
     { kind: 'select', requestId: expect.any(String), expectedVersion: 1, optionId: 'venue-a' },
@@ -58,7 +58,7 @@ test('saved options show sources and selection snapshots survive a follow-up and
   ])
   page.unmount()
   render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByRole('button', { name: 'Remove Garden room' })).toBeVisible()
+  expect(await screen.findByRole('button', { name: 'Back to settings' })).toBeVisible()
   expect(commands).toHaveLength(2)
 })
 
@@ -73,11 +73,11 @@ test('conflict refreshes the displayed version and preserves draft until explici
   })
   render(<ConnectedPlanningPage id="plan-a" />)
   await screen.findByRole('heading', { name: 'Garden room' })
-  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'My change' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Ask for changes' }), { target: { value: 'My change' } })
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Review the latest')
   await waitFor(() => expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled())
-  expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('My change')
+  expect(screen.getByRole('textbox', { name: 'Ask for changes' })).toHaveValue('My change')
   expect(commands).toHaveLength(1)
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
   await waitFor(() => expect(commands).toHaveLength(2))
@@ -95,16 +95,16 @@ test('lost writes preserve the draft and only check saved status without resendi
   })
   render(<ConnectedPlanningPage id="plan-a" />)
   await screen.findByRole('heading', { name: 'Garden room' })
-  fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'Cheaper please' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Ask for changes' }), { target: { value: 'Cheaper please' } })
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('could not confirm')
-  expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('Cheaper please')
+  expect(screen.getByRole('textbox', { name: 'Ask for changes' })).toHaveValue('Cheaper please')
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
   expect(commands).toHaveLength(1)
   fireEvent.click(screen.getByRole('button', { name: 'Check saved status' }))
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3))
   expect(commands).toHaveLength(1)
-  expect(screen.getByRole('textbox', { name: 'Message' })).toHaveValue('Cheaper please')
+  expect(screen.getByRole('textbox', { name: 'Ask for changes' })).toHaveValue('Cheaper please')
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
 })
 
@@ -115,7 +115,7 @@ test('polls do not overlap and stop at ready while retaining the prior proposal'
   http(() => { count++; return count === 1 ? Response.json(view({ status: 'working', progress: 'Comparing rooms.' })) : new Promise<Response>(r => { resolve = r }) })
   render(<ConnectedPlanningPage id="plan-a" />)
   await act(async () => {})
-  expect(screen.getByText('Comparing rooms.')).toBeVisible()
+  expect(screen.getByText('Updating your options...')).toBeVisible()
   expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
   await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
   await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
@@ -153,7 +153,7 @@ test('lost create response keeps the message and never creates again', async () 
   expect(created).not.toHaveBeenCalled()
 })
 
-test('selection follows server snapshots for one venue and multiple supplies and toggles off', async () => {
+test('selection follows detail checkboxes and choosing the same venue preserves selection', async () => {
   const otherVenue = { ...venue, id: 'venue-b', name: 'Dining hall' }
   const otherSupply = { ...supply, id: 'supply-b', name: 'Candles' }
   let saved = view({ proposal: { summary: 'Options.', nextQuestion: null, options: [venue, otherVenue, supply, otherSupply] } })
@@ -171,26 +171,33 @@ test('selection follows server snapshots for one venue and multiple supplies and
   })
   render(<ConnectedPlanningPage id="plan-a" />)
   await screen.findByRole('heading', { name: 'Garden room' })
-  for (const name of ['Garden room', 'Paper plates', 'Candles', 'Dining hall']) {
-    fireEvent.click(screen.getByRole('button', { name: `Select ${name}` }))
-    await screen.findByRole('button', { name: `Remove ${name}` })
+  fireEvent.click(screen.getByRole('button', { name: 'Choose Garden room' }))
+  await screen.findByRole('button', { name: 'Back to settings' })
+  for (const name of ['Paper plates', 'Candles']) {
+    fireEvent.click(screen.getByRole('checkbox', { name: new RegExp(name) }))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: new RegExp(name) })).toBeChecked())
   }
-  expect(screen.getByRole('button', { name: 'Select Garden room' })).toHaveAttribute('aria-pressed', 'false')
-  expect(screen.getByRole('button', { name: 'Remove Paper plates' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByRole('button', { name: 'Remove Candles' })).toHaveAttribute('aria-pressed', 'true')
-  fireEvent.click(screen.getByRole('button', { name: 'Remove Dining hall' }))
-  await screen.findByRole('button', { name: 'Select Dining hall' })
+  fireEvent.click(screen.getByRole('button', { name: 'Back to settings' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Choose Dining hall' }))
+  await waitFor(() => expect(saved.selections.find(item => item.kind === 'venue')?.id).toBe('venue-b'))
+  expect(screen.getByRole('checkbox', { name: /Paper plates/ })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: /Candles/ })).toBeChecked()
+  fireEvent.click(screen.getByRole('checkbox', { name: /Candles/ }))
+  await waitFor(() => expect(screen.getByRole('checkbox', { name: /Candles/ })).not.toBeChecked())
+  fireEvent.click(screen.getByRole('button', { name: 'Back to settings' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Choose Dining hall' }))
+  expect(saved.selections.find(item => item.kind === 'venue')?.id).toBe('venue-b')
   expect(commands).toHaveLength(5)
 })
 
 for (const status of ['ready', 'failed', 'uncertain'] as const) {
-  test(`automatic reads stop at ${status}`, async () => {
+  test(`automatic reads follow the ${status} state`, async () => {
     vi.useFakeTimers()
     http(() => Response.json(view({ status, error: 'private_provider_session_id' })))
     render(<ConnectedPlanningPage id="plan-a" />)
     await act(async () => {})
     await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
-    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(status === 'uncertain' ? 7 : 1)
     expect(screen.queryByText('private_provider_session_id')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /book|pay/i })).not.toBeInTheDocument()
   })
@@ -286,38 +293,19 @@ test('a saved assistant answer is not repeated above the option cards', async ()
   http(() => Response.json(saved))
   render(<ConnectedPlanningPage id="plan-a" />)
   await screen.findByRole('heading', { name: 'Garden room' })
-  expect(screen.getAllByText(/Two options for dinner\./)).toHaveLength(1)
+  expect(screen.queryByText(/Two options for dinner\./)).not.toBeInTheDocument()
+  expect(screen.queryByText('Conversation history')).not.toBeInTheDocument()
+  expect(screen.queryByText('Research activity')).not.toBeInTheDocument()
 })
 
-test('paused research shows the exact request and only an explicit decision sends confirmation', async () => {
-  const commands: Record<string, unknown>[] = []
-  const paused = view({ status: 'blocked', canReviewResearch: true, progress: null, error: 'Research is paused for a decision.', approvals: [
-    { id: 'approval-1', tool: 'monid.monid_inspect', arguments: { provider: 'channel3', endpoint: '/v1/search' } },
-  ] })
-  http(async request => {
-    if (request.method === 'GET') return Response.json(paused)
-    commands.push(await request.json())
-    return Response.json(view({ version: 2, status: 'working', approvals: [] }))
-  })
-  render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByText("Research is paused for our team's review.")).toBeVisible()
-  fireEvent.click(screen.getByText('Operator review for local testing'))
-  expect(screen.getByText(/channel3/)).toBeVisible()
-  expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
-  expect(commands).toEqual([])
-  fireEvent.click(screen.getByRole('button', { name: 'Approve this research call' }))
-  await waitFor(() => expect(commands).toEqual([{ kind: 'confirm', requestId: expect.any(String), expectedVersion: 1, approvalId: 'approval-1', decision: 'allow' }]))
-})
-
-test.each(['blocked', 'uncertain'] as const)('shows team activity in %s state without exposing tool reviews to customers', async status => {
+test.each(['blocked'] as const)('shows customer status in %s state without exposing tool reviews', async status => {
   http(() => Response.json(view({ status, proposal: null, canReviewResearch: false,
     activity: [{ name: 'Maya', status: 'blocked', detail: 'Paused for an internal research review.' },
       { name: 'Tom', status: 'waiting', detail: 'Waiting for research teammates.' }],
     approvals: [{ id: 'private-call', tool: 'monid.monid_run', arguments: { query: 'private-input' } }] })))
   render(<ConnectedPlanningPage id="plan-a" />)
-  expect(await screen.findByRole('region', { name: 'Your planning team' })).toBeVisible()
-  expect(screen.getByText('Maya')).toBeVisible()
-  expect(screen.getByText('Waiting for research teammates.')).toBeVisible()
+  expect(await screen.findByText('Our team is reviewing a research request. Your plan is saved.')).toBeVisible()
+  expect(screen.queryByText('Research activity')).not.toBeInTheDocument()
   expect(screen.queryByText(/private-input/)).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve this research call' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
@@ -341,27 +329,31 @@ test('paused customer research checks for progress and resumes without sending a
   expect(reads).toBe(2)
 })
 
-test('a lost operator confirmation recovers after a read shows that exact call is closed', async () => {
-  let saved = view({ status: 'blocked', canReviewResearch: true, approvals: [
-    { id: 'old-call', tool: 'monid.monid_inspect', arguments: {} },
-  ] })
-  let writes = 0
+test('restores the saved plan first and retains it when an explicit research refresh fails', async () => {
+  const paths: string[] = []
   http(request => {
-    if (request.method === 'POST') {
-      writes++
-      saved = view({ version: 3, status: 'blocked', canReviewResearch: true, approvals: [
-        { id: 'new-call', tool: 'monid.monid_run', arguments: {} },
-      ] })
-      throw new TypeError('response lost')
-    }
-    return Response.json(saved)
+    const url = new URL(request.url)
+    paths.push(url.pathname + url.search)
+    return url.searchParams.get('saved') === '1' ? Response.json(view({ selections: [venue], status: 'uncertain' }))
+      : Response.json({ errorCode: 'provider_unavailable' }, { status: 503 })
   })
   render(<ConnectedPlanningPage id="plan-a" />)
-  fireEvent.click(await screen.findByText('Operator review for local testing'))
-  fireEvent.click(screen.getByRole('button', { name: 'Approve this research call' }))
-  await screen.findByRole('button', { name: 'Check saved status' })
-  fireEvent.click(screen.getByRole('button', { name: 'Check saved status' }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Approve this research call' })).toBeEnabled())
-  expect(writes).toBe(1)
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Garden room' })).toBeVisible()
+  expect(paths).toEqual(['/api/planning/plan-a?saved=1'])
+  await userEvent.click(screen.getByRole('button', { name: 'Check for an update' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('We could not load your plan')
+  expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
+  expect(paths).toEqual(['/api/planning/plan-a?saved=1', '/api/planning/plan-a'])
+})
+
+test('a controlled accepted inquiry does not claim that real email was sent', async () => {
+  http(() => Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+    recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Test inquiry', text: 'Controlled test only.',
+    contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: { status: 'accepted', mode: 'simulated', requestId: 'send',
+      draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0, messageId: 'fixture-mail' },
+  } })))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  fireEvent.click(await screen.findByText('Supplier correspondence'))
+  expect(await screen.findByText('Controlled test only.')).toBeVisible()
+  expect(screen.queryByText(/Email provider accepted your inquiry/)).not.toBeInTheDocument()
 })

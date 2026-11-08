@@ -103,10 +103,10 @@ const round = (n: number) => Math.round(n * 100) / 100
 export type Order = {
   lines: Array<ReceiptLine>
   requests: Array<string>
-  subtotal: number
+  subtotal: number | null
   /** Null when the amounts already include tax. */
   vat: number | null
-  total: number
+  total: number | null
 }
 
 /**
@@ -118,7 +118,7 @@ export function buildOrder(
   venue: Venue,
   addOns: Array<AddOn>,
   selected: Set<string>,
-): Order {
+): Order & { subtotal: number; total: number } {
   const lines: Array<ReceiptLine> = [venue.venueLine]
   let vat = venue.vat
   if (selected.has('candles')) lines.push(...baseLines)

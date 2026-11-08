@@ -28,27 +28,31 @@ export function usePlanningSession(id?: string) {
       return { ...next, proposal: next.proposal ?? (next.status === 'working' ? previous?.proposal ?? null : null) }
     })
   }
-  function schedule(delay: number) {
+  function schedule(delay: number, savedOnly = false) {
     clearTimeout(state.current.timer)
-    state.current.timer = setTimeout(() => void read(false), delay)
+    state.current.timer = setTimeout(() => void read(false, false, savedOnly), delay)
   }
-  async function read(manual: boolean, keepError = false) {
+  async function read(manual: boolean, keepError = false, savedOnly = false, reconcileMail = false) {
     const current = state.current
     if (!id || !current.active || current.busy) return
     const generation = cancelRead()
     if (manual) setLoading(true)
     try {
-      const next = await api.read(id, current.controller.signal)
+      const next = await api.read(id, current.controller.signal, savedOnly, reconcileMail)
       if (!current.active || generation !== current.generation) return
       accept(next)
       current.failures = 0
       const confirmationClosed = uncertain && 'kind' in uncertain && uncertain.kind === 'confirm'
         && next.version > uncertain.expectedVersion && next.status !== 'uncertain' && next.canReviewResearch
         && next.approvals && !next.approvals.some(approval => approval.id === uncertain.approvalId)
-      if (confirmationClosed) { setUncertain(null); setError(null) }
+      const inquiryResolved = uncertain && 'kind' in uncertain && uncertain.kind === 'send_inquiry'
+        && next.inquiry?.delivery?.requestId === uncertain.requestId
+        && ['accepted', 'failed'].includes(next.inquiry.delivery.status)
+      if (confirmationClosed || inquiryResolved) { setUncertain(null); setError(null) }
       else if (!keepError) setError(previous => previous?.uncertain ? previous : null)
-      if (next.status === 'working') schedule(2000)
-      else if (next.status === 'blocked') schedule(5000)
+      if (next.status === 'working' || next.inquiry?.delivery?.status === 'pending' || ['requested', 'preparing'].includes(next.arrangement?.status ?? '')) schedule(2000)
+      else if (['awaiting_reply', 'offer_ready', 'awaiting_vendor_confirmation'].includes(next.arrangement?.status ?? '')) schedule(5000, true)
+      else if (next.status === 'blocked' || next.status === 'uncertain') schedule(5000)
     } catch (cause) {
       if (!current.active || generation !== current.generation) return
       const failure = cause instanceof PlanningApiError ? cause : new PlanningApiError(0, false)
@@ -64,7 +68,7 @@ export function usePlanningSession(id?: string) {
   }
   useEffect(() => {
     state.current.active = true
-    void read(true)
+    void read(true, false, true)
     return () => { state.current.active = false; cancelRead() }
     // Account and route changes remount the owner rather than sharing its state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,8 +87,9 @@ export function usePlanningSession(id?: string) {
       if (!current.active || generation !== current.generation) return null
       accept(next)
       setUncertain(null)
-      if (id && next.status === 'working') schedule(2000)
-      else if (id && next.status === 'blocked') schedule(5000)
+      if (id && (next.status === 'working' || next.inquiry?.delivery?.status === 'pending' || ['requested', 'preparing'].includes(next.arrangement?.status ?? ''))) schedule(2000)
+      else if (id && ['awaiting_reply', 'offer_ready', 'awaiting_vendor_confirmation'].includes(next.arrangement?.status ?? '')) schedule(5000, true)
+      else if (id && (next.status === 'blocked' || next.status === 'uncertain')) schedule(5000)
       return next
     } catch (cause) {
       if (!current.active || generation !== current.generation) return null
@@ -108,5 +113,5 @@ export function usePlanningSession(id?: string) {
     }
   }
   return { view, pending, loading, error, uncertain, submit,
-    refresh: () => read(true) }
+    refresh: () => read(true), refreshSaved: () => read(true, false, true), checkMail: () => read(true, false, false, true) }
 }
