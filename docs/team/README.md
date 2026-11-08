@@ -10,10 +10,11 @@ Ferdinand owns pitch and the demo narrative.
 | Pitch owner | Ferdinand | [Pitch brief](pitch.md) | Customer story, demo script, and evidence-backed presentation. |
 | Frontend developer | Leo | [Frontend brief](frontend.md) | Intake through cancellation and refund status. |
 | Agent-workflow developer | Tony | [Agent brief](agent-workflow.md) | Naive runtime, research, and supplier adapters. |
-| Transaction developer | Ujjwal | [Transaction brief](transactions.md) | Shared contracts, state, approvals, payments, and worker execution. |
+| Transaction developer | Ujjwal | [Transaction brief](transactions.md) | Shared contracts, state, approvals, payments, and the guarded execution endpoint. |
 
 Read the [product baseline](../product-spec.md), [architecture draft](../architecture-draft.md), [contract draft](../contracts-draft.md), and [ownership rules](ownership.md) before starting.
 Use the [demo acceptance checklist](../demo-acceptance.md) as the shared definition of working behavior.
+Use the [demo plan](demo-plan.md) for the ordered hackathon milestones, owners, done-tests, and fallbacks.
 
 Before each session, follow the [coordination workflow](coordination.md) and inspect the [team status index](status/README.md).
 

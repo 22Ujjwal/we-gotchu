@@ -6,6 +6,25 @@ Tony owns agent workflow under the shared ownership contract.
 You own research, recommendation generation, the Naive runtime integration, and supplier interaction adapters.
 Read the [research index](../research-index.md), [architecture](../architecture-draft.md), and [contracts](../contracts-draft.md).
 
+## Hackathon deliverables, in order
+
+Follow the [demo plan](demo-plan.md); these come before everything else in this brief.
+
+Your agreed scope is the six research tickets in `.scratch/agent-research/issues`; they come first and are not changed by this document.
+The research spec, the readiness report, and a live Naive research experiment are already merged.
+
+1. Research on the path you tested: `startResearch(event)` creates a session with `web_search` and a required `submit_output`, and `advanceResearch(event, run)` reads it by sequence, validates it, and returns a ResearchResult.
+   The backend calls both and stores the result; there is no worker.
+2. The contract's ResearchResult, Candidate, and Run fields come from your spec; review them in the contracts PR before they are frozen.
+3. The backend owns the atomic stale-revision write, the single-flight lease, and deriving a bookable Plan from your result.
+   You carry run and brief identities through the result and own the validator, the one corrective message, and the evidence content.
+
+Not part of your six tickets, and not assigned to you here: execution, supplier cancellation, the simulated supplier adapter, the MCP hello session, and the scripted-agent fallback.
+They remain part of the wider product scope.
+Ujjwal covers them until you and he explicitly agree otherwise.
+
+Everything below is the longer-term brief and is not the current batch; live supplier checkout is a stretch goal.
+
 ## Deliverables
 
 Verify the account's hosted pi capabilities with the managed-agents SDK before relying on approval or streaming behavior.
@@ -16,14 +35,15 @@ Return structured plans through the shared contract instead of treating prose as
 
 Discover Monid tools that actually support the needed research and inspect their requirements before using them.
 Use AgentMail only when approved supplier communication is part of the selected workflow.
-Implement supplier quote, execute, reconcile, cancel, and recovery methods behind the shared adapter contract.
+Implement supplier commit, cancel, and reconcile methods behind the shared adapter contract; quote and recovery are deferred.
 Keep live and simulated adapters explicit.
 Support progress streaming and resume without declaring an approval pause to be completion.
 
 ## Dependencies and boundaries
 
 Use the transaction owner's guarded MCP tools for mutating actions.
-Match each call to a stored action approval and use call-scoped runtime confirmation.
+Purchase tools are set to `allow` on the Naive side; our MCP endpoint matches each call to the stored approval and is the only approval check for the hackathon.
+Naive's call-scoped `ask` confirmation is deferred until real money is used.
 Do not treat broad browser write access as customer purchase permission.
 Do not build on Naive cards or wallet while the documented capabilities are unavailable.
 Verify supplier login, secure payment entry, authentication challenges, and receipt extraction before claiming unattended checkout.

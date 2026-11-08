@@ -25,6 +25,9 @@ Keep any future business model separate from the demonstrated product.
 6. Show the resulting cancellations and honest refund status.
 
 Prepare a labeled recording or simulated fallback for an unavailable live step.
+Own milestone 8 in the [demo plan](demo-plan.md): the rehearsal, the recorded fallback video, and the agreed demo brief.
+Frame the demo around autonomy: count the agent's steps in the progress log against the two human steps, approve-and-pay and cancel.
+Say plainly which steps were live, Stripe test mode, or simulated.
 Keep the live, recorded, and simulated labels visible rather than explaining them only afterward.
 Do not describe negotiation, invitations, or hosting as working features.
 
