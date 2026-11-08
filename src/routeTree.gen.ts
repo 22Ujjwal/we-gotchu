@@ -14,6 +14,8 @@ import { Route as PartyRouteImport } from './routes/party'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
+import { Route as ReceiptsIndexRouteImport } from './routes/receipts.index'
+import { Route as ReceiptsReceiptIdRouteImport } from './routes/receipts.$receiptId'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsVenueIdRouteImport } from './routes/settings.$venueId'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
@@ -23,6 +25,8 @@ import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhoo
 import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
 import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.brief'
 import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
+import { Route as EventsEventIdReceiptsIndexRouteImport } from './routes/events.$eventId_.receipts.index'
+import { Route as EventsEventIdReceiptsReceiptIdRouteImport } from './routes/events.$eventId_.receipts.$receiptId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -47,6 +51,16 @@ const ApiMcpRoute = ApiMcpRouteImport.update({
 const EventsEventIdRoute = EventsEventIdRouteImport.update({
   id: '/events/$eventId',
   path: '/events/$eventId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReceiptsIndexRoute = ReceiptsIndexRouteImport.update({
+  id: '/receipts/',
+  path: '/receipts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReceiptsReceiptIdRoute = ReceiptsReceiptIdRouteImport.update({
+  id: '/receipts/$receiptId',
+  path: '/receipts/$receiptId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -94,6 +108,18 @@ const ApiEventsIdCancelRoute = ApiEventsIdCancelRouteImport.update({
   path: '/cancel',
   getParentRoute: () => ApiEventsIdRoute,
 } as any)
+const EventsEventIdReceiptsIndexRoute =
+  EventsEventIdReceiptsIndexRouteImport.update({
+    id: '/events/$eventId_/receipts/',
+    path: '/events/$eventId/receipts/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const EventsEventIdReceiptsReceiptIdRoute =
+  EventsEventIdReceiptsReceiptIdRouteImport.update({
+    id: '/events/$eventId_/receipts/$receiptId',
+    path: '/events/$eventId/receipts/$receiptId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,15 +127,19 @@ export interface FileRoutesByFullPath {
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/receipts/$receiptId': typeof ReceiptsReceiptIdRoute
   '/settings/$venueId': typeof SettingsVenueIdRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
+  '/events/$eventId/receipts/$receiptId': typeof EventsEventIdReceiptsReceiptIdRoute
+  '/events/$eventId/receipts/': typeof EventsEventIdReceiptsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,15 +147,19 @@ export interface FileRoutesByTo {
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/receipts/$receiptId': typeof ReceiptsReceiptIdRoute
   '/settings/$venueId': typeof SettingsVenueIdRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/receipts': typeof ReceiptsIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
+  '/events/$eventId/receipts/$receiptId': typeof EventsEventIdReceiptsReceiptIdRoute
+  '/events/$eventId/receipts': typeof EventsEventIdReceiptsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,15 +168,19 @@ export interface FileRoutesById {
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
   '/events/$eventId': typeof EventsEventIdRoute
+  '/receipts/$receiptId': typeof ReceiptsReceiptIdRoute
   '/settings/$venueId': typeof SettingsVenueIdRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/receipts/': typeof ReceiptsIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
+  '/events/$eventId_/receipts/$receiptId': typeof EventsEventIdReceiptsReceiptIdRoute
+  '/events/$eventId_/receipts/': typeof EventsEventIdReceiptsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,15 +190,19 @@ export interface FileRouteTypes {
     | '/api/events'
     | '/api/mcp'
     | '/events/$eventId'
+    | '/receipts/$receiptId'
     | '/settings/$venueId'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/receipts/'
     | '/settings/'
     | '/api/events/$id'
     | '/api/stripe/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
+    | '/events/$eventId/receipts/$receiptId'
+    | '/events/$eventId/receipts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -168,15 +210,19 @@ export interface FileRouteTypes {
     | '/api/events'
     | '/api/mcp'
     | '/events/$eventId'
+    | '/receipts/$receiptId'
     | '/settings/$venueId'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/receipts'
     | '/settings'
     | '/api/events/$id'
     | '/api/stripe/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
+    | '/events/$eventId/receipts/$receiptId'
+    | '/events/$eventId/receipts'
   id:
     | '__root__'
     | '/'
@@ -184,15 +230,19 @@ export interface FileRouteTypes {
     | '/api/events'
     | '/api/mcp'
     | '/events/$eventId'
+    | '/receipts/$receiptId'
     | '/settings/$venueId'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/receipts/'
     | '/settings/'
     | '/api/events/$id'
     | '/api/stripe/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
+    | '/events/$eventId_/receipts/$receiptId'
+    | '/events/$eventId_/receipts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,11 +251,15 @@ export interface RootRouteChildren {
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiMcpRoute: typeof ApiMcpRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
+  ReceiptsReceiptIdRoute: typeof ReceiptsReceiptIdRoute
   SettingsVenueIdRoute: typeof SettingsVenueIdRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
+  ReceiptsIndexRoute: typeof ReceiptsIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  EventsEventIdReceiptsReceiptIdRoute: typeof EventsEventIdReceiptsReceiptIdRoute
+  EventsEventIdReceiptsIndexRoute: typeof EventsEventIdReceiptsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -243,6 +297,20 @@ declare module '@tanstack/react-router' {
       path: '/events/$eventId'
       fullPath: '/events/$eventId'
       preLoaderRoute: typeof EventsEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/receipts/': {
+      id: '/receipts/'
+      path: '/receipts'
+      fullPath: '/receipts/'
+      preLoaderRoute: typeof ReceiptsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/receipts/$receiptId': {
+      id: '/receipts/$receiptId'
+      path: '/receipts/$receiptId'
+      fullPath: '/receipts/$receiptId'
+      preLoaderRoute: typeof ReceiptsReceiptIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -308,6 +376,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEventsIdCancelRouteImport
       parentRoute: typeof ApiEventsIdRoute
     }
+    '/events/$eventId_/receipts/': {
+      id: '/events/$eventId_/receipts/'
+      path: '/events/$eventId/receipts'
+      fullPath: '/events/$eventId/receipts/'
+      preLoaderRoute: typeof EventsEventIdReceiptsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/$eventId_/receipts/$receiptId': {
+      id: '/events/$eventId_/receipts/$receiptId'
+      path: '/events/$eventId/receipts/$receiptId'
+      fullPath: '/events/$eventId/receipts/$receiptId'
+      preLoaderRoute: typeof EventsEventIdReceiptsReceiptIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -345,11 +427,15 @@ const rootRouteChildren: RootRouteChildren = {
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiMcpRoute: ApiMcpRoute,
   EventsEventIdRoute: EventsEventIdRoute,
+  ReceiptsReceiptIdRoute: ReceiptsReceiptIdRoute,
   SettingsVenueIdRoute: SettingsVenueIdRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
+  ReceiptsIndexRoute: ReceiptsIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  EventsEventIdReceiptsReceiptIdRoute: EventsEventIdReceiptsReceiptIdRoute,
+  EventsEventIdReceiptsIndexRoute: EventsEventIdReceiptsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

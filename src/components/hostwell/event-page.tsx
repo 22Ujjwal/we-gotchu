@@ -33,7 +33,7 @@ export function EventPage({ eventId, identity, paid = false, onCheckout = (url) 
 // Long enough for the first receipt to finish printing.
 const QUOTE_SCREEN_MS = 4000
 
-function Loading() {
+export function Loading() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step="setting" />
@@ -42,7 +42,7 @@ function Loading() {
   )
 }
 
-function Notice({ title, action, step = 'setting' }: { title: string; action: ReactNode; step?: 'setting' | 'party' }) {
+export function Notice({ title, action, step = 'setting' }: { title: string; action: ReactNode; step?: 'setting' | 'party' }) {
   return (
     <div className="flex min-h-screen flex-col">
       <Header step={step} />
@@ -116,6 +116,7 @@ function EventSessionPage({ eventId, identity, onCheckout, signIn, paid, quoteSc
         order={settings.order(settings.planned)}
         place={event.brief.location}
         timezone={event.brief.timezone}
+        receiptsHref={`/events/${encodeURIComponent(eventId)}/receipts`}
         incomplete={event.status !== 'booked' ||
           view.attempts.some((a) => a.kind === 'commit' && a.state !== 'succeeded')}
       />

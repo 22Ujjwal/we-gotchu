@@ -1,6 +1,5 @@
-import { useRef } from 'react'
+import { Link } from '@tanstack/react-router'
 import { FeatureIcon, GoldSeal, Ticket } from './icons'
-import { Receipt } from './receipt'
 import { Button, Header, Photo } from './ui'
 import { to24h } from '#/lib/hostwell/fixture'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
@@ -43,6 +42,7 @@ export function PartyView({
   extras = [],
   place,
   timezone,
+  receiptsHref,
   incomplete = false,
 }: {
   brief: Brief
@@ -52,10 +52,10 @@ export function PartyView({
   /** Where it is, as shown under the venue name. */
   place: string
   timezone: string
+  receiptsHref: string
   /** Not every supplier confirmed (yet). */
   incomplete?: boolean
 }) {
-  const receipt = useRef<HTMLDialogElement>(null)
   const date = parseDate(brief.date)
   const start = to24h(brief.from)
   const end = brief.till ? to24h(brief.till) : ''
@@ -196,24 +196,14 @@ export function PartyView({
           >
             Add to calendar
           </button>
-          <button
-            type="button"
-            onClick={() => receipt.current?.showModal()}
-            className="flex-1 cursor-pointer border border-line-strong px-[26px] py-3.5 text-[16px] leading-5 font-semibold hover:border-ink"
+          <Link
+            to={receiptsHref}
+            className="flex-1 border border-line-strong px-[26px] py-3.5 text-center text-[16px] leading-5 font-semibold hover:border-ink"
           >
-            View receipt
-          </button>
+            View receipts
+          </Link>
         </div>
       </main>
-
-      <dialog
-        ref={receipt}
-        aria-label="Receipt"
-        onClick={(e) => e.target === receipt.current && receipt.current.close()}
-        className="m-auto w-[380px] max-w-[calc(100vw-32px)] overflow-visible bg-transparent p-0 backdrop:bg-[#1F1B1673]"
-      >
-        <Receipt venue={venue} order={order} brief={brief} />
-      </dialog>
     </div>
   )
 }
