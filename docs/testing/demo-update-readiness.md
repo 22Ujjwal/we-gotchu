@@ -1,6 +1,6 @@
 # Demo update readiness, 2026-11-08
 
-Branch: `fix/demo-live-updates`, based on photo branch head `5efbcc3`. This branch is local; it is not a deployment. Main was observed at `c920952fc7bf106b9ade5cc5c8a3b70c8f30ca20` after PR #77 merged. PR #78 remains the separate photo/UI PR.
+Branch: `fix/demo-live-updates`, based on photo branch head `5efbcc3`. Published as draft [PR #79](https://github.com/22Ujjwal/we-gotchu/pull/79), stacked on #78. Publishing is not live verification. Main was observed at `c920952fc7bf106b9ade5cc5c8a3b70c8f30ca20` after PR #77 merged. PR #78 remains the separate photo/UI PR.
 
 ## Implemented
 

@@ -1,6 +1,6 @@
 ## Demo live-update fixes, 2026-11-08
 
-Branch: `fix/demo-live-updates` (local, not pushed). Baseline: `5efbcc3` from photo PR [#78](https://github.com/22Ujjwal/we-gotchu/pull/78). Integration PR [#77](https://github.com/22Ujjwal/we-gotchu/pull/77) is merged into main at `c920952`. No PR yet for this increment.
+Branch: `fix/demo-live-updates`, pushed as draft [PR #79](https://github.com/22Ujjwal/we-gotchu/pull/79). Baseline: `5efbcc3` from photo PR [#78](https://github.com/22Ujjwal/we-gotchu/pull/78). Integration PR [#77](https://github.com/22Ujjwal/we-gotchu/pull/77) is merged into main at `c920952`. PR #79 is stacked on #78; neither is merged.
 
 Commits: `3cf5bbb` local readiness tool and recovery guide; `881053e` reject preview-fixture mode; `195f0d7` saved reply polling; `f8e34c4` idle-arrangement recovery; `2824a76` booking outcome and receipt link; `d2a29ac` truthful receipt evidence and currency formatting.
 
