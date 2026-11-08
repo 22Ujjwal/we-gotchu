@@ -7,7 +7,7 @@ export function PlanningConversation({ view, form, notice }: {
 }) {
   const messages = view.messages.filter((message, index) => index > 0 || message.role === 'assistant')
   const proposalText = view.proposal && [view.proposal.summary, view.proposal.nextQuestion].filter(Boolean).join('\n\n')
-  const waiting = view.status === 'working' || view.status === 'uncertain'
+  const waiting = view.status === 'working'
   return <section className="mx-auto flex w-full max-w-[1000px] flex-col items-center gap-10 pb-10 lg:gap-14 lg:pt-2" aria-label="Plan your event">
     <EventHeading brief={view.brief} />
     <div className="flex w-full max-w-[760px] flex-col gap-6 py-4 sm:py-8">
@@ -25,10 +25,10 @@ export function PlanningConversation({ view, form, notice }: {
         </div>}
       </div>
       {waiting && <p role="status" className="text-[15px] leading-6 text-stone">
-        {view.status === 'uncertain' ? 'Your answer is saved. We are reconnecting to continue your research.' : view.progress || 'Looking into your event.'}
+        {view.progress || 'Looking into your event.'}
       </p>}
       {view.status === 'blocked' && <p role="status" className="text-stone">Our team is reviewing a research request. Your plan is saved.</p>}
-      {view.status === 'failed' && <p role="status" className="text-stone">Research stopped before we had your options. You can send a message to continue.</p>}
+      {view.status === 'failed' && <p role="status" className="text-stone">Research could not continue. Your brief is saved. Check the status of the previous attempt before starting again.</p>}
       {notice}
       {form}
     </div>

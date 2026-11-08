@@ -37,7 +37,8 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   const notice = session.uncertain
     ? id ? 'We could not confirm whether your request was saved. Your draft is kept. Check the saved status before taking any further action.'
       : 'We could not confirm whether your plan was created. Your draft is kept. Do not submit again or reload to retry. Please contact support to locate your plan.'
-    : session.error?.message
+    : session.error?.message ?? (session.view?.status === 'uncertain'
+      ? 'We cannot confirm that research started or continued. Your brief is saved. Check the saved status before starting again.' : undefined)
   useEffect(() => { if (notice) alert.current?.focus() }, [notice])
   const { view } = session
   const blocked = session.pending || session.loading || !!session.uncertain || !!id && !view
@@ -87,9 +88,9 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     <p role="alert" tabIndex={-1} ref={alert}>{notice}</p>
     {id && <Button className="px-5 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Check saved status</Button>}
   </div>
-  if (id && (view?.status === 'working' || view?.status === 'uncertain') && !view.proposal && !notice) {
+  if (id && view?.status === 'working' && !view.proposal && !notice) {
     return <div className="w-full"><ReceiptLoader brief={view.brief}
-      activity={view.status === 'uncertain' ? 'Reconnecting to your research' : view.progress || view.activity?.find(item => item.status === 'working')?.detail || 'Starting your research'} /></div>
+      activity={view.progress || view.activity?.find(item => item.status === 'working')?.detail || 'Starting your research'} /></div>
   }
   if (view?.arrangement && !notice && !view.offer && !view.paymentLink
     && ['requested', 'preparing', 'awaiting_reply'].includes(view.arrangement.status)) {
@@ -98,7 +99,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       items={view.selections.map(option => ({ label: option.kind === 'venue' ? 'Venue' : 'Extras', title: option.name }))} />
   }
   if (id && view && !venueCards.length && !view.arrangement) {
-    return <PlanningConversation view={view} form={messageForm} notice={errorNotice} />
+    return <PlanningConversation view={view} form={view.status === 'failed' && !view.proposal ? null : messageForm} notice={errorNotice} />
   }
   return <div className={`flex w-full flex-col gap-8 ${id ? 'max-w-[1400px]' : 'max-w-[900px]'}`}>
     {!id && <h1 className="text-[34px] leading-tight font-light tracking-[-0.02em] lg:text-[56px]">What are you planning?</h1>}
