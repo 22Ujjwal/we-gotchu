@@ -1,5 +1,6 @@
 import { waitUntil } from '@vercel/functions'
 import { dispatchReplyProcessing, withReplyProcessing } from './reply-dispatch'
+import { createConfiguredOfferGenerator } from '../../agent/planning/offer-generator'
 import { createConfiguredPlanningAgent } from '../../agent/planning/provider'
 import { createConfiguredReplyInterpreter } from '../../agent/planning/reply-interpreter'
 import { requireCustomerId } from '../auth'
@@ -40,7 +41,8 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
   )
   return {
     async getDeps(): Promise<PlanningDeps> {
-      return { repository: (await getStorage()).repository, mail: (await getMail())?.transport, requireCustomerId,
+      return { repository: (await getStorage()).repository, offers: (await getStorage()).offers,
+        generateOffer: record => createConfiguredOfferGenerator(env)(record), mail: (await getMail())?.transport, requireCustomerId,
         allowResearchReview: env.NODE_ENV === 'development' && !!env.PLANNING_LOCAL_DB_DIR,
         agent: () => createConfiguredPlanningAgent(env) }
     },

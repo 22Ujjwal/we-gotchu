@@ -20,7 +20,7 @@ function sourceMatches(record: PlanningRecord, offer: SelectedOffer) {
 export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof schema>) {
   return {
     // Internal model-output storage. Customer commands cannot submit their own prices.
-    async save(customerId: string, conversationId: string, expectedVersion: number, input: SelectedOffer): Promise<PlanningRecord> {
+    async save(customerId: string, conversationId: string, expectedVersion: number, input: SelectedOffer, request?: { id: string; fingerprint: string }): Promise<PlanningRecord> {
       const offer = selectedOfferSchema.parse(input)
       return db.transaction(async tx => {
         const [row] = await tx.select().from(planningConversations).where(and(eq(planningConversations.id, conversationId),
@@ -31,7 +31,9 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
         if (record.view.paymentLink) throw new ApiError(409, 'payment_plan_exists', 'Cancel the existing payment plan before replacing its offer.')
         if (record.view.offer && (offer.id !== record.view.offer.id || offer.revision !== record.view.offer.revision + 1)) throw stale()
         if (!record.view.offer && offer.revision !== 1) throw stale()
-        const data = { ...record, revision: row.revision + 1, view: { ...record.view, version: record.view.version + 1, offer } }
+        const data = { ...record, revision: row.revision + 1,
+          requests: request ? { ...record.requests, [request.id]: request.fingerprint } : record.requests,
+          view: { ...record.view, version: record.view.version + 1, offer } }
         await tx.update(planningConversations).set({ revision: data.revision, data }).where(eq(planningConversations.id, conversationId))
         return data
       })

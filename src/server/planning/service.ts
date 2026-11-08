@@ -1,3 +1,5 @@
+import type { OfferGenerator } from '../../agent/planning/offer-generator'
+import type { createOfferRepository } from './offer-repository'
 import { inquirySendResultSchema, type SupplierMailTransport } from './supplier-mail'
 import { prepareInquiry, staleInquiry } from './inquiry'
 import { isDeepStrictEqual } from 'node:util'
@@ -9,6 +11,8 @@ import type { PlanningRecord, PlanningRepository } from './repository'
 
 export type PlanningDeps = {
   repository: PlanningRepository
+  offers?: ReturnType<typeof createOfferRepository>
+  generateOffer?: OfferGenerator
   mail?: SupplierMailTransport
   agent: () => PlanningAgent
   requireCustomerId: () => Promise<string>
@@ -171,6 +175,21 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (record.pending && record.view.status !== 'uncertain' && record.pending.expiresAt > now(deps)) throw busy()
   const requests = { ...record.requests, [command.requestId]: fingerprint }
   if (record.view.inquiry?.delivery?.status === 'pending') throw busy()
+  if (command.kind === 'prepare_offer') {
+    if (!deps.offers || !deps.generateOffer) throw new ApiError(503, 'offer_unavailable', 'Offer preparation is not configured.')
+    if (record.pending || record.view.status !== 'ready' || record.view.paymentLink) throw busy()
+    const inquiry = record.view.inquiry
+    const reply = inquiry?.replies?.at(-1)
+    if (!inquiry || inquiry.status === 'stale' || reply?.status !== 'ready'
+      || !['quote', 'confirmation'].includes(reply.interpretation?.kind ?? '')) {
+      throw new ApiError(422, 'quote_required', 'A current venue quote is needed before preparing an offer.')
+    }
+    let offer
+    try { offer = await bounded(() => deps.generateOffer!(record), timeout(deps)) }
+    catch { throw new ApiError(502, 'offer_failed', 'We could not prepare the offer. Your original reply is saved. Refresh before trying again.') }
+    return (await deps.offers.save(customerId, id, record.view.version, offer,
+      { id: command.requestId, fingerprint })).view
+  }
   if (command.kind === 'retry_reply') {
     const inquiry = record.view.inquiry
     const reply = inquiry?.replies?.find(item => item.id === command.replyId)
