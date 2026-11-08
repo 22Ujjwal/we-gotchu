@@ -108,5 +108,5 @@ export function usePlanningSession(id?: string) {
     }
   }
   return { view, pending, loading, error, uncertain, submit,
-    refresh: () => read(true) }
+    refresh: () => read(true), refreshSaved: () => read(true, false, true) }
 }
