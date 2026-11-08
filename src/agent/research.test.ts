@@ -121,3 +121,20 @@ test('discovery warnings survive degraded outcomes', async () => {
   })
   expect(failed.warnings).toContain('supply discovery was incomplete.')
 })
+
+
+test.each(['throw', 'identity', 'stall'])('detail %s failure still ranks discovery within the run deadline', async failure => {
+  const recommend = vi.fn(async () => ({ candidateIds: candidates.map(c => c.candidateId) }))
+  const result = await researchEvent(input, {
+    discover: async () => ({ candidates, sourceChecks: [] }),
+    enrich: async (_input, evidence) => {
+      if (failure === 'throw') throw new Error('secret provider error')
+      if (failure === 'stall') return new Promise(() => {})
+      return { ...evidence, candidates: [{ ...evidence.candidates[0], candidateId: 'other' }] }
+    }, recommend,
+  }, { timeoutMs: 200, detailTimeoutMs: 20, rankingReserveMs: 100 })
+  expect(result.recommendations).toHaveLength(candidates.length)
+  expect(recommend).toHaveBeenCalledTimes(1)
+  expect(result.candidates).toEqual(candidates)
+  expect(JSON.stringify(result)).not.toContain('secret provider error')
+})
