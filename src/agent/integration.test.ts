@@ -138,14 +138,23 @@ test('a new integration instance continues from durable evidence and session che
   expect(session.start).toHaveBeenCalledTimes(1)
 })
 
-test('enrichment receives saved evidence once before hosted ranking', async () => {
+test('enrichment resumes one candidate per poll before hosted ranking', async () => {
   const { deps, discover, session } = setup()
   const enrich = vi.fn(async (_input, evidence) => ({ ...evidence, warnings: ['Detail check did not confirm availability.'] }))
   deps.research = createResearchIntegration({ store, providers: { discover, session, enrich } })
   const started = await createEvent(deps, researchBriefFixture)
-  const completed = await finish(deps, started.event.eventId)
+  await getEventView(deps, started.event.eventId)
+  await getEventView(deps, started.event.eventId)
   expect(enrich).toHaveBeenCalledTimes(1)
-  expect(enrich.mock.calls[0][1].candidates).toEqual(discoveryFixture.candidates)
+  expect(enrich.mock.calls[0][1].candidates).toHaveLength(1)
+  expect(session.createAgent).not.toHaveBeenCalled()
+  // A replacement service resumes persisted progress without repeating the first candidate.
+  deps.research = createResearchIntegration({ store, providers: { discover, session, enrich } })
+  const completed = await finish(deps, started.event.eventId)
+  expect(enrich).toHaveBeenCalledTimes(discoveryFixture.candidates.length)
+  expect(enrich.mock.calls.flatMap(call => call[1].candidates.map(c => c.candidateId)).sort())
+    .toEqual(discoveryFixture.candidates.map(c => c.candidateId).sort())
+  expect(completed.researchResult!.candidates).toHaveLength(discoveryFixture.candidates.length)
   expect(completed.researchResult!.warnings).toContain('Detail check did not confirm availability.')
   expect(session.start).toHaveBeenCalledTimes(1)
 })
