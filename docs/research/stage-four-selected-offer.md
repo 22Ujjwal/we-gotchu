@@ -46,3 +46,22 @@ Verify changed and expired offers, duplicate approval, duplicate webhook, succes
 Require signed webhook evidence for paid status.
 A success redirect alone does not prove payment.
 Repeat the local browser journey in the existing independent testing session after the user resumes live checks.
+
+## Storage and approval progress
+
+The shared storage factory now exposes planning, offer and transaction repositories using the same database connection.
+Offer storage retains incomplete offers, checks the current inquiry and reply, and rejects stale generation results.
+Payment preparation locks the conversation and creates the linked event, completed research run and transaction plan in one database transaction.
+Concurrent preparation returns the same event and plan.
+This remains an internal repository operation, not a public customer endpoint.
+
+Plans retain their originating conversation and offer revision.
+The existing approval service rechecks that saved offer before Checkout creation.
+The database repeats the check while saving approval and before claiming supplier execution.
+Changed selections, customer instructions, source replies, financial terms or expiry invalidate the linked plan.
+New Checkout creation also requires the quote to cover the existing payment window.
+The focused event, offer and database checks passed 72 tests before the additional expiry-window regression.
+The later expiry-window and offer-storage checks passed 33 tests.
+
+Offer generation from actual saved evidence, customer offer display, local runtime wiring, payment endpoint integration and the complete browser journey are still pending.
+No real payment or provider call occurred in these checks.
