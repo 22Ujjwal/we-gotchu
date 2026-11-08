@@ -230,3 +230,154 @@ test('Clerk identity changes hide prior customer data and ignore a late response
   await advance(5000)
   expect(fetch).toHaveBeenCalledTimes(count)
 })
+
+test('slow research polls do not overlap and progress stays ordered without duplicates', async () => {
+  vi.useFakeTimers()
+  const first = createEventViewFixture('running')
+  const slow = deferred<Response>()
+  const paths: string[] = []
+  const final = createEventViewFixture('partial')
+  final.event.progressSequence = 3
+  final.progress = [
+    { ...first.progress[0], sequence: 3, message: 'Finished comparison.' },
+    { ...first.progress[0], sequence: 2, message: 'Saved venue evidence.' },
+    first.progress[0],
+  ]
+  controlledHttp(request => {
+    expect(request.method).toBe('GET')
+    paths.push(new URL(request.url).pathname + new URL(request.url).search)
+    if (paths.length === 1) return Response.json(first)
+    if (paths.length === 2) return slow.promise
+    throw new Error('Terminal research must not keep polling')
+  })
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  await advance()
+  await advance(5000)
+  expect(paths).toEqual(['/api/events/evt_ui_1', '/api/events/evt_ui_1?afterSequence=1'])
+  await act(async () => { slow.resolve(Response.json(final)) })
+  const progress = within(screen.getByRole('region', { name: 'Event progress' }))
+  expect(progress.getAllByRole('listitem').map(item => item.textContent)).toEqual([
+    'Comparing retrieved candidates.', 'Saved venue evidence.', 'Finished comparison.',
+  ])
+  await advance(5000)
+  expect(paths).toHaveLength(2)
+})
+
+test('a revised brief wins over an older in-flight research response', async () => {
+  vi.useFakeTimers()
+  const old = createEventViewFixture('running')
+  const late = deferred<Response>()
+  const revised = createEventViewFixture('partial', { briefRevision: 2 })
+  revised.event.brief.location = 'New location'
+  let reads = 0
+  const updates: unknown[] = []
+  controlledHttp(async request => {
+    if (request.method === 'GET') return ++reads === 1 ? Response.json(old) : late.promise
+    expect(request.method).toBe('PATCH')
+    expect(new URL(request.url).pathname).toBe('/api/events/evt_ui_1/brief')
+    updates.push(await request.json())
+    return Response.json(revised)
+  })
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  await advance()
+  fireEvent.click(screen.getByRole('button', { name: 'Edit brief' }))
+  fireEvent.change(screen.getByLabelText('Area'), { target: { value: 'New location' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
+  await flush()
+  expect(updates).toEqual([{ expectedBriefRevision: 1, changes: { location: 'New location' } }])
+  expect(screen.getByText('New location')).toBeVisible()
+  await act(async () => { late.resolve(Response.json(old)) })
+  expect(screen.getByText('New location')).toBeVisible()
+  expect(screen.queryByText('San Francisco, CA')).not.toBeInTheDocument()
+  expect(screen.getByText('Research: partial. Budget fit: unknown.')).toBeVisible()
+})
+
+test('conflicting edits keep the typed answers while current server state is restored', async () => {
+  vi.useFakeTimers()
+  const initial = createEventViewFixture('partial')
+  const current = createEventViewFixture('partial', { briefRevision: 2 })
+  current.event.brief.location = 'Someone else saved Berkeley'
+  let conflict = false
+  controlledHttp(request => {
+    if (request.method === 'GET') return Response.json(conflict ? current : initial)
+    expect(request.method).toBe('PATCH')
+    expect(new URL(request.url).pathname).toBe('/api/events/evt_ui_1/brief')
+    conflict = true
+    return Response.json({ errorCode: 'stale_brief', message: 'The brief changed. Review the latest event.' }, { status: 409 })
+  })
+  render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
+  await flush()
+  fireEvent.click(screen.getByRole('button', { name: 'Edit brief' }))
+  fireEvent.change(screen.getByLabelText('Area'), { target: { value: 'My unsent Oakland answer' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
+  await flush()
+  await advance()
+  expect(screen.getByText('Someone else saved Berkeley')).toBeVisible()
+  expect(screen.getByLabelText('Area')).toHaveValue('My unsent Oakland answer')
+  expect(screen.getByText('Your edits are retained. Review the latest event before submitting again.')).toBeVisible()
+  expect(screen.getAllByRole('alert').some(alert => alert.textContent?.includes('brief changed'))).toBe(true)
+})
+
+async function enterIntake(user: ReturnType<typeof userEvent.setup>, overrides: Record<string, string> = {}) {
+  const fields = { Occasion: 'Team dinner', 'Number of guests': '18', Date: '2026-12-12',
+    'Start time': '19:30+01:00', Timezone: 'Europe/Berlin', Area: 'Berlin', Budget: '900.25',
+    Currency: 'EUR', 'Acceptable cancellation loss': '12.50', 'What you need': 'candles, plates', ...overrides }
+  for (const labels of [['Occasion', 'Number of guests'], ['Date', 'Start time', 'Timezone', 'Area'],
+    ['Budget', 'Currency', 'Acceptable cancellation loss'], ['What you need']]) {
+    for (const label of labels) await user.type(screen.getByLabelText(label), fields[label as keyof typeof fields])
+    if (labels[0] !== 'What you need') await user.keyboard('{Enter}')
+  }
+}
+
+test('keyboard intake sends explicit offset timezone currency and answers without guessing', async () => {
+  const user = userEvent.setup()
+  const created = vi.fn()
+  const requests: unknown[] = []
+  controlledHttp(async request => {
+    expect(request.method).toBe('POST')
+    expect(new URL(request.url).pathname).toBe('/api/events')
+    requests.push(await request.json())
+    return Response.json(createEventViewFixture('running', { eventId: 'evt_created' }))
+  })
+  render(<BriefIntake identity="customer_ui_1" onCreated={created} />)
+  await enterIntake(user)
+  await user.keyboard('{Enter}')
+  expect(created).toHaveBeenCalledExactlyOnceWith('evt_created')
+  expect(requests).toEqual([{ eventType: 'Team dinner', headcount: 18, startsAt: '2026-12-12T18:30:00.000Z',
+    timezone: 'Europe/Berlin', location: 'Berlin', budget: 90025, currency: 'eur', maximumCancellationLoss: 1250,
+    supplyNeeds: ['candles', 'plates'] }])
+})
+
+for (const [fields, error] of [
+  [{ 'Start time': '19:30' }, /explicit UTC offset/],
+  [{ Timezone: 'Not/AZone' }, /valid timezone/],
+  [{ Currency: 'dollars' }, /three-letter currency/],
+  [{ Date: 'December 12' }, /YYYY-MM-DD/],
+] as const) {
+  test(`intake rejects ambiguous ${Object.keys(fields)[0]} without sending a request`, async () => {
+    const user = userEvent.setup()
+    render(<BriefIntake identity="customer_ui_1" onCreated={vi.fn()} />)
+    await enterIntake(user, fields)
+    await user.keyboard('{Enter}')
+    expect(await screen.findByRole('alert')).toHaveTextContent(error)
+    expect(screen.getByRole('alert')).toHaveFocus()
+    expect(screen.getByLabelText('What you need')).toHaveValue('candles, plates')
+    expect(fetch).not.toHaveBeenCalled()
+  })
+}
+
+test('a lost create response retains entered answers and prevents repeated creation', async () => {
+  const user = userEvent.setup()
+  controlledHttp(() => { throw new TypeError('response lost') })
+  render(<BriefIntake identity="customer_ui_1" onCreated={vi.fn()} />)
+  await enterIntake(user)
+  await user.keyboard('{Enter}')
+  expect(await screen.findByRole('alert')).toHaveTextContent('outcome is unknown')
+  expect(screen.getByLabelText('What you need')).toHaveValue('candles, plates')
+  const submit = screen.getByRole('button', { name: 'Find venues' })
+  expect(submit).toBeDisabled()
+  await user.click(submit)
+  expect(fetch).toHaveBeenCalledTimes(1)
+})
