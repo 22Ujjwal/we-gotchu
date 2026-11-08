@@ -20,7 +20,7 @@ export function Header({ step }: { step: Step }) {
       <Link to="/" className="flex items-center gap-2.5">
         <Logo />
         <span className="text-[18px] leading-[22px] font-extrabold tracking-[-0.02em]">
-          hostwell
+          arrange
         </span>
       </Link>
       <nav aria-label="Progress">

@@ -76,9 +76,9 @@ function PartyPage() {
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//hostwell//EN',
+      'PRODID:-//arrange//EN',
       'BEGIN:VEVENT',
-      `UID:${venue.id}-${stamp(start)}@hostwell`,
+      `UID:${venue.id}-${stamp(start)}@arrange`,
       `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`,
       `DTSTART;TZID=Europe/Berlin:${stamp(start)}`,
       `DTEND;TZID=Europe/Berlin:${stamp(end)}`,

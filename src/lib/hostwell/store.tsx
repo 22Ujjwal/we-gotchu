@@ -26,7 +26,7 @@ export function HostwellProvider({ children }: { children: ReactNode }) {
   const [brief, setBrief] = useState(defaultBrief)
   const [addOns, setAddOns] = useState(catalogue)
   const [selected, setSelected] = useState(
-    () => new Set(catalogue.filter((a) => a.included).map((a) => a.id)),
+    () => new Set<string>(),
   )
   const [bookedVenueId, setBookedVenueId] = useState<string | null>(null)
 
