@@ -38,7 +38,7 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
         return data
       })
     },
-    async prepare(customerId: string, conversationId: string, offerId: string, offerRevision: number, now: Date): Promise<PlanningPaymentLink> {
+    async prepare(customerId: string, conversationId: string, offerId: string, offerRevision: number, now: Date, request?: { id: string; fingerprint: string }): Promise<PlanningPaymentLink> {
       return db.transaction(async tx => {
         const [row] = await tx.select().from(planningConversations).where(and(eq(planningConversations.id, conversationId),
           eq(planningConversations.customerId, customerId))).for('update')
@@ -55,6 +55,7 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
           contextMessageIds: record.view.messages.filter(message => message.role === 'user').map(message => message.id),
           eventId: link.eventId, runId, briefRevision: 1, planId: link.planId, planRevision: link.planRevision, now: now.getTime() })
         if (!built.ok) throw new ApiError(422, 'offer_incomplete', built.reason)
+        if (built.plan.total === 0) throw new ApiError(422, 'no_payment_due', 'This offer has no payment due. No Checkout is needed.')
         if (existing) return existing
         await tx.insert(events).values({ id: link.eventId, customerId, brief: offer.brief, briefRevision: 1,
           status: 'plan_ready', planRevision: 1, createdAt: now })
@@ -62,6 +63,7 @@ export function createOfferRepository(db: PgDatabase<PgQueryResultHKT, typeof sc
           idempotencyKey: `${link.eventId}:offer:${offer.id}:${offer.revision}`, state: 'succeeded', createdAt: now })
         await tx.insert(plans).values({ id: link.planId, eventId: link.eventId, revision: 1, briefRevision: 1, runId, data: { ...built.plan, planningOffer: { conversationId, offerId, revision: offerRevision, expiresAt: offer.expiresAt } } })
         const data = { ...record, revision: row.revision + 1,
+          requests: request ? { ...record.requests, [request.id]: request.fingerprint } : record.requests,
           view: { ...record.view, version: record.view.version + 1, paymentLink: link } }
         await tx.update(planningConversations).set({ revision: data.revision, data }).where(eq(planningConversations.id, conversationId))
         return link
