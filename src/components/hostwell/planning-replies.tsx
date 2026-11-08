@@ -1,9 +1,10 @@
+import { Button } from './ui'
 import type { SupplierReply } from '../../agent/planning/reply-contract'
 
 const labels = { question: 'The venue has a question', refusal: 'The venue cannot accommodate this inquiry',
   tentative: 'Tentative availability', quote: 'Venue quote', confirmation: 'Supplier confirmation received', other: 'Venue reply' }
 
-export function PlanningReplies({ replies, stale }: { replies: SupplierReply[]; stale: boolean }) {
+export function PlanningReplies({ replies, stale, retry, disabled = false }: { replies: SupplierReply[]; stale: boolean; retry?: (replyId: string) => void; disabled?: boolean }) {
   if (!replies.length) return null
   return <section aria-label="Venue replies" className="flex flex-col gap-5">
     <h2 className="text-[26px] font-light">Replies from the venue</h2>
@@ -24,6 +25,8 @@ export function PlanningReplies({ replies, stale }: { replies: SupplierReply[]; 
           <p>{reply.interpretation.nextAction}</p>
         </> : <p role="status">{reply.status === 'failed' ? 'We saved this reply but could not interpret it. You can read the original below.'
           : 'We saved the venue reply and are preparing its summary.'}</p>}
+        {reply.status === 'failed' && reply.message.text.trim() && retry && <Button className="self-start px-4 py-2"
+          disabled={disabled} onClick={() => retry(reply.id)}>Retry reply summary</Button>}
         <details><summary className="cursor-pointer underline">Read original reply</summary>
           <p>{reply.message.subject}</p><p className="whitespace-pre-wrap">{reply.message.text}</p>
           <p className="text-sm text-stone">Message reference: {reply.message.messageId}</p>

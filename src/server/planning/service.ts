@@ -164,6 +164,15 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (record.pending && record.view.status !== 'uncertain' && record.pending.expiresAt > now(deps)) throw busy()
   const requests = { ...record.requests, [command.requestId]: fingerprint }
   if (record.view.inquiry?.delivery?.status === 'pending') throw busy()
+  if (command.kind === 'retry_reply') {
+    const inquiry = record.view.inquiry
+    const reply = inquiry?.replies?.find(item => item.id === command.replyId)
+    if (!inquiry || inquiry.id !== command.inquiryId || !reply || reply.status !== 'failed') throw stale()
+    if (!reply.message.text.trim()) throw new ApiError(422, 'missing_reply_text', 'The original reply has no plain text to interpret.')
+    return (await save(deps, record, { ...record, requests, view: changed(record, { inquiry: { ...inquiry,
+      replies: inquiry.replies!.map(item => item.id === reply.id ? { ...item, status: 'received', error: undefined, lease: undefined } : item),
+    } }) })).view
+  }
   if (command.kind === 'send_inquiry') {
     if (!deps.mail) throw new ApiError(503, 'mail_unavailable', 'Inquiry sending is not connected yet.')
     if (record.pending || record.view.status !== 'ready') throw busy()
