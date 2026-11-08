@@ -46,12 +46,16 @@ These are deterministic triage rules, not learned preferences or a claim about b
 
 ## What the snapshot covers
 
-The collector reads eleven committed files at this checkout's exact HEAD: coordination, ownership, four role briefs, the status index, and four owner status files.
+The collector reads coordination, ownership, four configured role briefs, and the status index at this checkout's exact HEAD.
+It discovers every direct Markdown file under `docs/team/status` at that commit, excluding `README.md` and `template.md` from owner reports.
+An empty or unreadable owner inventory makes collection incomplete.
+New role briefs outside that directory still require a deliberate change to the configured brief list.
 Uncommitted edits and handoffs on other branches are not read.
 Every document has its path, commit, exact-text SHA-256, and full text in JSON.
 Extracted items also include a one-based line number and excerpt.
 
-The GitHub CLI reads up to 1,000 open PRs, current main's commit, and each PR referenced as `PR #123` or `/pull/123` in those documents.
+The GitHub CLI reads up to 1,000 open PRs, current main's commit, and each local PR referenced as `PR #123` or a full `https://github.com/22Ujjwal/we-gotchu/pull/123` URL in those documents.
+Foreign repository URLs and their Markdown display labels do not become local PR references.
 Reaching the open-PR cap makes the collection incomplete.
 Every PR includes its state, head commit, update time, draft status, mergeability, review decision, and reported checks with available evidence URLs.
 Reads happen sequentially, so this is an observation window rather than a transactional GitHub snapshot.
@@ -79,6 +83,9 @@ For another checkout, first obtain this PR's files and confirm the checkout you 
 For a refreshed main baseline, deliberately update this coordination branch after inspecting local work; refresh never fetches, checks out, rebases, or merges.
 The owner must update their own status file when a report is stale.
 Existing project CI tests `src/**/*.test.ts` and does not discover the standalone Node suite.
-Run the standalone command explicitly until the root configuration owner chooses to add it to CI.
+Run the standalone command explicitly until [PR #27](https://github.com/22Ujjwal/we-gotchu/pull/27) lands.
+That separate root CI change installs Node 22 and uses a Bash nullglob array to run `node --test` when coordination tests exist.
+It skips the step with an activation message on branches without these files, then activates once PR #23 is present.
+Ujjwal review of the CI change is pending; this branch does not change root CI.
 
 See [capability research](research.md) and [verification](verification.md) for what was actually checked.
