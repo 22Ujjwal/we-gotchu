@@ -24,3 +24,23 @@ export type SelectedOffer = z.infer<typeof selectedOfferSchema>
 export type PlanningPaymentLink = {
   eventId: string; planId: string; planRevision: number; offerId: string; offerRevision: number;
 }
+
+export function calculateOfferCosts(offer: SelectedOffer): { ok: true; amounts: number[]; total: number } | { ok: false; reason: string } {
+  const fail = (reason: string): { ok: false; reason: string } => ({ ok: false, reason })
+  const amounts: number[] = []
+  for (const line of offer.lines) {
+    if (line.unitAmount === null || line.tax === null || line.delivery === null || line.fees === null
+      || line.deposit.amount === null || line.deposit.treatment === 'unknown' || !line.cancellationTerms) {
+      return fail(`${line.option.name} has unknown required costs or cancellation terms.`)
+    }
+    const subtotal = line.unitAmount * line.units
+    if (line.deposit.treatment === 'included' && line.deposit.amount > subtotal) return fail('The included deposit exceeds the quoted subtotal.')
+    const amount = subtotal + line.tax + line.delivery + line.fees
+      + (line.deposit.treatment === 'additional' ? line.deposit.amount : 0)
+    if (!Number.isSafeInteger(amount)) return fail('The offer amount is too large.')
+    amounts.push(amount)
+  }
+  const total = amounts.reduce((sum, amount) => sum + amount, 0)
+  if (!Number.isSafeInteger(total) || total > offer.brief.budget) return fail('The complete offer exceeds the event budget.')
+  return { ok: true, amounts, total }
+}
