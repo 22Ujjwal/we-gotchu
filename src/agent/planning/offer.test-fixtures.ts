@@ -19,4 +19,3 @@ export const extracted = {
     deposit: { amount: 5000, treatment: 'included' }, cancellationTerms: null,
     sourceQuotes: ['USD 200 for the room, including USD 50 deposit. Tax is extra.'] }],
 }
-
