@@ -1,5 +1,13 @@
 # Verification record
 
+## Concise status update
+
+The final concise renderer is `805bb6ac08025fba3ea29b074262d0dc19cf41f6`.
+All 25 standalone tests passed on Node 26 and Node 22.23.4, and application typecheck and 135 tests passed on this implementation.
+The Markdown now uses one-line PR statuses and short notes, without repeated next-step paragraphs, displayed commit hashes, or the priority legend.
+A regression limits the representative six-PR briefing to 35 lines while retaining evidence links and all JSON detail.
+No collection, priority, or merge policy changed.
+
 ## Human briefing update
 
 The human-readable renderer was tested at `b409f72`, with coverage wording and shorter displayed head commits checked at `c6db58f`.

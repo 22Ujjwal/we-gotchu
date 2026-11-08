@@ -16,8 +16,8 @@ cat tools/team-coordination/output/queue.md
 ```
 
 Open `tools/team-coordination/output/queue.md` in your editor for the human briefing.
-It puts blockers and decision requests first, then open PRs and grouped handoff follow-ups.
-Each item names a next step and links to the exact source or PR; detailed evidence stays in JSON.
+It is a short status summary: blockers, decisions, one line per open PR, and brief handoff notes.
+Source links are available when needed; repeated instructions, commit identifiers, and detailed evidence stay out of the human summary.
 Historical PR references are grouped by source report so repeated mentions do not crowd out current work.
 The briefing does not read inline review discussions or compare changes against the previous refresh; the chief must inspect discussions before recommending a merge.
 The adjacent `queue.json` includes the collected handoff text and PR metadata for an agent to inspect.
@@ -45,7 +45,7 @@ If Git or output writing fails before a snapshot can be written, the command rep
 Always check the timestamp and exit status; old green output is not current evidence.
 The two output files replace individually, not as one transaction; do not refresh concurrently or read while refresh is running.
 
-The generated queue header contains the priority key maintained in `tools/team-coordination/queue.mjs`.
+The JSON retains numeric priorities; the human summary uses short sections instead of a technical priority legend.
 These are deterministic triage rules, not learned preferences or a claim about business urgency.
 
 ## What the snapshot covers
