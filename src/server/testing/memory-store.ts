@@ -132,6 +132,7 @@ export class MemoryStore implements Store {
   getPaymentByApproval(): never { throw new Error('not implemented') }
   hasStripeEvent(): never { throw new Error('not implemented') }
   markPaymentPaid(): never { throw new Error('not implemented') }
+  repairExpiredCheckout(): never { throw new Error('not implemented') }
   markPaymentExpired(): never { throw new Error('not implemented') }
   setRefund(): never { throw new Error('not implemented') }
   recordStripeEvent(): never { throw new Error('not implemented') }

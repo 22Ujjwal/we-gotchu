@@ -233,6 +233,17 @@ export class MemoryStore implements Store {
     p.state = 'expired'
     return true
   }
+  async repairExpiredCheckout(checkoutSessionId: string): Promise<string | null> {
+    const payment = [...this.payments.values()].find(p => p.checkoutSessionId === checkoutSessionId)
+    const approval = payment && this.approvals.get(payment.approvalId)
+    const event = approval && this.events.get(approval.eventId)
+    const current = event && [...this.approvals.values()].filter(a => a.eventId === event.eventId).at(-1)
+    if (!event || !approval || payment?.state !== 'expired' || approval.revokedAt ||
+        event.cancelRequestedAt || event.status !== 'awaiting_payment' ||
+        event.planRevision !== approval.planRevision || current?.approvalId !== approval.approvalId) return null
+    event.status = 'plan_ready'
+    return event.eventId
+  }
   async setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }) {
     Object.assign(this.payments.get(paymentId)!, refund)
   }

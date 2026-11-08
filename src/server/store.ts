@@ -85,6 +85,8 @@ export interface Store {
   /** Conditional pending -> paid. Returns null if it was not pending. */
   markPaymentPaid(checkoutSessionId: string, paymentIntentId: string): Promise<Payment | null>
   markPaymentExpired(checkoutSessionId: string): Promise<boolean>
+  /** Atomically returns the current expired Checkout to plan_ready. Serializes with approval creation and cancellation. Returns the changed event id. */
+  repairExpiredCheckout(checkoutSessionId: string): Promise<string | null>
   setRefund(paymentId: string, refund: { refundId: string; refundState: Payment['refundState']; refundReason: string }): Promise<void>
   /** Records a Stripe event id; returns true only the first time. */
   recordStripeEvent(stripeEventId: string): Promise<boolean>

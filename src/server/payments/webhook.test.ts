@@ -131,7 +131,7 @@ describe('stripe webhook', () => {
   it('repairs an interrupted expiration when the same webhook is retried', async () => {
     const { deps, store, session, payment, eventId, confirmed, stripe } = await awaitingPayment()
     const { payload, header } = signed('checkout.session.expired', { ...session, payment_status: 'unpaid' })
-    vi.spyOn(store, 'setEventStatus').mockRejectedValueOnce(new Error('status unavailable'))
+    vi.spyOn(store, 'repairExpiredCheckout').mockRejectedValueOnce(new Error('status unavailable'))
 
     await expect(handleStripeWebhook(deps, payload, header)).rejects.toThrow('status unavailable')
     expect(store.payments.get(payment.paymentId)?.state).toBe('expired')

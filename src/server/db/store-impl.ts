@@ -616,6 +616,27 @@ export function createStore(db: Db): Store {
       return rows.length > 0
     },
 
+    async repairExpiredCheckout(checkoutSessionId) {
+      return db.transaction(async (tx) => {
+        const [identity] = await tx.select({ eventId: approvals.eventId, approvalId: approvals.id, paymentId: payments.id })
+          .from(payments).innerJoin(approvals, eq(approvals.id, payments.approvalId))
+          .where(eq(payments.checkoutSessionId, checkoutSessionId))
+        if (!identity) return null
+        // createApproval and cancellation take this event lock too. Read the
+        // current approval only after acquiring it, never from a stale view.
+        const [event] = await tx.select().from(events).where(eq(events.id, identity.eventId)).for('update')
+        if (!event || event.cancelRequestedAt || event.status !== 'awaiting_payment') return null
+        const [approval] = await tx.select().from(approvals).where(eq(approvals.eventId, event.id))
+          .orderBy(desc(approvals.approvedAt)).limit(1).for('update')
+        if (!approval || approval.id !== identity.approvalId || approval.revokedAt ||
+            approval.planRevision !== event.planRevision) return null
+        const [payment] = await tx.select().from(payments).where(eq(payments.id, identity.paymentId)).for('update')
+        if (!payment || payment.approvalId !== approval.id || payment.state !== 'expired') return null
+        await tx.update(events).set({ status: 'plan_ready' }).where(eq(events.id, event.id))
+        return event.id
+      })
+    },
+
     async setRefund(paymentId, refund) {
       await db
         .update(payments)

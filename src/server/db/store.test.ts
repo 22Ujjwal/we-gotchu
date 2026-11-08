@@ -4,6 +4,9 @@ import { OpenApprovalExistsError, type Store } from '../store'
 import { approve as approveCheckout, cancel } from '../events/service'
 import { makeDeps } from '../events/testFakes'
 import { createTestStore } from './client'
+import Stripe from 'stripe'
+import { WEBHOOK_SECRET } from '../events/testFakes'
+import { handleStripeWebhook } from '../payments/webhook'
 
 const brief: Brief = planReadyEvent.event.brief
 
@@ -464,3 +467,69 @@ it('finds paid approvals after revocation for a cancellation retry', async () =>
   expect(await store.listPaidApprovalIds(event.eventId)).toEqual([approval.approvalId])
   expect(await store.listPaidApprovalIds('another-event')).toEqual([])
 })
+
+
+it('does not let expiration overwrite an approval created during status repair', async () => {
+  const { event, run } = await store.createEvent({ customerId: 'cust_expiry_race', brief })
+  const { approvalId, checkoutSessionId } = await approve(event.eventId, run.runId)
+  await store.setEventStatus(event.eventId, ['researching'], 'awaiting_payment')
+  const approval = (await store.getApproval(approvalId))!
+  const payment = (await store.getPaymentByApproval(approvalId))!
+  let inserted = false
+  const insertReplacement = async () => {
+    if (inserted) return
+    inserted = true
+    // A new approval becomes eligible once the original approval has timed out.
+    const approvedAt = new Date(Date.parse(approval.expiresAt) + 1000)
+    await store.createApproval(
+      { ...approval, approvalId: `${approvalId}_new`, approvedAt: approvedAt.toISOString(),
+        expiresAt: new Date(approvedAt.getTime() + 31 * 60_000).toISOString() },
+      { ...payment, paymentId: `${payment.paymentId}_new`, approvalId: `${approvalId}_new`, checkoutSessionId: `${checkoutSessionId}_new` },
+    )
+  }
+  const racingStore = new Proxy(store, {
+    get(target, property, receiver) {
+      const original = Reflect.get(target, property, receiver)
+      if (property === 'getEventView') return async (...args: Parameters<Store['getEventView']>) => {
+        const stale = await target.getEventView(...args)
+        await insertReplacement()
+        return stale
+      }
+      if (property === 'repairExpiredCheckout') return async (sessionId: string) => {
+        await insertReplacement()
+        return original.call(target, sessionId)
+      }
+      return original
+    },
+  })
+  const { deps } = makeDeps()
+  deps.store = racingStore
+  const payload = JSON.stringify({ id: `stripe_${event.eventId}`, type: 'checkout.session.expired',
+    created: Math.floor(Date.now() / 1000), data: { object: { id: checkoutSessionId } } })
+  const signature = Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET })
+  expect(await handleStripeWebhook(deps, payload, signature)).toBe('expired')
+  const current = (await store.getEventView(event.eventId))!
+  expect(current.approval?.approvalId).toBe(`${approvalId}_new`)
+  expect(current.payment?.state).toBe('pending')
+  expect(current.event.status).toBe('awaiting_payment')
+  expect(current.progress).toHaveLength(0)
+})
+
+
+it.each(['expired', 'pending', 'paid', 'revoked', 'canceled', 'stale_plan'] as const)(
+  'repairs only the current uncanceled expired Checkout: %s', async (state) => {
+    const { event, run } = await store.createEvent({ customerId: 'cust_expiry_guard', brief })
+    const { checkoutSessionId } = await approve(event.eventId, run.runId)
+    await store.setEventStatus(event.eventId, ['researching'], 'awaiting_payment')
+    if (state === 'paid') await store.markPaymentPaid(checkoutSessionId, 'pi_expiry_guard')
+    if (state !== 'pending') await store.markPaymentExpired(checkoutSessionId)
+    if (state === 'revoked') await store.revokeApprovals(event.eventId, new Date())
+    if (state === 'canceled') await store.requestCancel(event.eventId, new Date())
+    if (state === 'stale_plan') await store.savePlan(planFor(event.eventId, run.runId, 2))
+    expect(await store.repairExpiredCheckout(checkoutSessionId)).toBe(state === 'expired' ? event.eventId : null)
+    expect((await store.getEvent(event.eventId))?.status).toBe(
+      state === 'expired' ? 'plan_ready' : state === 'canceled' ? 'canceling' : 'awaiting_payment',
+    )
+    expect(await store.repairExpiredCheckout(checkoutSessionId)).toBeNull()
+  },
+)
