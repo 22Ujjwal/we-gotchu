@@ -13,6 +13,8 @@ Spec: [Connect the event interface to the working backend](../../specs/event-ui-
 Connect the existing frontend to the existing authenticated customer event API while preserving Leo's design.
 Replace sample event state and simulated success navigation with persisted EventView data, revision-safe updates, progress polling, exact-plan approval, Checkout restoration, and truthful cancellation/refund states.
 Claim this ticket before implementation and coordinate cross-owned edits.
+Do not change Leo's design.
+When a missing frontend state or element blocks integration, give Tony a specific prompt for Leo instead of implementing a design change or messaging him directly.
 
 ## Acceptance criteria
 

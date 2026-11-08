@@ -47,7 +47,10 @@ This is Tony's integration work, not a new frontend redesign assignment for Leo.
 
 ## Implementation Decisions
 
-- Preserve existing layouts, visual styling, and navigation intent while replacing fixture-backed event state with an authenticated EventView consumer.
+- Preserve existing layouts, visual styling, components, and navigation intent while replacing fixture-backed event state with an authenticated EventView consumer.
+Do not redesign screens or independently add frontend presentation elements.
+If a required state has no existing presentation, stop that presentation change and give Tony a concrete prompt for Leo describing the missing state and backend evidence.
+Continue independent API wiring and tests while waiting for the frontend decision.
 - Use the existing customer HTTP API and shared contract 0.4 types and validation rules.
 Do not add a second backend or make browser calls directly to supplier providers or MCP.
 - Create an event with POST /api/events and restore it with GET /api/events/:id.
@@ -67,7 +70,8 @@ ResearchResult is read-only evidence; approval requires an eligible current back
 Current real research may remain partial and produce no Plan.
 - Render integer minor-unit money using its supplied currency.
 Do not reuse sample VAT arithmetic or invent delivered totals, photos, capacity, dates, receipt lines, or verified supplier attributes.
-Hide unsupported presentation details or label their absence.
+Never populate unsupported details with fabricated data.
+If the existing design cannot represent their absence, request Leo's frontend decision through Tony before changing the presentation.
 - Show recommendation matched, unmet, and unchecked reasons, sources, warnings, freshness limitations, and listing-price provenance.
 Do not combine incompatible currencies or turn unknown budget fit into within budget.
 - Submit approval to POST /api/events/:id/approve with the displayed planId and planRevision.
