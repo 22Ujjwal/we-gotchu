@@ -1,8 +1,20 @@
 # We Gotchu
 
-We Gotchu helps a host plan an event, reserve a venue, and buy supplies through one approved event plan.
-One cancellation request coordinates the supplier cancellations and shows the resulting refund status.
+## Problem
+
+Planning an event means coordinating a venue, supplies, availability, budgets, and cancellation terms across different suppliers.
+The host has to compare options, make separate bookings and purchases, and track what is confirmed.
+If plans change, they have to cancel each commitment and follow each refund themselves.
+
+## Solution
+
+We Gotchu turns the host's requirements into one event plan with a venue, supplies, a cost breakdown, and cancellation terms.
+The host reviews and approves the specific actions before the service books the venue and purchases the supplies.
+One event view shows progress and supplier confirmations.
+If the host cancels the event, the service coordinates the approved cancellations and reports each result and refund status.
 Planning is free; the customer pays the approved event costs.
+
+## Project status
 
 The repository contains planning documents and an existing TanStack Start application scaffold.
 The scaffold was added separately by the team; the documentation work does not verify its runtime behavior.
