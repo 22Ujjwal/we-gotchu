@@ -1,0 +1,4 @@
+export const title = 'PR 18: event research';
+const labels = {Checking:'Checking the brief',NeedsInput:'More details needed',Searching:'Finding options',Ranking:'Ordering options',Correcting:'Fixing invalid ranking',Partial:'Options returned with unknown costs',EvidenceOnly:'Evidence returned without ranking',Failed:'Research failed',Canceled:'Research canceled'};
+export const state = (v) => labels[v.phase];
+export const step = (a) => ({NeedInput:'required details missing',Start:'brief is complete',NoResults:'no usable options',Found:'options found',Valid:'ranking is valid',Correct:'ranking is invalid',RetryValid:'corrected ranking is valid',RetryInvalid:'corrected ranking is invalid',FailBefore:'search fails or times out',FailAfter:'ranking fails or times out',Cancel:'cancellation signal arrives',Done:null}[a] ?? null);

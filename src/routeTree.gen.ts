@@ -13,8 +13,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PartyRouteImport } from './routes/party'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsVenueIdRouteImport } from './routes/settings.$venueId'
+import { Route as ApiEventsRouteImport } from './routes/api/events'
+import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
+import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
+import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.brief'
+import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,6 +41,14 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
 const SettingsVenueIdRoute = SettingsVenueIdRouteImport.update({
   id: '/settings/$venueId',
   path: '/settings/$venueId',
+const ApiEventsRoute = ApiEventsRouteImport.update({
+  id: '/api/events',
+  path: '/api/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMcpRoute = ApiMcpRouteImport.update({
+  id: '/api/mcp',
+  path: '/api/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInSplatRoute = SignInSplatRouteImport.update({
@@ -45,6 +60,31 @@ const SignUpSplatRoute = SignUpSplatRouteImport.update({
   id: '/sign-up/$',
   path: '/sign-up/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiEventsRoute,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEventsIdApproveRoute = ApiEventsIdApproveRouteImport.update({
+  id: '/approve',
+  path: '/approve',
+  getParentRoute: () => ApiEventsIdRoute,
+} as any)
+const ApiEventsIdBriefRoute = ApiEventsIdBriefRouteImport.update({
+  id: '/brief',
+  path: '/brief',
+  getParentRoute: () => ApiEventsIdRoute,
+} as any)
+const ApiEventsIdCancelRoute = ApiEventsIdCancelRouteImport.update({
+  id: '/cancel',
+  path: '/cancel',
+  getParentRoute: () => ApiEventsIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -62,6 +102,27 @@ export interface FileRoutesByTo {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/settings': typeof SettingsIndexRoute
+  '/api/events': typeof ApiEventsRouteWithChildren
+  '/api/mcp': typeof ApiMcpRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
+  '/api/events/$id': typeof ApiEventsIdRouteWithChildren
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
+  '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
+  '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/api/events': typeof ApiEventsRouteWithChildren
+  '/api/mcp': typeof ApiMcpRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
+  '/api/events/$id': typeof ApiEventsIdRouteWithChildren
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
+  '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
+  '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +132,15 @@ export interface FileRoutesById {
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
   '/settings/': typeof SettingsIndexRoute
+  '/api/events': typeof ApiEventsRouteWithChildren
+  '/api/mcp': typeof ApiMcpRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
+  '/api/events/$id': typeof ApiEventsIdRouteWithChildren
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
+  '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
+  '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -97,6 +167,39 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/settings/'
+    | '/api/events'
+    | '/api/mcp'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/api/events/$id'
+    | '/api/stripe/webhook'
+    | '/api/events/$id/approve'
+    | '/api/events/$id/brief'
+    | '/api/events/$id/cancel'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/api/events'
+    | '/api/mcp'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/api/events/$id'
+    | '/api/stripe/webhook'
+    | '/api/events/$id/approve'
+    | '/api/events/$id/brief'
+    | '/api/events/$id/cancel'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/events'
+    | '/api/mcp'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/api/events/$id'
+    | '/api/stripe/webhook'
+    | '/api/events/$id/approve'
+    | '/api/events/$id/brief'
+    | '/api/events/$id/cancel'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +209,11 @@ export interface RootRouteChildren {
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  ApiEventsRoute: typeof ApiEventsRouteWithChildren
+  ApiMcpRoute: typeof ApiMcpRoute
+  SignInSplatRoute: typeof SignInSplatRoute
+  SignUpSplatRoute: typeof SignUpSplatRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -136,6 +244,18 @@ declare module '@tanstack/react-router' {
       path: '/settings/$venueId'
       fullPath: '/settings/$venueId'
       preLoaderRoute: typeof SettingsVenueIdRouteImport
+    '/api/events': {
+      id: '/api/events'
+      path: '/api/events'
+      fullPath: '/api/events'
+      preLoaderRoute: typeof ApiEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mcp': {
+      id: '/api/mcp'
+      path: '/api/mcp'
+      fullPath: '/api/mcp'
+      preLoaderRoute: typeof ApiMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-in/$': {
@@ -152,8 +272,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignUpSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/events/$id': {
+      id: '/api/events/$id'
+      path: '/$id'
+      fullPath: '/api/events/$id'
+      preLoaderRoute: typeof ApiEventsIdRouteImport
+      parentRoute: typeof ApiEventsRoute
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/events/$id/approve': {
+      id: '/api/events/$id/approve'
+      path: '/approve'
+      fullPath: '/api/events/$id/approve'
+      preLoaderRoute: typeof ApiEventsIdApproveRouteImport
+      parentRoute: typeof ApiEventsIdRoute
+    }
+    '/api/events/$id/brief': {
+      id: '/api/events/$id/brief'
+      path: '/brief'
+      fullPath: '/api/events/$id/brief'
+      preLoaderRoute: typeof ApiEventsIdBriefRouteImport
+      parentRoute: typeof ApiEventsIdRoute
+    }
+    '/api/events/$id/cancel': {
+      id: '/api/events/$id/cancel'
+      path: '/cancel'
+      fullPath: '/api/events/$id/cancel'
+      preLoaderRoute: typeof ApiEventsIdCancelRouteImport
+      parentRoute: typeof ApiEventsIdRoute
+    }
   }
 }
+
+interface ApiEventsIdRouteChildren {
+  ApiEventsIdApproveRoute: typeof ApiEventsIdApproveRoute
+  ApiEventsIdBriefRoute: typeof ApiEventsIdBriefRoute
+  ApiEventsIdCancelRoute: typeof ApiEventsIdCancelRoute
+}
+
+const ApiEventsIdRouteChildren: ApiEventsIdRouteChildren = {
+  ApiEventsIdApproveRoute: ApiEventsIdApproveRoute,
+  ApiEventsIdBriefRoute: ApiEventsIdBriefRoute,
+  ApiEventsIdCancelRoute: ApiEventsIdCancelRoute,
+}
+
+const ApiEventsIdRouteWithChildren = ApiEventsIdRoute._addFileChildren(
+  ApiEventsIdRouteChildren,
+)
+
+interface ApiEventsRouteChildren {
+  ApiEventsIdRoute: typeof ApiEventsIdRouteWithChildren
+}
+
+const ApiEventsRouteChildren: ApiEventsRouteChildren = {
+  ApiEventsIdRoute: ApiEventsIdRouteWithChildren,
+}
+
+const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
+  ApiEventsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -162,6 +345,11 @@ const rootRouteChildren: RootRouteChildren = {
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  ApiEventsRoute: ApiEventsRouteWithChildren,
+  ApiMcpRoute: ApiMcpRoute,
+  SignInSplatRoute: SignInSplatRoute,
+  SignUpSplatRoute: SignUpSplatRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
