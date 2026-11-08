@@ -2,9 +2,9 @@ import { expect, test, vi } from 'vitest'
 import type { ReplyCompletionInput } from './reply-interpreter'
 import { createReplyInterpreter } from './reply-interpreter'
 
-test('uses a tool-free completion to interpret the original supplier message as data', async () => {
+test.each(['plain', 'fenced'])('interprets original supplier evidence with %s JSON output', async format => {
   const interpretation = { kind: 'question', summary: 'Start time needed.', nextAction: 'Confirm the time.', facts: [], missing: ['Start time'] }
-  const completions = vi.fn(async (_input: ReplyCompletionInput) => ({ choices: [{ message: { content: JSON.stringify(interpretation) }, finish_reason: 'stop' }] }))
+  const completions = vi.fn(async (_input: ReplyCompletionInput) => ({ choices: [{ message: { content: format === 'fenced' ? '```json\n' + JSON.stringify(interpretation) + '\n```' : JSON.stringify(interpretation) }, finish_reason: 'stop' }] }))
   const interpret = createReplyInterpreter({ completions }, 'configured-model')
   const result = await interpret({ message: { provider: 'fixture', messageId: '1', threadId: null, inReplyTo: 'sent', from: 'v@example.com', to: ['p@example.com'],
     subject: 'Party', text: 'What start time?', receivedAt: '2026-11-08T10:00:00Z', originalRef: 'fixture:1', mode: 'simulated' },
