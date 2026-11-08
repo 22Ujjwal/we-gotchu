@@ -1,3 +1,15 @@
+## Demo live-update fixes, 2026-11-08
+
+Branch: `fix/demo-live-updates` (local, not pushed). Baseline: `5efbcc3` from photo PR [#78](https://github.com/22Ujjwal/we-gotchu/pull/78). Integration PR [#77](https://github.com/22Ujjwal/we-gotchu/pull/77) is merged into main at `c920952`. No PR yet for this increment.
+
+Commits: `3cf5bbb` local readiness tool and recovery guide; `881053e` reject preview-fixture mode; `195f0d7` saved reply polling; `f8e34c4` idle-arrangement recovery; `2824a76` booking outcome and receipt link; `d2a29ac` truthful receipt evidence and currency formatting.
+
+Working on this branch: asynchronous reply UI updates, late reply polling, focus recovery, actionable recovery selection, separate payment and simulated booking outcomes, receipt links and test/simulation labels. No production capability or live send is claimed. Provider configuration and independent recipient are still missing for the local controlled rehearsal.
+
+Verification: 807 application tests, 35 tooling tests, typecheck and production build passed. The initial database reopen timeout passed unchanged in isolation and in the full rerun. No live external actions or fresh browser verification.
+
+Next: obtain Tony's local company-agent/webhook configuration path and the approved team-controlled recipient, then verify one controlled mail journey. Keep Stripe rehearsal separate. Recovery still has interrupted-session/notification limitations. Evidence and exact remaining gates: [demo readiness](../../testing/demo-update-readiness.md).
+
 ## Latest: venue photo fallback, 2026-11-08
 
 Branch: `feat/venue-photo-fallbacks`, stacked on tested integration baseline `f933645`.
