@@ -45,6 +45,7 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
       if (['failed', 'cancelled'].includes(session.status) || ['error', 'budget_paused', 'max_iterations', 'context_exhausted'].includes(session.stop_reason ?? '')) {
         return { ...result, status: 'failed', progress: null, error: 'Research stopped before the next proposal was ready. Your saved options are still available.' }
       }
+      if (session.stop_reason === 'awaiting_delegation') return { ...result, progress: 'Your research team is checking options.' }
       if (session.pending_actions?.length || ['awaiting_approval', 'awaiting_input', 'awaiting_answer'].includes(session.stop_reason ?? '')) {
         return { ...result, status: 'failed', progress: null, error: 'Research needs operator attention. Your saved options are still available.' }
       }
