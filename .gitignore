@@ -13,3 +13,6 @@ __unconfig*
 todos.json
 .clerk/
 .claude/worktrees/
+
+# Vercel
+.vercel
