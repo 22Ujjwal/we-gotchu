@@ -63,6 +63,9 @@ Tony approved three local tickets to move from a saved venue selection to an inq
 This stage extends the earlier planning milestone, which deferred supplier contact; it does not authorize live outreach or purchases by itself.
 Prepare the email integration prerequisites while stage two is reviewed, then implement the tickets in dependency order.
 Use the existing email integration if it supports sending, reply correlation, and inbound processing; coordinate that decision with Ujjwal before adding another provider.
+Tony owns planning, inquiry approval, reply interpretation, and customer UI.
+Ujjwal owns supplier-mail transport and inbound handling under the [shared handoff](../research/stage-three-team-handoff.md).
+Agree on the small interface before parallel implementation; integrate in ticket order.
 Venue images remain independent work.
 
 - [01: Prepare an inquiry for the selected venue](../../.scratch/venue-inquiries/issues/01-prepare-selected-venue-inquiry.md).

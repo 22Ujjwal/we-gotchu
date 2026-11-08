@@ -27,6 +27,8 @@ Keep UI presentation refinements separate from the minimum clear offer and sourc
 
 ## Coordination
 
-Tony owns this complete stage-three slice, including mail integration, planning state, and customer UI.
-Ujjwal's parallel assignment is venue images and hosted readiness, not supplier inquiries.
+Tony owns the shared inquiry contract, planning state, customer approval and UI, and reply interpretation.
+Ujjwal owns the isolated supplier-mail transport, inbound handling, provider references, and transport deduplication.
+Agree on the send and inbound interfaces before implementing in parallel.
 Coordinate shared schema, migration, runtime, and dependency changes before editing.
+See [the ownership and verification handoff](../../../docs/research/stage-three-team-handoff.md).
