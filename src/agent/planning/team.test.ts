@@ -16,7 +16,11 @@ test('specialists can research but cannot spawn another team or inherit customer
     const definition = specialistDefinition(role, 'model')
     expect(definition.handoffs).toBe(false)
     expect(definition.multiagent).toBeNull()
-    expect(definition.tools?.configs?.['monid.monid_run'].permission).toBe('allow')
+    expect(definition.mcp_servers).toEqual([])
+    expect(Object.keys(definition.tools?.configs ?? {}).sort()).toEqual(['data_describe', 'data_run', 'data_search', 'web_fetch', 'web_search'])
+    for (const config of Object.values(definition.tools?.configs ?? {})) expect(config.permission).toBe('allow')
+    expect(definition.system).toContain('Use native public research tools')
+    expect(definition.system).not.toContain('Use Monid directly')
     expect(definition.structured_output_required).toBe(true)
     expect(definition.output_schema?.properties).not.toHaveProperty('selectedOptionId')
   }
