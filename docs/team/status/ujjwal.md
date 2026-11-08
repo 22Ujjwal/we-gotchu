@@ -4,7 +4,7 @@ Owner: Ujjwal.
 Responsibility: transactions and integration.
 Updated: 2026-11-07T17:05:52-08:00
 Baseline: main at a54e054cc48a15c2b30ae170db662849d1597185 (merged PR #10).
-Branch and PR: docs/status-ujjwal (this file only), PR link below once opened.
+Branch and PR: docs/status-ujjwal (this file only), https://github.com/22Ujjwal/we-gotchu/pull/13.
 Other work, not yet published: feat/clerk-auth (Clerk code, local only) and docs/backend-decisions (draft doc updates, local only).
 Availability: proposed. The Clerk code exists only in a local clone (commit d47f35a) and is not published.
 Tested commit: d47f35a passed typecheck and build and served the home and sign-in pages in a dev server. The sign-in flow itself was not exercised.
