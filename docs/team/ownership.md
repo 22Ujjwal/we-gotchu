@@ -12,14 +12,14 @@ Coordinate shared route files through the transaction owner if UI and server cod
 ## Original draft
 
 Status: draft for agreement by the four teammates.
-Paths below describe the intended repository layout; application files do not exist yet.
+Paths below describe the earlier proposed layout; map them to the existing TanStack Start scaffold before editing.
 Each implementation task has one owner, one branch, and a declared file set.
 
 | Owner | Exclusive primary paths |
 | --- | --- |
-| Frontend | apps/web/src/app except its api subtree; apps/web/src/components; apps/web/src/features; apps/web/public; frontend journey tests. |
-| Agent workflow | packages/agent; packages/suppliers; agent and supplier adapter tests. |
-| Transactions and integration | apps/web/src/app/api; apps/worker; packages/contracts; packages/db; packages/transactions; payment, worker, and contract tests. |
+| Frontend, Leo | apps/web/src/app except its api subtree; apps/web/src/components; apps/web/src/features; apps/web/public; frontend journey tests. |
+| Agent workflow, Tony | packages/agent; packages/suppliers; agent and supplier adapter tests. |
+| Transactions and integration, Ujjwal | apps/web/src/app/api; apps/worker; packages/contracts; packages/db; packages/transactions; payment, worker, and contract tests. |
 | Pitch | docs/pitch; presentation assets under assets/pitch. |
 
 The transaction owner also coordinates root package manifests, lockfiles, TypeScript configuration, workspace configuration, CI, environment-variable documentation, migrations, and shared fixtures.

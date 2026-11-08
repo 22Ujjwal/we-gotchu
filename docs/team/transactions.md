@@ -1,5 +1,8 @@
 # Transactions and integration handoff
 
+Assigned teammate: Ujjwal.
+Ujjwal owns transactions and integration under the shared ownership contract.
+
 You own authoritative state, shared contracts, approval enforcement, customer payments, refunds, durable execution, and integration coordination.
 Read the [contract draft](../contracts-draft.md), [payment research](../research-index.md), and [ownership rules](ownership.md).
 
