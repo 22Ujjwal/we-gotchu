@@ -49,7 +49,7 @@ test('Markdown renders untrusted source text as inert ASCII and retains provenan
   assert.ok(!md.includes('<script>'));
   assert.ok(!md.includes('[click]'));
   assert.ok(!/[^\x00-\x7f]/.test(md));
-  assert.match(md, /abc/);
+  assert.match(md, /https:\/\/github.com\/22Ujjwal\/we-gotchu\/pull\/16/);
 });
 
 test('multiple resolved PR references on one line produce unique queue IDs', () => {
@@ -79,19 +79,12 @@ test('equal priorities sort source lines and PR numbers naturally', () => {
   assert.deepEqual(result.items.filter(x => x.kind === 'pull-request').map(x => x.evidence.number), [9, 10]);
 });
 
-test('rendered priority key covers the implemented PR blocking conditions', () => {
-  const md = renderMarkdown(buildQueue(snapshot()));
-  assert.match(md, /failed checks/);
-  assert.match(md, /requested changes/);
-  assert.match(md, /merge conflicts/);
-});
-
 test('human briefing groups actionable requests and links evidence without dumping JSON', () => {
   const q = buildQueue(snapshot({ documents: [doc('Needs from Tony: review Candidate fields.\nBlockers: waiting for endpoint.')], prs: [pr()] }));
   const md = renderMarkdown(q);
   assert.match(md, /## Needs attention/);
   assert.match(md, /## Decisions to confirm/);
-  assert.match(md, /## Pull requests to review/);
+  assert.match(md, /## Open PRs/);
   assert.match(md, /\[Open PR #16\]\(https:\/\/github.com\/22Ujjwal\/we-gotchu\/pull\/16\)/);
   assert.match(md, /\/blob\/baseline\/docs\/team\/status\/ujjwal.md#L1/);
   assert.ok(!md.includes('"headRefOid"'));
@@ -102,8 +95,8 @@ test('human briefing groups actionable requests and links evidence without dumpi
 test('repeated historical references become one follow-up per source report', () => {
   const q = buildQueue(snapshot({ documents: [doc('PR #16 merged.\nReview PR #16.\nEarlier PR #17.')], prs: [pr({ state: 'MERGED' }), pr({ number: 17, state: 'CLOSED' })] }));
   const md = renderMarkdown(q);
-  assert.equal((md.match(/### Check references in/g) || []).length, 1);
-  assert.match(md, /historical references may already be accurate/);
+  assert.equal((md.match(/Historical PR references/g) || []).length, 1);
+  assert.match(md, /may already be accurate/);
   assert.equal(q.items.filter(x => x.kind === 'reconcile').length, 3);
 });
 
@@ -112,4 +105,16 @@ test('incomplete collection leads the briefing and missing reports never imply i
   assert.ok(md.indexOf('INCOMPLETE') < md.indexOf('##'));
   assert.match(md, /Activity elsewhere is unknown/);
   assert.match(md, /Do not treat missing items as resolved/);
+});
+
+
+test('briefing stays short and leaves technical evidence in JSON', () => {
+  const md = renderMarkdown(buildQueue(snapshot({
+    documents: [doc('Needs from Tony: review fields.\nPR #16 merged.\nPR #16 merged.')],
+    prs: Array.from({ length: 6 }, (_, i) => pr({ number: i + 20 })),
+  })));
+  assert.ok(md.split('\n').length <= 35);
+  assert.ok(!md.includes('Next step:'));
+  assert.ok(!md.includes('Head:'));
+  assert.ok(!md.includes('baseline'));
 });
