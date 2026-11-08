@@ -21,7 +21,7 @@ type Sentence = Array<string | { key: Key; label: string; optional?: boolean; pl
 const sentences: Array<Sentence> = [
   ["I'm planning ", { key: 'occasion', label: 'Occasion', placeholder: 'Franz’s 30th birthday' }, ' for ', { key: 'guests', label: 'Number of guests', placeholder: '24' }, ' people.'],
   ["It's on ", { key: 'date', label: 'Date', placeholder: 'Sat 12 Dec' }, ' from ', { key: 'from', label: 'Start time', placeholder: '7pm' }, ' till ', { key: 'till', label: 'End time', placeholder: '11pm' }, ', in ', { key: 'area', label: 'Area', placeholder: 'Kreuzberg or Neukölln' }, '.'],
-  ["I'll spend up to $", { key: 'budget', label: 'Budget in dollars', placeholder: '900' }, ', and can lose $', { key: 'canLose', label: 'Acceptable cancellation loss in dollars', placeholder: '10' }, ' if plans change.'],
+  ["I'll spend up to $", { key: 'budget', label: 'Budget in dollars', placeholder: '900' }, ', and can lose $', { key: 'canLose', label: 'Acceptable cancellation loss in dollars', placeholder: 'optional', optional: true }, ' if plans change.'],
   ["We'll need ", { key: 'needs', label: 'What you need', placeholder: 'table candles' }, ', and the vibe should be ', { key: 'vibe', label: 'Vibe', optional: true, placeholder: 'cosy? fancy?' }],
 ]
 
@@ -69,7 +69,8 @@ function ConnectedBriefPage() {
         const message = [
           `I am planning ${draft.occasion.trim()} for ${brief.headcount} people in ${draft.area.trim()}.`,
           `Date: ${draft.date.trim()}. Start: ${draft.from.trim()}. End: ${draft.till.trim()}. All times are local to the event location, not the browser's timezone.`,
-          `My total budget is USD ${brief.budget / 100}. My maximum acceptable cancellation loss is USD ${brief.maximumCancellationLoss / 100}.`,
+          `My total budget is USD ${brief.budget / 100}.`,
+          ...(draft.canLose.trim() ? [`My maximum acceptable cancellation loss is USD ${brief.maximumCancellationLoss / 100}.`] : []),
           `Supplies needed: ${draft.needs.trim()}.`,
           ...(draft.vibe.trim() ? [`Preferred atmosphere: ${draft.vibe.trim()}.`] : []),
           'Research suitable venues and supplies. Explain capacity, budget and cancellation fit, with sources and any unknowns. Ask about missing requirements when needed. Do not contact suppliers, reserve or purchase anything.',
