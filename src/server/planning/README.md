@@ -1,7 +1,9 @@
 # Planning persistence and HTTP API
 
 Planning conversations have their own IDs and database table.
-They do not create transaction events, plans, approvals, or payments.
+Research and selection do not create transaction records.
+The explicit prepare_payment command links a complete selected offer to the existing transaction event and plan.
+Approval and Checkout still use the existing transaction API.
 The HTTP bodies and returned views use `src/agent/planning/contract.ts`.
 
 - `POST /api/planning` accepts `{ requestId, message }` and returns a view with status 201.
