@@ -74,7 +74,7 @@ export function PlanningInquiryEditor({ inquiry, version, disabled, canSend = fa
           onChange={event => edit('text', event.target.value)} className={fieldClass} />
       </label>
       <Button type="submit" className="self-start px-5 py-3" disabled={locked || conflict || !dirty || !draft.subject.trim() || !draft.text.trim()}>Save inquiry draft</Button>
-      {saved && <p role="status">Draft saved. Nothing has been sent.</p>}
+      {saved && !inquiry.delivery && <p role="status">Draft saved. Nothing has been sent.</p>}
     </form>
     {inquiry.delivery && <p role="status">{inquiry.delivery.status === 'pending' ? 'Submitting your approved inquiry.'
       : inquiry.delivery.status === 'accepted' ? 'Email provider accepted your inquiry. Delivery and a venue reply are not confirmed yet.'
