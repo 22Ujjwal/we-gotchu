@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
 import { planningCommandSchema, planningCreateSchema, planningProposalSchema } from '../../agent/planning/contract'
 import type { PlanningAgent, PlanningOption, PlanningView } from '../../agent/planning/contract'
@@ -12,7 +13,7 @@ export type PlanningDeps = {
   now?: () => number
 }
 const now = (deps: PlanningDeps) => (deps.now ?? Date.now)()
-const timeout = (deps: PlanningDeps) => deps.timeoutMs ?? 20_000
+const timeout = (deps: PlanningDeps) => deps.timeoutMs ?? 55_000
 const busy = () => new ApiError(409, 'busy', 'This conversation has a pending or uncertain message. Refresh to check its status.')
 const stale = () => new ApiError(409, 'stale_version', 'This conversation changed. Refresh before trying again.')
 const uncertainError = 'Delivery could not be confirmed. Refresh to check status. This message will not be sent again automatically.'
@@ -91,7 +92,7 @@ export async function createPlanning(deps: PlanningDeps, input: unknown): Promis
   const record: PlanningRecord = {
     id, customerId, createRequestId: requestId, initialMessage: message, revision: 0,
     sessionId: null, sequence: 0,
-    pending: { kind: 'create', requestId, message, selections: [], expiresAt: now(deps) + timeout(deps) + 5_000 },
+    pending: { kind: 'create', requestId, message, selections: [], expiresAt: now(deps) + Math.max(90_000, timeout(deps) + 5_000) },
     requests: { [requestId]: fingerprint },
     view: {
       id, version: 0, status: 'working',
@@ -132,7 +133,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
     ...record, requests,
     pending: {
       kind: 'message', requestId: command.requestId, message: command.message,
-      selections: record.view.selections, expiresAt: now(deps) + timeout(deps) + 5_000,
+      selections: record.view.selections, expiresAt: now(deps) + Math.max(90_000, timeout(deps) + 5_000),
     },
     view: changed(record, {
       status: 'working', progress: null, error: null,
@@ -164,10 +165,11 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   } catch {
     throw new ApiError(503, 'provider_unavailable', 'Could not refresh this conversation. Your saved work is unchanged.')
   }
-  if (result.sequence <= record.sequence) return record.view
+  if (result.sequence < record.sequence || (result.sequence === record.sequence && result.status !== 'failed')) return record.view
   const proposal = result.proposal ?? record.view.proposal
   const messages = [...record.view.messages]
-  if (result.proposal && JSON.stringify(result.proposal) !== JSON.stringify(record.view.proposal)) {
+  const answersNewTurn = result.status === 'ready' && messages.at(-1)?.role === 'user'
+  if (result.proposal && (answersNewTurn || !isDeepStrictEqual(result.proposal, record.view.proposal))) {
     const messageId = `assistant:${record.sessionId}:${result.sequence}`
     if (!messages.some(message => message.id === messageId)) {
       messages.push({
@@ -188,6 +190,7 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
       error: record.pending ? uncertainError : result.error,
     }),
   }
+  if (after.sequence === record.sequence && isDeepStrictEqual({ ...after.view, version: record.view.version }, record.view)) return record.view
   const saved = await deps.repository.compareAndSet(record, after)
   return saved?.view ?? (await owned(deps, customerId, id)).view
 }
