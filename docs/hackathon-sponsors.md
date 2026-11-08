@@ -3,7 +3,8 @@
 Tony supplied this sponsor list on 2026-11-07 and asked that it be remembered when planning the project.
 The event is the [YC and Naive Autonomous Company Hackathon](https://events.ycombinator.com/naive-autonomous-companies-hackathon).
 The descriptions below summarize Tony's supplied context and were not independently verified in this update.
-Sponsorship does not establish that our team has credits, account access, or a working integration.
+The account evidence and Tony's later team-credit confirmation are recorded below.
+Credits do not establish that an integration works.
 
 ## Sponsors
 
@@ -44,5 +45,16 @@ The slide advertises the following participant benefits:
 
 These are advertised benefits, not verified redemption or balances in our accounts.
 Do not treat payment-processing or incorporation credits as funds available to purchase event supplies.
+
+## Team credit confirmation
+
+Tony confirmed that all four teammates have the sponsor benefits and instructed us not to constrain the stack proposal by credit budget.
+Use that as the planning assumption without assuming balances can be pooled across accounts.
+His account screenshot shows $250 in Naive credits added to Tony HQ and Pro free through November 30.
+The same screenshot lists $250 in Neon credits and 1,500 Mobilerun credits with claim links.
+Mobilerun access lasts 72 hours according to that screenshot.
+Tony also confirmed Monid availability without specifying a credit amount.
+Prefer Naive credits for the proposed Naive runtime; OpenAI credits remain separate unless billing interoperability is verified.
+The remaining integration checks concern capabilities and working access, not whether the team has enough credits to start.
 
 Source: [Sponsor slide](</Users/minhthiennguyen/.t3/userdata/attachments/660e0c2d-86e5-450b-8ae3-ca8898229ad4-c66a088b-35bb-405e-8c13-f0dce9056edc.png>).
