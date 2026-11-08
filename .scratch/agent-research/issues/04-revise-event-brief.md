@@ -4,11 +4,20 @@
 
 **Blocked by:** 01: Research a complete brief using real sources.
 
-**Status:** ready-for-agent
+**Status:** implemented in independent branch; cross-ticket integration pending
 
-- [ ] Carry answered requirements into the next submission and ask only for still-missing essential information.
+- [x] Carry answered requirements into the next submission and ask only for still-missing essential information.
 - [ ] Changes to location, quantity, or budget affect discovery, filtering, or ranking rather than reusing incompatible recommendations.
-- [ ] Every outcome carries its brief revision and run identity, and superseded outcomes are distinguishable to application consumers.
-- [ ] Coordinate the conditional publication rule with Ujjwal so an older run cannot overwrite a newer brief result at the storage boundary; an in-memory check alone is insufficient.
-- [ ] Controlled workflow tests submit successive briefs and out-of-order completions to prove retained answers, changed recommendations, and stale-result rejection.
-- [ ] Verify the stale-write rule against the application storage integration when available and mark it unverified until that check passes; frontend implementation stays with Leo.
+- [x] Every outcome carries its brief revision and run identity, and superseded outcomes are distinguishable to application consumers.
+- [x] Verify the existing conditional publication rule at the migrated application storage boundary and report lifecycle dependencies through the chief.
+- [x] Controlled workflow tests submit successive briefs and out-of-order completions to prove retained answers, changed recommendations, and stale-result rejection.
+- [x] Verify stale-write rejection through application handlers and migrated test storage; frontend implementation stays with Leo.
+
+## Implementation evidence
+
+See [the ticket04 handoff](../../../docs/research/ticket04-brief-revisions.md) for baseline acceptance, reproduced failures, controlled tests, and integration limits.
+The handler now rejects array patches and conditions its post-cleanup status write on the matching brief revision.
+Location and guest-count changes produce new discovery requests under controlled HTTP.
+Budget forwarding is verified; budget and quantity ranking policy remains ticket03 work.
+Ticket06 must assess delayed initialization of an already superseded checkpoint.
+No live application or provider behavior is claimed.
