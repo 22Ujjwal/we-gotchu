@@ -66,7 +66,7 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord): Promise<Plan
       return agent.send({ sessionId: record.sessionId!, requestId: pending.requestId, message: pending.message, selections: pending.selections })
     }, timeout(deps))
     const sessionId = 'sessionId' in result ? result.sessionId : record.sessionId
-    if (!sessionId || !Number.isSafeInteger(result.sequence) || result.sequence < record.sequence) {
+    if (typeof sessionId !== 'string' || !sessionId || !Number.isSafeInteger(result.sequence) || result.sequence < record.sequence) {
       throw new Error('Invalid provider acknowledgement.')
     }
     after = {
@@ -178,7 +178,9 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
     }
   }
   const after: PlanningRecord = {
-    ...record, sequence: result.sequence,
+    ...record,
+    // The provider can report the final sequence before it reports completion.
+    sequence: result.status === 'working' ? record.sequence : result.sequence,
     view: changed(record, {
       proposal, messages, progress: result.progress,
       // A read cannot prove whether an unacknowledged write was accepted.
