@@ -340,3 +340,28 @@ test('paused customer research checks for progress and resumes without sending a
   await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
   expect(reads).toBe(2)
 })
+
+test('a lost operator confirmation recovers after a read shows that exact call is closed', async () => {
+  let saved = view({ status: 'blocked', canReviewResearch: true, approvals: [
+    { id: 'old-call', tool: 'monid.monid_inspect', arguments: {} },
+  ] })
+  let writes = 0
+  http(request => {
+    if (request.method === 'POST') {
+      writes++
+      saved = view({ version: 3, status: 'blocked', canReviewResearch: true, approvals: [
+        { id: 'new-call', tool: 'monid.monid_run', arguments: {} },
+      ] })
+      throw new TypeError('response lost')
+    }
+    return Response.json(saved)
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  fireEvent.click(await screen.findByText('Operator review for local testing'))
+  fireEvent.click(screen.getByRole('button', { name: 'Approve this research call' }))
+  await screen.findByRole('button', { name: 'Check saved status' })
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved status' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Approve this research call' })).toBeEnabled())
+  expect(writes).toBe(1)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
