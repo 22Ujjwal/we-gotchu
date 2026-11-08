@@ -1,3 +1,5 @@
+import { createCommerceLedger } from './commerce'
+import type { CommerceFacts } from './commerce-types'
 import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
@@ -25,11 +27,11 @@ export type RefusalCode =
   | 'empty_update' | 'invalid_update_kind'
 
 export class LedgerRefusal extends Error {
-  constructor(readonly code: RefusalCode, message: string) { super(message) }
+  constructor(readonly code: string, message: string) { super(message) }
 }
 
 export type SeedContact = { name: string; email: string; kind: string }
-export type Stage = 'getting_started' | 'contacting_suppliers' | 'supplier_replied' | 'negotiating'
+export type Stage = 'getting_started' | 'contacting_suppliers' | 'supplier_replied' | 'negotiating' | 'choosing' | 'offer_ready' | 'awaiting_payment' | 'paid' | 'confirmed'
 export type EmailDraft = { subject: string; body: string }
 export type EmailOutcome =
   | { state: 'sent'; messageId: string; threadId?: string; sentAt: Date }
@@ -58,6 +60,7 @@ export type EventRecord = {
   received: { id: string; messageId: string; contactId: string; operationId: string | null; from: string; subject: string | null; text: string | null; receivedAt: Date; deliveryState: string | null }[]
   terms: { id: string; messageId: string; contactId: string; term: string; amountMinor: number | null; currency: string | null; note: string | null; excerpt: string; recordedAt: Date }[]
   updates: { id: string; kind: UpdateKind; text: string; createdAt: Date }[]
+  commerce: CommerceFacts
   stage: Stage
 }
 
@@ -66,6 +69,7 @@ const normalize = (value: string) => value.replace(/\s+/g, ' ').trim()
 
 export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; sendCap?: number; now?: () => Date }) {
   const now = opts.now ?? (() => new Date())
+  const commerce = createCommerceLedger(db, now)
   const sendCap = opts.sendCap ?? 5
   const newId = (prefix: string) => `${prefix}_${randomUUID().replaceAll('-', '')}`
 
@@ -95,7 +99,7 @@ export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; s
       id: event.id, customerId: event.customerId, brief: event.brief, contactConsent: event.contactConsent,
       sessionId: event.sessionId, createdAt: event.createdAt,
       contacts: contacts.map(c => ({ id: c.id, name: c.name, email: c.email, kind: c.kind })),
-      sent, received,
+      sent, received, commerce: await commerce.readCommerce(eventId),
       terms: terms.map(t => ({
         id: t.id, messageId: byReceipt.get(t.receiptId)!.messageId, contactId: byReceipt.get(t.receiptId)!.contactId,
         term: t.term, amountMinor: t.amountMinor, currency: t.currency, note: t.note, excerpt: t.excerpt, recordedAt: t.createdAt,
@@ -189,6 +193,7 @@ export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; s
   }
 
   return {
+    ...commerce,
     mailOperations,
     mailReceipts,
     readEvent,
@@ -335,7 +340,15 @@ export function createEventLedger(db: Db, opts: { seedContacts: SeedContact[]; s
 export type EventLedger = ReturnType<typeof createEventLedger>
 
 /** The customer-facing stage, derived from facts each time the event is read. */
-export function deriveStage(event: Pick<EventRecord, 'sent' | 'received' | 'terms'>): Stage {
+export function deriveStage(event: Pick<EventRecord, 'sent' | 'received' | 'terms'> & { commerce?: CommerceFacts }): Stage {
+  const facts = event.commerce
+  if (facts?.payment) {
+    const offer = facts.offers.find(o => o.id === facts.checkout?.offerId)
+    return offer?.lines.every(l => facts.confirmations.some(c => c.contactId === l.contactId)) ? 'confirmed' : 'paid'
+  }
+  if (facts?.approval) return 'awaiting_payment'
+  if (facts?.offers.length) return 'offer_ready'
+  if (facts?.options.length && !facts.choice) return 'choosing'
   const sends = event.sent.filter(s => s.state !== 'rejected')
   if (event.received.length === 0) return sends.length ? 'contacting_suppliers' : 'getting_started'
   const firstReply = Math.min(...event.received.map(r => r.receivedAt.getTime()))

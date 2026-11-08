@@ -3,9 +3,9 @@ import type { ResearchCheckpoint } from '../research-checkpoint'
 import { bigint, bigserial, boolean, check, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import type { Attempt, Brief, Plan, ResearchResult } from '../../contracts'
-import { arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms, arrangeUpdates } from '../arrange/tables'
+import { arrangeCommerce, arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms, arrangeUpdates } from '../arrange/tables'
 
-export { arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms, arrangeUpdates }
+export { arrangeCommerce, arrangeEvents, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierContacts, arrangeSupplierTerms, arrangeUpdates }
 
 // Drizzle schema for the transaction service (contract 0.4).
 // Keep in sync with BOOTSTRAP_SQL in migrate.ts; store.test.ts exercises every table.
@@ -167,5 +167,5 @@ export const planningConversations = pgTable('planning_conversations', {
 
 export const schema = {
   planningConversations, events, runs, researchResults, plans, approvals, payments, attempts, progressEntries, stripeEvents,
-  arrangeEvents, arrangeSupplierContacts, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierTerms, arrangeUpdates,
+  arrangeCommerce, arrangeEvents, arrangeSupplierContacts, arrangeMailOperations, arrangeMailReceipts, arrangeSupplierTerms, arrangeUpdates,
 }

@@ -1,3 +1,4 @@
+import type { CommerceFacts } from './commerce-types'
 import { bigint, bigserial, boolean, index, jsonb, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import type { IncomingReply } from '../email/supplier-inquiries/incoming-types'
 import type { EventBrief } from './brief'
@@ -96,4 +97,9 @@ export const arrangeUpdates = pgTable('arrange_updates', {
   kind: text('kind').notNull(),
   text: text('text').notNull(),
   createdAt: ts('created_at').notNull(),
+})
+
+export const arrangeCommerce = pgTable('arrange_commerce', {
+  eventId: text('event_id').primaryKey().references(() => arrangeEvents.id),
+  facts: jsonb('facts').$type<CommerceFacts>().notNull(),
 })
