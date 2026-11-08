@@ -316,3 +316,21 @@ for (const failure of ['read', 'create-response'] as const) {
     }
   })
 }
+
+test('interruption at the retry limit cannot grant another provider read', async () => {
+  const { eventId, runId } = await startRanking()
+  vi.mocked(session.poll).mockRejectedValue(new TypeError('disconnected'))
+  for (let i = 0; i < 2; i++) await getEventView(deps, eventId)
+  const checkpoints = store.researchCheckpoints!
+  const save = checkpoints.save.bind(checkpoints)
+  vi.spyOn(checkpoints, 'save').mockImplementation(async (run, version, checkpoint, message) => {
+    const saved = await save(run, version, checkpoint, message)
+    if (checkpoint.readFailures === 3) throw new Error('process interrupted at retry limit')
+    return saved
+  })
+  await getEventView(deps, eventId)
+  expect(await checkpoints.read(runId)).toMatchObject({ stage: 'ranking', readFailures: 3 })
+  await restart()
+  await finish(eventId)
+  expect(session.poll).toHaveBeenCalledTimes(3)
+})
