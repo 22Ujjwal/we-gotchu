@@ -1,6 +1,6 @@
 // Idempotent AgentMail setup for the ARRANGE live gate. Team-controlled inboxes only.
 //
-//   bun scripts/arrange-live-setup.mjs inboxes           # create the two inboxes + send allowlist
+//   bun scripts/arrange-live-setup.mjs inboxes [--with-supplies] # create controlled inboxes + send allowlist
 //   bun scripts/arrange-live-setup.mjs webhook <tunnel-url>   # point message.received at the tunnel
 //
 // Requires AGENTMAIL_API_KEY (bun loads .env.local). Writes the values the app
@@ -26,16 +26,23 @@ if (phase === 'inboxes') {
   const venue = await client.inboxes.create({ username: 'cafe-botanico', displayName: 'Cafe Botanico', clientId: 'arrange-venue-cafe-botanico-v1' })
   console.log('arrange inbox:', arrange.inboxId)
   console.log('venue inbox:  ', venue.inboxId)
+  const supplies = process.argv.includes('--with-supplies')
+    ? await client.inboxes.create({ username: 'arrange-table-supplies', displayName: 'Table supplies', clientId: 'arrange-supplies-v1' })
+    : null
 
-  // Send allowlist: the ARRANGE account may only email the controlled venue inbox.
+  // Send allowlist: the ARRANGE account may email the configured controlled supplier inboxes.
   // Note: a send allow list applies account-wide on AgentMail.
   const existing = await client.lists.list('send', 'allow')
   const entries = (existing.entries ?? existing).map(e => e.entry ?? e)
-  if (!entries.includes(venue.inboxId)) {
-    await client.lists.create('send', 'allow', { entry: venue.inboxId })
-    console.log('allowlist: added', venue.inboxId)
-  } else {
-    console.log('allowlist: already contains', venue.inboxId)
+  for (const inboxId of [venue.inboxId, ...(supplies ? [supplies.inboxId] : [])]) {
+    if (!entries.includes(inboxId)) {
+      await client.lists.create('send', 'allow', { entry: inboxId })
+      console.log('allowlist: added', inboxId)
+    }
+  }
+  if (supplies) {
+    envSet('ARRANGE_SUPPLIER_EMAIL', supplies.inboxId)
+    envSet('ARRANGE_SUPPLIER_NAME', 'Table supplies')
   }
 
   envSet('ARRANGE_AGENTMAIL_INBOX_ID', arrange.inboxId)
