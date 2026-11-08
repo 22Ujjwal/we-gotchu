@@ -40,3 +40,18 @@ test('offers replacement only after cancellation has no unsettled payment', asyn
   await userEvent.setup().click(await screen.findByRole('button', { name: 'Update offer after cancellation' }))
   expect(release).toHaveBeenCalledTimes(1)
 })
+
+test('keeps cancellation recovery available while supplier settlement is unfinished', async () => {
+  const canceling = { ...bookedEvent, event: { ...bookedEvent.event, status: 'canceling', cancelRequestedAt: '2026-11-08T12:00:00Z' } }
+  const requests: string[] = []
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    requests.push(`${init?.method ?? 'GET'} ${url}`)
+    return new Response(JSON.stringify(canceling))
+  }))
+  render(<PlanningPayment link={link} identity="customer" stale onRelease={vi.fn()} />)
+  expect(await screen.findByText('Cancellation is in progress. Supplier settlement and any refund may still be pending.')).toBeVisible()
+  expect(screen.queryByText('This payment plan was canceled.')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Update offer after cancellation' })).not.toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Continue cancellation' }))
+  await waitFor(() => expect(requests.filter(request => request.startsWith('POST'))).toEqual([`POST /api/events/${link.eventId}/cancel`]))
+})
