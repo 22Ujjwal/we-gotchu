@@ -9,6 +9,7 @@ import { createAgentMailProvider } from '../email/supplier-inquiries/agentmail'
 import { ApiError } from '../events/errors'
 import { createPlanningMail } from './mail-integration'
 import { processReplyJobs } from './reply-worker'
+import { prepareReplyOffer } from './reply-offer'
 import type { PlanningDeps } from './service'
 
 type Storage = Awaited<ReturnType<typeof createLocalPlanningRepository>>
@@ -36,9 +37,11 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     }
     return mail
   }
-  const processReplies = async () => processReplyJobs(
-    (await getStorage()).repository, createConfiguredReplyInterpreter(env), 5,
-  )
+  const processReplies = async () => {
+    const saved = await getStorage()
+    return processReplyJobs(saved.repository, createConfiguredReplyInterpreter(env), 5,
+      job => prepareReplyOffer(saved.repository, saved.offers, createConfiguredOfferGenerator(env), job))
+  }
   return {
     async getTransactionStore() { return (await getStorage()).store },
     async getDeps(): Promise<PlanningDeps> {
