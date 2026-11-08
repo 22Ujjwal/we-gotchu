@@ -16,3 +16,5 @@ todos.json
 
 # Vercel
 .vercel
+.env*
+!.env.example
