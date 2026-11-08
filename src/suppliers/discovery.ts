@@ -28,7 +28,7 @@ export function createDiscovery(options: { apiKey: string; fetch?: typeof fetch;
       { provider: 'litescrape', endpoint: '/google/maps', kind: 'venue' as const,
         queryParams: { q: `${input.brief.eventType} event venue ${input.brief.location}`, type: 'search', location: input.brief.location, z: 12, start: 0 } },
       ...(input.brief.supplyNeeds.length ? [{ provider: 'channel3', endpoint: '/v1/search', kind: 'supply' as const,
-        body: { query: `${input.brief.supplyNeeds.join(', ')} for ${input.brief.headcount} people`, limit, config: { country: 'US', currency: input.brief.currency.toUpperCase() } } }] : []),
+        body: { query: `${input.brief.supplyNeeds.join(', ')} for a ${input.brief.eventType} with ${input.brief.headcount} people`, limit, config: { country: 'US', currency: input.brief.currency.toUpperCase() } } }] : []),
     ]
     for (const job of jobs) {
       signal.throwIfAborted()
