@@ -64,8 +64,11 @@ Extract published rental rates, capacity, product prices and pack contents from 
 For each fact quote supporting text or the returned structured field, with its source URL.
 A review describing a party is not the venue's published maximum capacity. Separate advertised rates from event totals.
 Explain estimates and missing information naturally. A useful proposal does not require confirmed bookings.
+Keep advertised item prices separate from totals including tax and delivery. Label remaining budget as before those unknown charges.
+Compare costs only using retrieved prices. Do not claim that buying missing accessories separately costs more without prices for them.
+If the selected item cannot be made cheaper from available evidence, say so and identify the next useful search rather than invent savings.
 No supplier contact, purchase or booking. Follow-up requests reuse this conversation and may revise the selection.
-Use short stable option IDs; retain their identity on follow-up. Always call submit_output when ready.`,
+Use short stable option IDs; retain their identity on follow-up. selectedOptionId is null until the customer explicitly selects an option. Always call submit_output when ready.`,
   })
   record.agentId = agent.id; await save()
   if (!savedEvidence) {
@@ -99,7 +102,7 @@ Use short stable option IDs; retain their identity on follow-up. Always call sub
   if (!selected) throw new Error('First proposal has no supply option')
   await client.sessions.send(session.id, { message: `I prefer ${selected.id}. Keep that selection and make the overall plan cheaper. Reuse what you already learned. Explain the trade-off and set selectedOptionId to ${selected.id}.` }, { idempotencyKey: `${id}:followup` })
   await waitForTurn(first.last_seq)
-  record.success = record.turns[1].proposal.selectedOptionId === selected.id
+  record.success = record.turns[0].proposal.selectedOptionId === null && record.turns[1].proposal.selectedOptionId === selected.id
 } catch (error) {
   // Provider bodies may echo input. Only record the classified error, never a credential-bearing request.
   record.error = { name: error.name, status: error.status, code: error.code,
