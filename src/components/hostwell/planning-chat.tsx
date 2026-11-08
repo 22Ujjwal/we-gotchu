@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PlanningOption } from '../../agent/planning/contract'
 import { usePlanningSession } from '../../lib/hostwell/planning-session'
 import { Button } from './ui'
+import { PlanningInquiryEditor } from './planning-inquiry'
 
 export function PlanningIntake({ onCreated }: { onCreated: (id: string) => void }) {
   const { user, isLoaded } = useUser()
@@ -104,6 +105,13 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         {[...options.values()].map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
+      {view.inquiry && <PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
+        disabled={!!blocked || view.status !== 'ready'} submit={session.submit} />}
+      {view.selections.some(option => option.kind === 'venue') && (!view.inquiry || view.inquiry.status === 'stale')
+        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
+          onClick={() => void session.submit({ kind: 'prepare_inquiry', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
+          {view.inquiry ? 'Replace outdated inquiry draft' : 'Prepare venue inquiry'}
+        </Button>}
       <p className="text-[14px] leading-6 text-stone">Selections save your preferences. Send a message when you want us to research changes. Nothing is booked or purchased.</p>
     </>}
     <form className="flex flex-col gap-4" onSubmit={event => { event.preventDefault(); void send() }}>

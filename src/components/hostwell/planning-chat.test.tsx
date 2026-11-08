@@ -395,3 +395,27 @@ test('prepares, edits and reloads an inquiry without sending mail', async () => 
   expect(screen.getByRole('textbox', { name: 'Inquiry message' })).toHaveValue('Please confirm our date and all-in price. We need space for 12.')
   expect(screen.queryByRole('button', { name: /Send inquiry/ })).not.toBeInTheDocument()
 })
+
+test('a concurrent inquiry edit retains local text and requires explicit reconciliation', async () => {
+  const user = userEvent.setup()
+  let saved = view({ selections: [venue], inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+    recipient: '', contactSourceUrl: null, subject: 'Event inquiry', text: 'Original inquiry',
+    contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z' } })
+  let writes = 0
+  http(request => {
+    if (request.method === 'GET') return Response.json(saved)
+    writes++
+    saved = { ...saved, version: 3, inquiry: { ...saved.inquiry!, revision: 2, text: 'Saved by another tab' } }
+    return Response.json({ errorCode: 'stale_version' }, { status: 409 })
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  const message = await screen.findByRole('textbox', { name: 'Inquiry message' })
+  await user.type(message, ' with my changes')
+  await user.click(screen.getByRole('button', { name: 'Save inquiry draft' }))
+  expect(await screen.findByText(/Another update changed the saved draft/)).toBeVisible()
+  expect(message).toHaveValue('Original inquiry with my changes')
+  expect(screen.getByRole('button', { name: 'Save inquiry draft' })).toBeDisabled()
+  await user.click(screen.getByRole('button', { name: 'Load saved draft and discard my edits' }))
+  expect(message).toHaveValue('Saved by another tab')
+  expect(writes).toBe(1)
+})

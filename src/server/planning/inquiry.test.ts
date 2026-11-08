@@ -54,3 +54,13 @@ test('unverified contacts stay empty and changing the selected venue invalidates
   expect(view.inquiry?.venue.id).toBe(venue.id)
   await expect(commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'without-venue', expectedVersion: view.version })).rejects.toMatchObject({ status: 422 })
 })
+
+test('a new customer message marks the draft stale without changing its text', async () => {
+  let view = await selected()
+  view = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'draft', expectedVersion: view.version })
+  const draft = view.inquiry!
+  view = await commandPlanning(deps, view.id, { kind: 'message', requestId: 'change-date', expectedVersion: view.version, message: 'Move the dinner to December 19.' })
+  expect(view.inquiry).toEqual({ ...draft, status: 'stale' })
+  await expect(commandPlanning(deps, view.id, { kind: 'save_inquiry', requestId: 'old-draft', expectedVersion: view.version,
+    inquiryId: draft.id, expectedDraftRevision: draft.revision, recipient: draft.recipient, subject: draft.subject, text: draft.text })).rejects.toMatchObject({ status: 409 })
+})
