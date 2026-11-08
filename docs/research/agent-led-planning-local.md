@@ -190,3 +190,42 @@ The ping test remains unfinished in Ujjwal's handoff, so its agent was preserved
 One-off diagnostic scripts were archived as ignored text files; JSON evidence and credentials were preserved.
 PR50 is merged on origin/main at 86be4d5 with successful checks, but has not been integrated into this frozen local browser-test head.
 Its Stripe refund webhook activation remains a separate hosted setup step.
+
+## Customer progress and closed-confirmation recovery
+
+The customer should choose event preferences, options and spending or booking commitments.
+Supplier searches, tool inspection and page reading belong to the planning team.
+This changes the earlier customer-facing approval presentation.
+Technical requests now appear only in a collapsed operator panel when the server runs in development with explicit local planning storage.
+Other runtimes omit approval payloads and reject confirmation commands.
+There is no deployed operator role or review console yet.
+
+The saved browser conversation had two distinct local commands for the same research inspection.
+The provider showed that inspection had completed and five later requests remained pending.
+The local record retained an uncertain confirmation and hid those current requests.
+The available evidence does not establish the original confirmation error or which acknowledgement was lost.
+
+Read-only reconciliation now clears only a specific confirmation that is absent from the complete current parent and child pending-action lists.
+It does not assert that a message was accepted or that a booking succeeded.
+Incomplete provider reads preserve uncertainty.
+The UI also releases a lost confirmation response after an authoritative newer view establishes that this exact call is closed.
+Uncertain create and message requests remain protected from resend.
+
+Each teammate's reported working, waiting or paused state now appears on the page.
+Paused views refresh every five seconds, with existing non-overlap and failure backoff behavior.
+No percentage or completion time is invented.
+The local browser conversation recovered to blocked at version 12 using provider reads and a local compare-and-set update.
+Sam had three supply searches pending and Maya had two research tool inspections pending.
+Tom was waiting for the specialists.
+A browser reload preserved the brief, all three team states and the collapsed operator panel containing five requests.
+No approval, new research session, supplier contact or transaction was submitted during this check.
+
+The provider's per-call human review requirement still applies.
+The remaining autonomy question is whether Naive supports a public-research setup that does not impose this review on each external call.
+Do not relabel retrieved content or treat general customer authorization as a substitute for a required human tool review.
+Final options, selection and a follow-up remain unverified in this live conversation.
+
+Implementation head 7773a815895df9b3812b94d395f2debf75d6dcb5 passed `bun run test --maxWorkers 2` with 456 tests in 42 files, `bun run typecheck`, `bun run build` and `git diff --check` using Bun 1.4.4.
+The unchanged coordination suite passed all 25 tests earlier in this work with `node --test tools/team-coordination/*.test.mjs`.
+The browser evidence is local only; nothing was pushed or deployed.
+The temporary verification tab and server were closed after the check.
