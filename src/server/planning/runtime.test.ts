@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const factories = vi.hoisted(() => ({ local: vi.fn(), neon: vi.fn(), provider: vi.fn(), close: vi.fn() }))
-vi.mock('../db/client', () => ({ createLocalPlanningRepository: factories.local, createNeonPlanningRepository: factories.neon }))
+vi.mock('../db/client', () => ({ createLocalPlanningRepository: factories.local, createNeonPlanningStorage: factories.neon }))
 vi.mock('../auth', () => ({ requireCustomerId: async () => 'alice' }))
 vi.mock('../../agent/planning/provider', () => ({ createConfiguredPlanningAgent: factories.provider }))
 import { createPlanningRuntime } from './runtime'
@@ -9,7 +9,7 @@ import { createPlanningRuntime } from './runtime'
 beforeEach(() => {
   vi.resetAllMocks()
   factories.local.mockResolvedValue({ repository: { local: true }, close: factories.close })
-  factories.neon.mockReturnValue({ neon: true })
+  factories.neon.mockReturnValue({ repository: { neon: true }, close: factories.close })
 })
 
 describe('planning runtime storage boundary', () => {

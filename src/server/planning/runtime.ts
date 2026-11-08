@@ -1,33 +1,57 @@
 import { createConfiguredPlanningAgent } from '../../agent/planning/provider'
+import { createConfiguredReplyInterpreter } from '../../agent/planning/reply-interpreter'
 import { requireCustomerId } from '../auth'
-import { createLocalPlanningRepository, createNeonPlanningRepository } from '../db/client'
+import { createLocalPlanningRepository, createNeonPlanningStorage } from '../db/client'
+import { createAgentMailProvider } from '../email/supplier-inquiries/agentmail'
 import { ApiError } from '../events/errors'
-import type { PlanningRepository } from './repository'
+import { createPlanningMail } from './mail-integration'
+import { processReplyJobs } from './reply-worker'
 import type { PlanningDeps } from './service'
 
+type Storage = Awaited<ReturnType<typeof createLocalPlanningRepository>>
 export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
-  let repository: Promise<PlanningRepository> | undefined
-  let local: Awaited<ReturnType<typeof createLocalPlanningRepository>> | undefined
+  let storage: Promise<Storage> | undefined
+  let mail: ReturnType<typeof createPlanningMail> | undefined
 
-  async function open(): Promise<PlanningRepository> {
+  async function open(): Promise<Storage> {
     if (env.NODE_ENV === 'development' && env.PLANNING_LOCAL_DB_DIR) {
-      local = await createLocalPlanningRepository(env.PLANNING_LOCAL_DB_DIR)
-      return local.repository
+      return createLocalPlanningRepository(env.PLANNING_LOCAL_DB_DIR)
     }
     if (!env.DATABASE_URL) throw new ApiError(503, 'planning_unavailable', 'Planning storage is not configured.')
-    return createNeonPlanningRepository(env.DATABASE_URL)
+    return createNeonPlanningStorage(env.DATABASE_URL)
   }
-
+  async function getStorage() {
+    storage ??= open().catch(error => { storage = undefined; throw error })
+    return storage
+  }
+  async function getMail() {
+    if (!env.AGENTMAIL_API_KEY || !env.AGENTMAIL_INBOX_ID || !env.AGENTMAIL_WEBHOOK_SECRET) return undefined
+    if (!mail) {
+      const saved = await getStorage()
+      mail = createPlanningMail({ repository: saved.repository, storage: saved.mail, secret: env.AGENTMAIL_WEBHOOK_SECRET,
+        provider: createAgentMailProvider({ apiKey: env.AGENTMAIL_API_KEY, inboxId: env.AGENTMAIL_INBOX_ID }) })
+    }
+    return mail
+  }
   return {
     async getDeps(): Promise<PlanningDeps> {
-      repository ??= open().catch(error => { repository = undefined; throw error })
-      return { repository: await repository, requireCustomerId, allowResearchReview: env.NODE_ENV === 'development' && !!env.PLANNING_LOCAL_DB_DIR, agent: () => createConfiguredPlanningAgent(env) }
+      return { repository: (await getStorage()).repository, mail: (await getMail())?.transport, requireCustomerId,
+        allowResearchReview: env.NODE_ENV === 'development' && !!env.PLANNING_LOCAL_DB_DIR,
+        agent: () => createConfiguredPlanningAgent(env) }
+    },
+    async getWebhook() {
+      const configured = await getMail()
+      if (!configured) throw new ApiError(503, 'mail_unavailable', 'Supplier mail is not configured.')
+      return configured.webhook
+    },
+    async processReplies() {
+      return processReplyJobs((await getStorage()).repository, createConfiguredReplyInterpreter(env))
     },
     async close(): Promise<void> {
-      await repository?.catch(() => undefined)
-      await local?.close()
-      local = undefined
-      repository = undefined
+      const opened = await storage?.catch(() => undefined)
+      await opened?.close()
+      storage = undefined
+      mail = undefined
     },
   }
 }
@@ -39,3 +63,5 @@ const runtime = process.env.NODE_ENV === 'development'
   : createPlanningRuntime()
 
 export const getPlanningDeps = () => runtime.getDeps()
+export const getSupplierMailWebhook = () => runtime.getWebhook()
+export const processPlanningReplies = () => runtime.processReplies()

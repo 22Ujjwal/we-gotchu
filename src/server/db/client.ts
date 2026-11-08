@@ -47,7 +47,12 @@ export async function createTestStore(): Promise<Store> {
 
 // Isolated from the transaction Store so planning never creates payment records.
 export function createNeonPlanningRepository(databaseUrl: string) {
-  return createPlanningRepository(neonDb(databaseUrl).db)
+  return createNeonPlanningStorage(databaseUrl).repository
+}
+
+export function createNeonPlanningStorage(databaseUrl: string) {
+  const { db, pool } = neonDb(databaseUrl)
+  return { repository: createPlanningRepository(db), mail: createSupplierMailRepositories(db), close: () => pool.end() }
 }
 
 export function createTestPlanningRepository(dataDir?: string) {
