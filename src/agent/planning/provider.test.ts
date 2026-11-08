@@ -25,7 +25,6 @@ describe('hosted planning adapter', () => {
   })
   it('does not publish a previous turn as the result of a newly accepted message', async () => {
     const { agent, client } = setup()
-    vi.mocked(client.sessions.events).mockResolvedValueOnce({ data: [] })
     expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'working', proposal: null })
     expect(await agent.read({ sessionId: 'session-1', afterSequence: 29 })).toMatchObject({ status: 'ready', proposal })
   })
@@ -69,6 +68,28 @@ it('includes a completion beyond the first event page and rereads it at the save
   vi.mocked(client.sessions.events).mockResolvedValue({ data: [{ seq: 250, type: 'session.idle', data: { structured_output: latest } }] })
   expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', proposal: latest })
   expect(client.sessions.events).toHaveBeenLastCalledWith('session-1', { after_seq: 150, limit: 100 })
-  expect(await agent.read({ sessionId: 'session-1', afterSequence: 250 })).toMatchObject({ status: 'ready', proposal: latest })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 250, completedSequence: 250 })).toMatchObject({ status: 'ready', proposal: latest })
   expect(client.sessions.events).toHaveBeenLastCalledWith('session-1', { after_seq: 249, limit: 100 })
+})
+
+
+it('uses the newest completion even when bookkeeping events follow it', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 42
+  const latest = { ...proposal, summary: 'A new supplier comparison' }
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [
+    { seq: 31, type: 'session.idle', data: { structured_output: proposal } },
+    { seq: 41, type: 'session.idle', data: { structured_output: latest } },
+    { seq: 42, type: 'usage.updated', data: {} },
+  ] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', sequence: 41, proposal: latest })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 41, completedSequence: 41 })).toMatchObject({ status: 'ready', sequence: 41, proposal: latest })
+})
+
+it('does not report failure for an idle session that has not completed a turn', async () => {
+  const { agent, snapshot, client } = setup()
+  snapshot.last_seq = 2
+  snapshot.stop_reason = ''
+  vi.mocked(client.sessions.events).mockResolvedValue({ data: [{ seq: 2, type: 'session.idle', data: {} }] })
+  expect(await agent.read({ sessionId: 'session-1', afterSequence: 0 })).toMatchObject({ status: 'working', error: null, proposal: null })
 })
