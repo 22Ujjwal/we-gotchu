@@ -18,6 +18,6 @@ Ujji coordinates updates to this index; each person owns their individual status
 
 [PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6), the proposed Next.js workspace migration, is closed without merging. The merged baseline remains TanStack Start with Bun.
 
-At main `ce2d672`, contracts #16, Clerk #17, standalone research #18, frontend #19, backend core #20, deployment #21, coordination #23 and #27, research integration #24, supplier evidence #25, and the shared route repair #26 are merged.
-Hosted integration is not established by those merges. [Ujjwal's transaction fix #28](https://github.com/22Ujjwal/we-gotchu/pull/28) remains open and tracks the combined verification and deployment blockers.
+At main `a6afd9f`, contracts #16, Clerk #17, standalone research #18, frontend #19, backend core #20, deployment #21, coordination #23 and #27, research integration #24, supplier evidence #25, the shared route repair #26, transaction fixes #28, frontend handoff #29, and brief revision fixes #30 are merged.
+The production app and direct bearer-authenticated MCP ping are live-verified; shared Clerk ownership, completed sign-in, hosted database/payment setup, and Naive-session connectivity remain pending. See [Ujjwal's hosted setup handoff](ujjwal.md) for URLs and evidence.
 Recheck current PR state before integrating; these entries record availability, not teammate approval or runtime evidence.
