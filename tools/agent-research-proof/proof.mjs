@@ -10,7 +10,8 @@ const id = randomUUID()
 const directory = new URL(`./output/${id}/`, import.meta.url)
 await mkdir(directory, { recursive: true, mode: 0o700 })
 const record = { id, mode: savedEvidence ? 'saved-evidence' : 'direct-mcp', model: process.env.NAIVE_MODEL, approvedCalls: [], turns: [], cleanup: {} }
-const save = () => writeFile(new URL('result.json', directory), JSON.stringify(record, null, 2), { mode: 0o600 })
+const save = () => writeFile(new URL('result.json', directory),
+  JSON.stringify(record, null, 2).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')), { mode: 0o600 })
 const client = createClient({ baseUrl: 'https://api.vetta.sh', apiKey: process.env.NAIVE_API_KEY,
   fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(45_000) }),
 })
@@ -103,6 +104,7 @@ Use short stable option IDs; retain their identity on follow-up. selectedOptionI
   await client.sessions.send(session.id, { message: `I prefer ${selected.id}. Keep that selection and make the overall plan cheaper. Reuse what you already learned. Explain the trade-off and set selectedOptionId to ${selected.id}.` }, { idempotencyKey: `${id}:followup` })
   await waitForTurn(first.last_seq)
   record.success = record.turns[0].proposal.selectedOptionId === null && record.turns[1].proposal.selectedOptionId === selected.id
+  if (!record.success) process.exitCode = 1
 } catch (error) {
   // Provider bodies may echo input. Only record the classified error, never a credential-bearing request.
   record.error = { name: error.name, status: error.status, code: error.code,
