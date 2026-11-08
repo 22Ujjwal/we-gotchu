@@ -60,3 +60,23 @@ Browser network capture was incomplete, and the preview reported itself invisibl
 Server aborted-request messages appeared in the browser console.
 No duplicate accepted messages appeared in the inspected provider trace, but complete HTTP request counts remain unverified.
 The UI activity history, output presentation, image integration, and purchase readiness are separate work.
+
+## Review follow-up
+
+The independent review reported a successful browser follow-up on application code matching `92b88d2` and three adapter edge cases that were not triggered in that run.
+Controlled regressions reproduced those three cases before the fix.
+The adapter now finds the newest relevant completion across event pages rather than requiring completion to be the last event.
+It returns the completion's own sequence so trailing bookkeeping events cannot become the answer cursor.
+The service explicitly identifies an already completed cursor for rereads; a newly accepted message cannot reuse the previous answer at that cursor.
+An idle snapshot without a completed turn and output remains waiting instead of reporting a malformed answer.
+Malformed output at an actual completed turn still reports failure.
+
+The regression suite includes more than one page of trailing events.
+At implementation commit `a3ed53d`, Bun 1.4.4 frozen install, 489 tests across 42 files, typecheck, production build, 25 coordination tests, and whitespace checks passed.
+This follow-up did not rerun a live browser or paid provider session.
+The earlier browser reports remain evidence for their recorded revisions only.
+
+Saved customer selections remain authoritative even when a later proposal omits those options.
+This preserves the requested venue instead of silently undoing a customer decision.
+Activity remains a current status projection rather than a persistent history; a durable activity history is deferred UI work.
+Product source mismatches and stock freshness remain research-quality limitations, not resolved by this adapter change.
