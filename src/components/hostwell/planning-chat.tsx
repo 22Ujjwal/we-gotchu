@@ -49,9 +49,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     {session.loading && <p role="status">Loading your plan...</p>}
     {session.error && <div className="flex flex-col gap-3">
       <p role="alert" tabIndex={-1} ref={alert}>{session.error.message}</p>
-      {session.uncertain ? <Button className="self-start px-6 py-3" disabled={session.pending}
-        onClick={async () => complete(await session.retry(), !('kind' in session.uncertain!) || session.uncertain?.kind === 'message')}>Retry saved request</Button>
-        : id && <Button className="self-start px-6 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Refresh plan</Button>}
+      {id && <Button className="self-start px-6 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>{session.uncertain ? 'Check saved status' : 'Refresh plan'}</Button>}
       {session.error.status === 401 && <a className="underline" href={`/sign-in?redirect_url=${encodeURIComponent(id ? `/planning/${encodeURIComponent(id)}` : '/')}`}>Sign in again</a>}
     </div>}
     {view && <>

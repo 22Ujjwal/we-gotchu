@@ -11,7 +11,7 @@ const viewSchema: z.ZodType<PlanningView> = z.object({
 export type PlanningCreate = { requestId: string; message: string }
 export class PlanningApiError extends Error {
   constructor(readonly status: number, readonly uncertain: boolean) {
-    super(uncertain ? 'We could not confirm whether your request was saved. Your draft is kept. Retry the saved request to check it safely.'
+    super(uncertain ? 'We could not confirm whether your request was saved. Your draft is kept. Please check the saved status before taking any further action.'
       : status === 409 ? 'Your plan changed. Review the latest plan, then submit again. Your draft is kept.'
         : [401, 403, 404].includes(status) ? 'This plan is not available. Sign in with the account that created it.'
           : status === 422 || status === 400 ? 'Please check your message and try again.'

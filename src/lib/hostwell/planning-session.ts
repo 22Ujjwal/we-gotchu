@@ -102,5 +102,5 @@ export function usePlanningSession(id?: string) {
     }
   }
   return { view, pending, loading, error, uncertain, submit,
-    refresh: () => read(true), retry: () => uncertain ? submit(uncertain) : Promise.resolve(null) }
+    refresh: () => read(true) }
 }
