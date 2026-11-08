@@ -50,7 +50,6 @@ export function BriefForm({ initial, onSubmit, pending = false, disabled = false
     </ol>}
     {(edit ? sentences : [sentence]).map((s, i) => <p key={edit ? i : step}
       className="rise m-0 text-center text-[34px] leading-[60px] font-light tracking-[-0.02em] lg:text-[56px] lg:leading-[96px]">{renderSentence(s)}</p>)}
-    <p className="text-[14px] leading-[18px] text-stone">Use YYYY-MM-DD, a time with UTC offset, and the event timezone. Amounts use the currency code you enter. Separate supplies with commas; leave blank if none.</p>
     {error && <p ref={errorRef} tabIndex={-1} role="alert" className="text-[16px] leading-6 text-body">{error}</p>}
     <Button type="submit" disabled={pending || disabled || !edit && !complete}
       className="w-full py-[17px] text-[18px] leading-[22px] font-bold lg:w-auto lg:px-14">
