@@ -2,7 +2,7 @@ import { isCurrentPlanningOffer } from '../planning/offer'
 import { ApiError } from '../events/errors'
 import { createResearchCheckpointStore } from './research-checkpoints'
 import { randomUUID } from 'node:crypto'
-import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, ne, or, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
 import {
   Approval,
@@ -101,6 +101,7 @@ const toPayment = (r: PaymentRow): Payment =>
     approvalId: r.approvalId,
     checkoutSessionId: r.checkoutSessionId,
     paymentIntentId: r.paymentIntentId,
+    ...(r.paidAt ? { paidAt: r.paidAt.toISOString() } : {}),
     amount: r.amount,
     currency: r.currency,
     state: r.state,
@@ -513,7 +514,7 @@ export function createStore(db: Db): Store {
             eq(approvals.eventId, eventId),
             eq(approvals.planRevision, planRevision),
             isNull(approvals.revokedAt),
-            gt(approvals.expiresAt, now),
+            or(gt(approvals.expiresAt, now), and(eq(payments.state, 'paid'), lt(payments.paidAt, approvals.expiresAt))),
           ),
         )
         .orderBy(desc(approvals.approvedAt))
@@ -628,11 +629,12 @@ export function createStore(db: Db): Store {
       return rows.map(row => row.id)
     },
 
-    async markPaymentPaid(checkoutSessionId, paymentIntentId) {
+    async markPaymentPaid(checkoutSessionId, paymentIntentId, paidAt) {
       const [row] = await db
         .update(payments)
-        .set({ state: 'paid', paymentIntentId })
-        .where(and(eq(payments.checkoutSessionId, checkoutSessionId), eq(payments.state, 'pending')))
+        .set({ state: 'paid', paymentIntentId, ...(paidAt ? { paidAt } : {}) })
+        .where(and(eq(payments.checkoutSessionId, checkoutSessionId), or(eq(payments.state, 'pending'),
+          paidAt ? and(eq(payments.state, 'paid'), eq(payments.paymentIntentId, paymentIntentId), isNull(payments.paidAt)) : undefined)))
         .returning()
       return row ? toPayment(row) : null
     },
@@ -706,10 +708,10 @@ export function createStore(db: Db): Store {
         if (prior) return { attempt: toAttempt(prior), replayed: true }
         if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status)) return null
         const [approval] = await tx.select().from(approvals).where(eq(approvals.id, input.approvalId)).for('update')
-        if (!approval || approval.eventId !== input.eventId || approval.revokedAt || approval.expiresAt <= now ||
+        if (!approval || approval.eventId !== input.eventId || approval.revokedAt ||
             approval.planRevision !== event.planRevision || !approval.actionIds.includes(input.actionId)) return null
         const [payment] = await tx.select().from(payments).where(eq(payments.approvalId, approval.id)).for('update')
-        if (!payment || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
+        if (!payment || approval.expiresAt <= (payment.paidAt ?? now) || payment.state !== 'paid' || payment.amount !== approval.approvedTotal ||
             payment.currency !== approval.currency || (input.mode === 'live' && payment.mode !== 'live')) return null
         const [currentPlan] = await tx.select().from(plans).where(eq(plans.id, approval.planId))
         if (currentPlan?.data.planningOffer && !['executing', 'booked', 'partially_booked', 'failed'].includes(event.status)) {

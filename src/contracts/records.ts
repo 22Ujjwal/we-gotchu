@@ -226,6 +226,7 @@ export const Payment = z.object({
   approvalId: Id,
   checkoutSessionId: Id,
   paymentIntentId: Id.nullable(),
+  paidAt: Timestamp.optional(),
   amount: Minor,
   currency: Currency,
   state: z.enum(['pending', 'paid', 'expired']),

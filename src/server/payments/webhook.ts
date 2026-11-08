@@ -129,9 +129,10 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
 
   const intentId = paymentIntentId(session)
   if (!intentId) return 'mismatch'
-  const changed = await deps.store.markPaymentPaid(session.id, intentId)
+  const changed = await deps.store.markPaymentPaid(session.id, intentId, paidAt)
   const paid = changed ?? await deps.store.getPaymentByCheckoutSession(session.id)
   if (!paid || paid.state !== 'paid' || paid.paymentIntentId !== intentId) return 'already_processed'
+  const confirmedPaidAt = paid.paidAt ? new Date(paid.paidAt) : paidAt
   // This durable receipt is written only after the handoff finishes. A paid row
   // alone is not evidence that execution or a refund was delivered.
   const receipt = `${paid.paymentId}:paid-handoff`
@@ -139,8 +140,8 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
   const current = await deps.store.getEvent(approval.eventId)
   if (!current) throw new Error('Paid event was not found')
   const plan = await deps.store.getPlan(approval.eventId)
-  const staleOffer = !!plan?.planningOffer && (plan.planId !== approval.planId || !(await deps.store.validatePlanOffer?.(plan, deps.now())))
-  const late = staleOffer || approval.revokedAt !== null || paidAt.getTime() >= new Date(approval.expiresAt).getTime()
+  const staleOffer = !!plan?.planningOffer && (plan.planId !== approval.planId || !(await deps.store.validatePlanOffer?.(plan, confirmedPaidAt)))
+  const late = staleOffer || approval.revokedAt !== null || confirmedPaidAt.getTime() >= new Date(approval.expiresAt).getTime()
   const started = ['executing', 'booked', 'partially_booked', 'failed'].includes(current.status)
   const moved = !late && !current.cancelRequestedAt &&
     (started || await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'executing'))
@@ -154,7 +155,7 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
   if (changed) await deps.store.appendProgress(approval.eventId, 'system', `Payment confirmed (${paid.mode}).`)
   // Hooks must be idempotent by approval/payment identity because delivery is at least once.
   await onPaymentConfirmed(deps, { eventId: approval.eventId, approvalId: approval.approvalId, paymentId: paid.paymentId })
-  if (plan?.planningOffer && !(await deps.store.validatePlanOffer?.(plan, deps.now()))) {
+  if (plan?.planningOffer && !(await deps.store.validatePlanOffer?.(plan, confirmedPaidAt))) {
     return settleUnapprovedPayment(deps, approval.eventId, paid, receipt, true)
   }
   await deps.store.recordStripeEvent(receipt)

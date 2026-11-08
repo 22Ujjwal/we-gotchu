@@ -187,7 +187,11 @@ export class MemoryStore implements Store {
   }
   async findOpenApproval(eventId: string, planRevision: number, now: Date) {
     const a = [...this.approvals.values()].find(
-      (x) => x.eventId === eventId && x.planRevision === planRevision && x.revokedAt === null && new Date(x.expiresAt) > now,
+      (x) => {
+        const paid = [...this.payments.values()].find(p => p.approvalId === x.approvalId && p.state === 'paid')
+        return x.eventId === eventId && x.planRevision === planRevision && x.revokedAt === null
+          && (new Date(x.expiresAt) > now || !!paid?.paidAt && Date.parse(paid.paidAt) < Date.parse(x.expiresAt))
+      },
     )
     if (!a) return null
     const payment = [...this.payments.values()].find((p) => p.approvalId === a.approvalId)!
@@ -224,11 +228,12 @@ export class MemoryStore implements Store {
     const p = [...this.payments.values()].find((x) => x.approvalId === approvalId)
     return p ? { ...p } : null
   }
-  async markPaymentPaid(checkoutSessionId: string, paymentIntentId: string) {
+  async markPaymentPaid(checkoutSessionId: string, paymentIntentId: string, paidAt?: Date) {
     const p = [...this.payments.values()].find((x) => x.checkoutSessionId === checkoutSessionId)
-    if (!p || p.state !== 'pending') return null
+    if (!p || p.state !== 'pending' && !(p.state === 'paid' && p.paymentIntentId === paymentIntentId && paidAt && !p.paidAt)) return null
     p.state = 'paid'
     p.paymentIntentId = paymentIntentId
+    if (paidAt) p.paidAt = paidAt.toISOString()
     return { ...p }
   }
   async markPaymentExpired(checkoutSessionId: string) {
@@ -276,7 +281,7 @@ export class MemoryStore implements Store {
     const approval = this.approvals.get(attempt.approvalId)
     const payment = [...this.payments.values()].find(p => p.approvalId === attempt.approvalId)
     if (!event || event.cancelRequestedAt || ['canceling', 'canceled'].includes(event.status) ||
-        !approval || approval.revokedAt || new Date(approval.expiresAt) <= now || approval.planRevision !== event.planRevision ||
+        !approval || approval.revokedAt || new Date(approval.expiresAt) <= (payment?.paidAt ? new Date(payment.paidAt) : now) || approval.planRevision !== event.planRevision ||
         !approval.actionIds.includes(attempt.actionId) || !payment || payment.state !== 'paid') return null
     return this.insertAttempt(attempt)
   }

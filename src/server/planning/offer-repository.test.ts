@@ -190,7 +190,7 @@ test.each([
     expect(await handleStripeWebhook(deps, payload, signature)).toBe(changed ? 'refunded_late_or_revoked' : 'paid')
     expect(await handleStripeWebhook(deps, payload, signature)).toBe('duplicate')
     const restored = await db.store.getEventView(link.eventId)
-    expect(restored?.payment).toMatchObject({ state: 'paid', amount: total, mode: 'test' })
+    expect(restored?.payment).toMatchObject({ state: 'paid', amount: total, mode: 'test', paidAt: now.toISOString() })
     expect(restored?.attempts).toHaveLength(changed ? 0 : supplyFirst ? 2 : 1)
     if (changed) {
       expect(stripe.refundCalls).toHaveLength(1)
