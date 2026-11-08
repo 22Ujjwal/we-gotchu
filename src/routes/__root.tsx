@@ -15,7 +15,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'We Gotchu',
       },
     ],
     links: [
@@ -34,19 +34,36 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
-        {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+      <body className="bg-white text-slate-900">
+        <a
+          href="#main"
+          className="skip-link rounded bg-slate-900 px-3 py-2 text-white"
+        >
+          Skip to content
+        </a>
+        <header className="border-b border-slate-200">
+          <div className="mx-auto max-w-3xl px-4 py-4">
+            <a href="/" className="text-lg font-semibold">
+              We Gotchu
+            </a>
+          </div>
+        </header>
+        <main id="main" className="mx-auto max-w-3xl px-4 py-8">
+          {children}
+        </main>
+        {import.meta.env.DEV && (
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+        )}
         <Scripts />
       </body>
     </html>
