@@ -720,7 +720,7 @@ test('selected venue keeps decision facts and supply quantities visible without 
   ] }
   const plates = { ...supply, facts: [
     { ...supply.facts[0], label: 'Pack contents', value: '24 plates, 7-inch.' },
-    { ...supply.facts[0], label: 'Price', value: '$1 per pack.' },
+    { ...supply.facts[0], label: 'Published pack price', value: '$1 per pack.' },
     { ...supply.facts[0], label: 'Quantity', value: '1 pack covers 20 guests; tax and delivery extra.' },
   ] }
   http(() => Response.json(view({ selections: [room], proposal: { summary: 'Options.', nextQuestion: null, options: [room, plates] } })))
@@ -730,6 +730,7 @@ test('selected venue keeps decision facts and supply quantities visible without 
   await userEvent.click(screen.getByText('Venue details'))
   for (const fact of room.facts) expect(screen.getAllByText(fact.value)[0]).toBeVisible()
   expect(screen.getByText('24 plates, 7-inch.')).toBeVisible()
+  expect(screen.getAllByText('$1 per pack.')).toHaveLength(1)
   expect(screen.getByText('1 pack covers 20 guests; tax and delivery extra.')).toBeVisible()
   expect(screen.getAllByText(room.why)).toHaveLength(1)
   expect(screen.getByText(room.why)).toBeVisible()

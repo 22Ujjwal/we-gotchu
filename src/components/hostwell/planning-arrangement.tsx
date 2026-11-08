@@ -30,7 +30,7 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-ink" checked={selected.has(option.id)} disabled={disabled || !!view.paymentLink}
           onChange={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />
         <span className="min-w-0 flex-1"><span className="block font-medium" title={displayCopy(option.name)}>{displayCopy(option.name)}</span>
-          {option.facts.filter(fact => /pack|quantity|size|capacity/i.test(fact.label)).slice(0, 2).map((fact, index) => <span key={index} className="mt-1 block text-[15px]">{displayFactValue(fact.value)}</span>)}
+          {option.facts.filter(fact => /pack|quantity|size|capacity/i.test(fact.label) && !/price|cost/i.test(fact.label)).slice(0, 2).map((fact, index) => <span key={index} className="mt-1 block text-[15px]">{displayFactValue(fact.value)}</span>)}
         </span>
         <span className="max-w-[36%] text-right font-mono text-receipt-muted">{displayFactValue(option.facts.find(fact => /price|cost|subtotal/i.test(fact.label))?.value ?? 'Quote needed')}</span>
       </label>)}
