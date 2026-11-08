@@ -62,6 +62,7 @@ test('an open editor keeps its original revision after polling loads another tab
     fireEvent.change(screen.getByLabelText('Area'), { target: { value: 'Oakland, CA' } })
     await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
     expect(reads).toBe(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit brief' }))
     fireEvent.click(screen.getByRole('button', { name: 'Update brief' }))
     await act(async () => {})
     const write = vi.mocked(fetch).mock.calls.find(([, init]) => init?.method === 'PATCH')!
