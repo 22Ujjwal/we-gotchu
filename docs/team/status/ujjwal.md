@@ -180,3 +180,9 @@ Clerk sign-in, research-only creation, a real partial proposal and browser-reloa
 ### UI cleanup and photo-source diagnosis
 
 Local branch only. `12c7e32` removes repeated planning narration and centers content; `f2aaa17` fixes decorated-name image extraction only when the page corroborates business and city. 758 combined tests, typecheck/build passed before the final small copy sweep. Live Pearl rooftop extraction and image bytes verified; final in-page image render and new mobile captures remain unverified. A subsequent planner name-only revision returned uncertain; no blind resend. [Verification details](../../testing/ui-integration-verification.md). No push/deploy.
+
+### Customer flow and agent connection final check
+
+Customer history removed; research recovery sits beside Ask for changes rather than above venue options. Native Chrome screenshot now confirms real Pearl photo rendered in card and no top update/history clutter. 763 application tests, 31 tooling tests, root typecheck/Vercel build pass. Separately 5 MCP client tests/54 assertions and 34 gateway tests pass, with SDK typecheck/build. No live external assistant client or hosted external endpoint.
+
+Nine-step workflow audit identifies remaining controlled-only automation, manual-control overlap, awaiting-reply refresh, venue count and final booking-status/receipt gaps. See [complete audit](../../testing/customer-workflow-audit.md). Local only; no push or deployment.
