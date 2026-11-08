@@ -172,3 +172,7 @@ Next: user/team review of the local combined branch, then publication when autho
 Branch `integrate/agent-connect-tony`, implementation `7cc8679`, local only; no PR/push/deployment. Transient venue image failures retry twice, then expose Retry photos. Successful photos are preserved; polling does not restart requests and scope cleanup cancels work. This resolves the earlier deferred reload-only recovery limitation.
 
 Verified: 741 application tests, 31 tooling tests, typecheck, build and independent review pass. The real local homepage and Clerk sign-in rendered in Chrome. Authenticated research/image verification is pending user sign-in, not a claimed pass. Local server remains available for that handoff at localhost:3000 with an isolated planning DB; no supplier/payment actions or hosted configuration changes. Next: complete signed-in browser verification before publication. [Evidence and limitations](../../testing/ui-integration-verification.md).
+
+### Local live verification update
+
+Clerk sign-in, research-only creation, a real partial proposal and browser-reload restoration now verified on `02d4fe5`. El Lopo venue lead and paper plates displayed with explicit unknowns; missing photo did not block the proposal. Live image recovery and changed-brief behavior were not exercised. No provider commitments or payment actions. [Detailed evidence and limits](../../testing/ui-integration-verification.md). Branch remains local; no push or PR.

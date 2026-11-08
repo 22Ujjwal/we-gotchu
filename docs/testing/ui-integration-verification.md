@@ -45,3 +45,13 @@ The real development app was opened in Chrome at localhost:3000. The homepage an
 These checks prove controlled frontend/API compatibility and local rendering. They do not establish hosted Clerk sign-in, a real Naive research result, supplier availability, delivered supplier mail, completed bookings or a live external-agent connection. Customer approval and payment boundaries remain intact. Public external-agent enrollment, admission and route mounting remain separate work.
 
 Retry implementation: `7cc8679`. Fresh verification: 741 application tests and 31 tooling tests pass, typecheck and production build pass, diff check clean. Independent review found no blockers. Retry regression tests use controlled responses; live signed-in photo recovery remains unverified.
+
+## Signed-in local retry verification — 2026-11-08
+
+Tested source `02d4fe543cc24963af58669d31bdc7d729eacde7` in native Chrome at localhost:3000. User completed Clerk sign-in. Submitted the agreed San Francisco / 20 guests / December 12 at 18:00 Pacific / USD 500 / paper plates / USD 0 cancellation-loss research-only brief once, around 17:34:53 UTC. The app opened a saved conversation and progressed from Checking sources to Your options are ready.
+
+Conversation: `/planning/planning_6579677d-6e9a-4e21-afc2-e2afbce9cf32`. The real result provided El Lopo as a provisional adult-only venue and one 24-plate pack with a displayed $1 subtotal before tax/delivery. It explicitly left venue quote, availability, cancellation terms and budget compliance unverified and asked for the missing end time. This is an honest partial research result, not a confirmed bookable offer. Prices/source claims were displayed by the planner, not independently audited in this UI check.
+
+Browser Reload restored the same URL, proposal and supply details. Photo not available remained visible without preventing use of the proposal. No successful live image or transient-error recovery was observed; bounded retry recovery remains supported by controlled regression tests. Browser inspection and screenshot capture intermittently timed out, so exact completion latency and a final proposal screenshot are unavailable. An earlier live saving-screen screenshot and accessibility observations were returned in the session. No network capture was available to establish exact request counts.
+
+No revised brief, supplier contact, approval, Checkout, purchase, payment, hosted migration or deployment was performed in this run. Local app remains running for user inspection. This supersedes the prior sign-in-pending note; structured homepage submission and changed-brief behavior remain outside this run.
