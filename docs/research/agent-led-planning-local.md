@@ -256,3 +256,40 @@ Tony chose to retain direct Monid and wait for Naive support.
 The native-tool proof remains evidence of an alternative, not the accepted product configuration.
 No switch, new team test, Terra session, push or deployment was performed.
 The next live flow test waits for a supported public Monid research configuration from Naive.
+
+## Native research switch
+
+Tony subsequently approved native research for the demo while retaining Monid for later integration.
+Specialist definitions now use web_search, web_fetch, data_search, data_describe and data_run with explicit allow permissions and no external MCP server.
+The Monid definition and existing vault credentials remain available; they were not deleted or relabeled.
+Tom still delegates to the named specialists and returns the existing proposal schema.
+The conversation API, persistence and UI interfaces did not change for this switch.
+
+The setup script now updates existing specialists before pinning their versions in Tom's roster.
+Naive normalizes enabled=true in tool configurations; the native definition states that explicitly so read-back verification is stable.
+Live read-back confirmed Maya version 2, Sam version 2 and Tom version 4 with both specialist versions pinned.
+Existing sessions keep their original version pins, so testing uses a fresh conversation.
+
+At implementation head 6838740, `bun run test --maxWorkers 2` passed 456 tests in 42 files, followed by `bun run typecheck`, `bun run build` and `git diff --check` using Bun 1.4.4.
+
+### Final local configuration and bounded team tests
+
+The latest verified configuration is Tom version 6 with Maya and Sam version 4 pinned in his roster.
+Specialists return plain-text research to Tom through the supported delegation path.
+Tom alone submits the structured customer proposal.
+The earlier typed-delegation attempt passed an output schema but child sessions returned no schema; the support report records exact sessions and event sequences.
+
+Implementation head 64935c3eb8887302fd8c57084e4bfb4ca81ac6e1 passed 456 tests in 42 files, typecheck, production build and whitespace checks with Bun 1.4.4.
+The native team test 5a3d792a-17cc-4e98-bf5d-d27c829d8f41 created parent session ses_3xj8ej2ye55jaw0d4zrzedn0ms.
+Both specialist traces contained zero tool.confirm events.
+Sam returned two priced supply options; Maya found venue candidates but continued researching.
+No customer proposal arrived within the four-minute observation window.
+Selection and same-session follow-up therefore remain unverified.
+The observer canceled its parent and both children, with all cancellation acknowledgements recorded.
+The window is a test bound, not evidence that the provider had failed or could never finish.
+Five native web_search/web_fetch calls returned "the web provider answered 429" during this run.
+See naive-native-search-support.md for exact error evidence, timestamps and tool call IDs.
+
+The native switch removes the observed approval interruption but is not yet a passing end-to-end customer flow.
+The next investigation should establish why venue research keeps expanding after finding useful options and whether partial specialist progress should reach the customer earlier.
+No new browser test, push or deployment was performed.
