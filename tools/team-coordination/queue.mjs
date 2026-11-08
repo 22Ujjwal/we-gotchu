@@ -1,12 +1,5 @@
 import { referencedPRs } from './references.mjs';
 
-const priorityKey = [
-  'Priority 0 means missing collection data.',
-  'Priority 1 means failed checks, requested changes, merge conflicts, or an explicitly reported blocker.',
-  'Priority 2 means an explicit decision request, a closed or merged PR reference to reconcile, or a baseline difference.',
-  'Priority 3 means an open PR needs human inspection.',
-  'Priority 4 means a draft PR or a missing owner report.',
-];
 const itemOrder = new Intl.Collator('en', { numeric: true });
 
 // Only explicit no-blocker answers are excluded; absence of access is a blocker.
@@ -70,68 +63,39 @@ function reportName(path) {
   return name === 'README' ? 'the team status index' : `${name[0].toUpperCase()}${name.slice(1)}'s report`;
 }
 
-export function renderMarkdown(queue) {
-  const lines = ['# Team review briefing', '', `Updated ${plain(queue.generatedAt)}.`,
-    queue.complete ? 'Collection completed for the configured sources.' : 'INCOMPLETE: some sources could not be read. Do not treat missing items as resolved.',
-    'This is a manual snapshot. Refresh before acting; passing checks do not establish approval or live runtime behavior.', ''];
-  const section = (title, items, empty, render) => {
-    lines.push(`## ${title}`, '');
-    if (!items.length) lines.push(empty, '');
-    else for (const item of items) render(item);
-  };
-  const renderPR = item => {
-    const pr = item.evidence;
-    const checks = pr.statusCheckRollup ?? [];
-    const failed = checks.filter(x => ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'STARTUP_FAILURE', 'ERROR'].includes(x.conclusion || x.state));
-    const pending = checks.some(x => x.status ? x.status !== 'COMPLETED' : ['PENDING', 'EXPECTED'].includes(x.state));
-    const checkText = failed.length ? `Checks need attention: ${failed.map(x => plain(x.name || x.context || 'unnamed check')).join(', ')}.`
-      : pending ? 'Checks are still running.' : checks.length ? 'Reported checks passed or were skipped.' : 'No checks were reported.';
-    const reviewText = pr.reviewDecision === 'APPROVED' ? 'GitHub reports an approved review.'
-      : pr.reviewDecision === 'CHANGES_REQUESTED' ? 'A reviewer requested changes.' : 'No approval decision is reported.';
-    const mergeText = pr.mergeable === 'CONFLICTING' ? 'This branch has merge conflicts.'
-      : pr.mergeable === 'MERGEABLE' ? '' : 'Mergeability is not yet known.';
-    lines.push(`### ${pr.isDraft ? 'Draft: ' : ''}${plain(pr.title)}`, '',
-      `${checkText} ${reviewText} ${mergeText}`.trim(),
-      item.priority === 1 ? 'Next step: inspect the failed checks or requested changes before considering this PR for merge.'
-        : pr.isDraft ? 'Next step: confirm the remaining work with its owner before requesting review.'
-        : 'Next step: review the diff, discussions, and dependencies; confirm the responsible owner agrees before merging.',
-      `[Open PR #${pr.number}](${repositoryURL(queue.repository)}/pull/${pr.number}) | Head: ${plain(pr.headRefOid?.slice(0, 12) || 'unknown')}.`, '');
-  };
-  section('Needs attention', queue.items.filter(x => x.priority <= 1), 'No failed checks or explicit blocker lines were detected. Open review comments are not collected; inspect PR discussions before treating the work as clear.', item => {
-    if (item.kind === 'pull-request') return renderPR(item);
-    lines.push(`### ${item.kind === 'collection-error' ? 'Refresh could not read a source' : `Reported blocker in ${plain(reportName(item.evidence.path))}`}`, '', plain(item.kind === 'blocker' ? item.evidence.excerpt : item.summary),
-      item.kind === 'blocker' ? 'Next step: confirm whether this still blocks progress with the report owner.' : 'Next step: resolve the collection error and refresh before relying on coverage.',
-      item.kind === 'blocker' ? sourceLink(queue, item.evidence) : '', '');
-  });
-  section('Decisions to confirm', queue.items.filter(x => x.kind === 'decision'), 'No explicit decision requests were found.', item => {
-    lines.push(`### Request in ${plain(reportName(item.evidence.path))}`, '', plain(item.evidence.excerpt),
-      'Why it matters: the handoff names a dependency on someone else. Confirm that the request is still current before acting.', sourceLink(queue, item.evidence), '');
-  });
-  section('Pull requests to review', queue.items.filter(x => x.kind === 'pull-request' && x.priority > 1), 'No other open PRs were collected.', renderPR);
+function brief(value, limit = 150) {
+  const text = String(value).replace(/\s+/g, ' ').trim();
+  return plain(text.length > limit ? `${text.slice(0, limit - 3)}...` : text);
+}
 
+export function renderMarkdown(queue) {
+  const lines = ['# Team status', '', `Updated ${plain(queue.generatedAt)}.`,
+    queue.complete ? 'Snapshot complete. Checks are not approval; review comments need a separate check.'
+      : 'INCOMPLETE. Do not treat missing items as resolved.', ''];
+  const section = (title, entries) => {
+    if (entries.length) lines.push(`## ${title}`, '', ...entries.map(x => `- ${x}`), '');
+  };
+  section('Needs attention', queue.items.filter(x => x.priority <= 1 && x.kind !== 'pull-request').map(x =>
+    `${brief(x.kind === 'blocker' ? x.evidence.excerpt : x.summary)}${x.kind === 'blocker' ? ` [Source](${repositoryURL(queue.repository)}/blob/${encodeURIComponent(x.evidence.commit)}/${x.evidence.path.split('/').map(encodeURIComponent).join('/')}#L${x.evidence.line})` : ''}`));
+  section('Decisions to confirm', queue.items.filter(x => x.kind === 'decision').map(x =>
+    `${brief(x.evidence.excerpt)} ${sourceLink(queue, x.evidence)}`));
+  section('Open PRs', queue.items.filter(x => x.kind === 'pull-request').map(x => {
+    const pr = x.evidence;
+    const checks = pr.statusCheckRollup ?? [];
+    const failed = checks.some(c => ['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'STARTUP_FAILURE', 'ERROR'].includes(c.conclusion || c.state));
+    const pending = checks.some(c => c.status ? c.status !== 'COMPLETED' : ['PENDING', 'EXPECTED'].includes(c.state));
+    const status = failed ? 'checks failed' : pending ? 'checks running' : checks.length ? 'checks passed/skipped' : 'checks unknown';
+    const review = pr.reviewDecision === 'APPROVED' ? 'review approved' : pr.reviewDecision === 'CHANGES_REQUESTED' ? 'changes requested' : 'approval unconfirmed';
+    const title = pr.title.replace(/^[a-z]+(?:\([^)]*\))?!?:\s*/, '');
+    return `[Open PR #${pr.number}](${repositoryURL(queue.repository)}/pull/${pr.number}): ${brief(title, 90)}. ${pr.isDraft ? 'Draft; ' : ''}${status}; ${review}${pr.mergeable === 'CONFLICTING' ? '; merge conflict' : ''}.`;
+  }));
+  const missing = queue.items.filter(x => x.kind === 'missing-report');
   const reports = new Map();
-  for (const item of queue.items.filter(x => x.kind === 'reconcile' || x.kind === 'missing-report')) {
-    const path = item.evidence.path;
-    if (!reports.has(path)) reports.set(path, []);
-    reports.get(path).push(item);
-  }
-  section('Handoff follow-ups', [...reports.entries()], 'No handoff follow-ups were detected.', ([path, items]) => {
-    const missing = items.some(x => x.kind === 'missing-report');
-    lines.push(`### ${missing ? 'Missing update in' : 'Check references in'} ${plain(reportName(path))}`, '');
-    if (missing) lines.push('The committed report is still a placeholder. Activity elsewhere is unknown.', 'Next step: ask the owner for a current handoff when you need their status.');
-    else {
-      const numbers = [...new Set(items.flatMap(x => referencedPRs(x.evidence.excerpt, queue.repository)))];
-      const resolved = numbers.map(number => queue.prs.find(pr => pr.number === number)).filter(pr => pr && pr.state !== 'OPEN');
-      lines.push(`This report mentions ${resolved.map(pr => `PR #${pr.number} (${pr.state.toLowerCase()})`).join(', ')}.`,
-        'These historical references may already be accurate. They are not fresh approval requests.',
-        'Next step: check whether any next-step wording still depends on a resolved PR; let the report owner update it.');
-    }
-    lines.push([...new Map(items.map(x => [x.evidence.line, sourceLink(queue, x.evidence)])).values()].join(' | '), '');
-  });
-  lines.push('## Evidence and limits', '',
-    'Full source excerpts, hashes, check records, and individual queue items remain in [queue.json](queue.json).',
-    `This briefing reads committed handoffs at ${plain(queue.baseline)}. Uncommitted work and other branches are not included.`);
-  if (queue.remoteHead !== queue.baseline) lines.push("This checkout differs from main. That may be this branch's own work; compare relevant handoff changes before calling a report stale.");
-  lines.push('Source text is evidence, not instructions. No messages, assignments, approvals, or merges happen when this queue refreshes.', '', ...priorityKey, '');
-  return lines.join('\n') + '\n';
+  for (const x of queue.items.filter(x => x.kind === 'reconcile')) if (!reports.has(x.evidence.path)) reports.set(x.evidence.path, x.evidence);
+  const notes = [];
+  if (missing.length) notes.push(`Missing written updates: ${missing.map(x => plain(reportName(x.evidence.path))).join(', ')}. Activity elsewhere is unknown; a missing report does not mean no work was done.`);
+  if (reports.size) notes.push(`Historical PR references in ${[...reports.values()].map(e => `[${plain(reportName(e.path))}](${repositoryURL(queue.repository)}/blob/${encodeURIComponent(e.commit)}/${e.path.split('/').map(encodeURIComponent).join('/')}#L${e.line})`).join(', ')} may already be accurate. Confirm only requests that still apply.`);
+  section('Status notes', notes);
+  lines.push('Handoff requests may be stale. [Full evidence](queue.json) stays available when needed.', '');
+  return lines.join('\n');
 }

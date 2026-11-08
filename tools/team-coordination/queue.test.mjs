@@ -116,5 +116,5 @@ test('briefing stays short and leaves technical evidence in JSON', () => {
   assert.ok(md.split('\n').length <= 35);
   assert.ok(!md.includes('Next step:'));
   assert.ok(!md.includes('Head:'));
-  assert.ok(!md.includes('baseline'));
+  assert.ok(!md.replace(/\]\([^)]*\)/g, ']').includes('baseline'));
 });
