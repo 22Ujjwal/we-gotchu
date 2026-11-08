@@ -1,11 +1,12 @@
 # Connect and verify the existing event journey
 
 Type: implementation
-Status: ready-for-agent
+Status: claimed
 Label: ready-for-agent
 Owner: Tony.
-Assignee: unclaimed.
-Blocked by: Ujjwal-coordinated rendered-UI test dependencies and root configuration.
+Assignee: Tony integration session, branch feat/event-api-connection.
+Local test prerequisite: exact owner-provided DOM setup commit 04bca450 is integrated.
+Remaining gates: final review, upstream integration, and separate live verification.
 Tony explicitly authorizes functional route and API wiring in existing frontend files while preserving Leo's design.
 Live verification additionally requires completed Clerk sign-in/access, database configuration and migrations, research workspace/model credentials, and an agreed test brief.
 Checkout verification also requires Stripe configuration.
@@ -45,3 +46,13 @@ Implement in incremental tested commits with one integration PR and a reviewable
 Do not edit other owners' status files or silently change shared contracts, root configuration, or provider behavior.
 Live payments, external communication, and supplier commitments require separate authorized test conditions.
 This ticket connects existing capabilities; it does not certify untested live booking or recovery.
+
+## Implementation checkpoint
+
+The customer API client, identity-scoped polling, intake, canonical event screen, and revision-safe actions are implemented locally.
+The owner-provided DOM setup and all 37 fixture/rendered journey checks are integrated.
+Functional loading, errors, evidence, and payment states use existing styles; no browser layout verification is claimed.
+Review reproduced two bugs: malformed successful creation allowed another submission, and an open editor used a newer revision fetched by polling.
+Regression tests now pass for uncertain-create locking and edits tied to their original revision, with conflicting input retained.
+Final combined checks and independent re-review remain required before the implementation PR is ready.
+Live acceptance remains separate and incomplete.

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PartyRouteImport } from './routes/party'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
+import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as SettingsIndexRouteImport } from './routes/settings.index'
 import { Route as SettingsVenueIdRouteImport } from './routes/settings.$venueId'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
@@ -41,6 +42,11 @@ const ApiEventsRoute = ApiEventsRouteImport.update({
 const ApiMcpRoute = ApiMcpRouteImport.update({
   id: '/api/mcp',
   path: '/api/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsEventIdRoute = EventsEventIdRouteImport.update({
+  id: '/events/$eventId',
+  path: '/events/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/party': typeof PartyRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
+  '/events/$eventId': typeof EventsEventIdRoute
   '/settings/$venueId': typeof SettingsVenueIdRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/party': typeof PartyRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
+  '/events/$eventId': typeof EventsEventIdRoute
   '/settings/$venueId': typeof SettingsVenueIdRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/party': typeof PartyRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
+  '/events/$eventId': typeof EventsEventIdRoute
   '/settings/$venueId': typeof SettingsVenueIdRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/party'
     | '/api/events'
     | '/api/mcp'
+    | '/events/$eventId'
     | '/settings/$venueId'
     | '/sign-in/$'
     | '/sign-up/$'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/party'
     | '/api/events'
     | '/api/mcp'
+    | '/events/$eventId'
     | '/settings/$venueId'
     | '/sign-in/$'
     | '/sign-up/$'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/party'
     | '/api/events'
     | '/api/mcp'
+    | '/events/$eventId'
     | '/settings/$venueId'
     | '/sign-in/$'
     | '/sign-up/$'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   PartyRoute: typeof PartyRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiMcpRoute: typeof ApiMcpRoute
+  EventsEventIdRoute: typeof EventsEventIdRoute
   SettingsVenueIdRoute: typeof SettingsVenueIdRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
@@ -223,6 +236,13 @@ declare module '@tanstack/react-router' {
       path: '/api/mcp'
       fullPath: '/api/mcp'
       preLoaderRoute: typeof ApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/$eventId': {
+      id: '/events/$eventId'
+      path: '/events/$eventId'
+      fullPath: '/events/$eventId'
+      preLoaderRoute: typeof EventsEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -324,6 +344,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartyRoute: PartyRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiMcpRoute: ApiMcpRoute,
+  EventsEventIdRoute: EventsEventIdRoute,
   SettingsVenueIdRoute: SettingsVenueIdRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,

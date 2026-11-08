@@ -1,3 +1,6 @@
+import { useUser } from '@clerk/tanstack-react-start'
+import { localPreview } from '#/lib/local-preview'
+import { BriefIntake } from '#/components/hostwell/brief-intake'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -21,6 +24,23 @@ const sentences: Array<Sentence> = [
 ]
 
 function BriefPage() {
+  return localPreview ? <PreviewBriefPage /> : <ConnectedBriefPage />
+}
+
+function ConnectedBriefPage() {
+  const { user, isLoaded } = useUser()
+  const navigate = useNavigate()
+  return <div className="flex min-h-screen flex-col">
+    <Header step="brief" />
+    <main className="flex flex-1 flex-col items-center justify-center px-5 pt-10 pb-8 lg:px-12">
+      {isLoaded ? <BriefIntake identity={user?.id ?? null}
+        onCreated={eventId => void navigate({ to: '/events/$eventId', params: { eventId } })} />
+        : <p role="status">Loading sign-in...</p>}
+    </main>
+  </div>
+}
+
+function PreviewBriefPage() {
   const { brief, setBrief } = useHostwell()
   const navigate = useNavigate()
   const [draft, setDraft] = useState(brief)
