@@ -67,3 +67,14 @@ Native Chrome screenshots confirmed centered supply/form alignment and compact s
 The exact saved name `The Pearl — San Francisco (budget mismatch on published rates)` failed original matching. The fix requires a page title matching the business plus a caption corroborating business and city, then admits only business-matched room captions. Metadata extraction and URL/DNS/template/logo guards remain unchanged. Root and reviewer each verified one live rooftop image from the official brochure; root downloaded and visually inspected it at `.scratch/verification/ui-integration/pearl-live-rooftop.webp`. Final in-page rendering after the extractor fix was not confirmed because browser interactions were interrupted by tab changes. No claim of four photos: this page yields one.
 
 No supplier outreach, purchase, payment, hosted change or push. Live research-only prompts and public source/image reads occurred.
+
+
+## Local browser recheck, 2026-11-08 18:37 UTC
+
+Revision: `9144120cb37936a3e620e7d4073aa630a111c3cc`. Port 3000 process 16995 was confirmed to run from this integration checkout. Native Chrome opened the existing saved conversation above. Browser Reload retained the same proposal URL and rendered The Pearl rooftop photograph. A screenshot returned in chat confirms the actual photo, shortened fact wording, and absence of the removed proposal Details disclosure and keyboard hint. The source page provides one photo, so live gallery navigation was not available.
+
+The saved research state remains uncertain and venue/supply selection remains disabled. This is not a successful fresh research or selection test. The old saved venue title and source attribution are still verbose; local prompt changes do not rewrite saved records or update hosted agents.
+
+Further scrolling encountered `noWindowsAvailable`; subsequent Chrome screenshots were blank and the content accessibility tree disappeared. Requested that the user restore the visible local window. No additional live image-failure, mobile, selection or fresh research verification is claimed.
+
+Controlled checks at this revision: 94 tests passed across planning-chat, ui-photo, planning-images, venue-images and venue-images-http. These cover gallery navigation, failed assets, missing-image fallback, bounded retry, stale results and ownership. They are not live browser evidence. No supplier messages, bookings, payments, hosted configuration changes or push occurred.
