@@ -13,8 +13,8 @@ Tested commit: not tested; no code has been written.
 No transaction or integration code exists yet.
 This update records a read-through review of the merged documents and the scaffold, plus the decisions below.
 The merged baseline is TanStack Start with Bun and a single package.json, as set by the foundation task.
-[PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) proposes a Next.js workspace migration and was still open when this was written.
-It contradicts the merged foundation task, so it is a proposal and not the baseline.
+[PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) proposed a Next.js workspace migration and was closed without merging.
+The TanStack Start baseline stands.
 
 ## Runtime evidence
 
@@ -36,9 +36,8 @@ Gaps found in the 0.1 draft, to be resolved by the first contract PR:
 
 Needs from Tony: how Naive will call the guarded tool endpoint, and the exact supplier adapter inputs and outputs.
 Needs from Leo: which summary and progress fields the UI reads.
-Needs from the team: a decision on PR #6.
 
 ## Next step and blockers
 
 Next step: first foundation PR with Zod schemas, simulated fixtures, typecheck and test scripts, and CI.
-Blocker: confirm PR #6 will not be merged, or agree to adopt it, before the PR is opened.
+Blocker: none found after checking; PR #6 is closed.
