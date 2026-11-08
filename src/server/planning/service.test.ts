@@ -62,6 +62,47 @@ describe('planning service', () => {
     expect(agent.read).toHaveBeenLastCalledWith({ sessionId: 'session-1', afterSequence: 1 })
   })
 
+  it('shows a terminal provider failure even without a newer event sequence', async () => {
+    const initial = await create()
+    vi.mocked(agent.read).mockResolvedValue({ status: 'failed', sequence: 1, proposal: null, progress: null, error: 'Research stopped.' })
+    const failed = await getPlanning(deps, initial.id)
+    expect(failed.status).toBe('failed')
+    expect(failed.error).toBe('Research stopped.')
+  })
+
+  it('records an identical proposal once when it answers a new customer turn', async () => {
+    const view = await ready()
+    await commandPlanning(deps, view.id, { kind: 'message', requestId: 'repeat', message: 'Please repeat those choices', expectedVersion: view.version })
+    sequence = 4
+    const answer = await getPlanning(deps, view.id)
+    expect(answer.messages.map(message => message.role)).toEqual(['user', 'assistant', 'user', 'assistant'])
+    expect((await getPlanning(deps, view.id)).messages).toEqual(answer.messages)
+  })
+
+  it('does not duplicate messages or versions on identical working snapshots', async () => {
+    const initial = await create()
+    vi.mocked(agent.read).mockResolvedValue({ status: 'working', sequence: 8, proposal, progress: 'Checking sources', error: null })
+    const first = await getPlanning(deps, initial.id)
+    const second = await getPlanning(deps, initial.id)
+    expect(second).toEqual(first)
+  })
+
+  it('uses a 55 second deadline and retains a 90 second pending lease', async () => {
+    const clock = 1_800_000_000_000
+    vi.mocked(agent.start).mockRejectedValue(new Error('Ambiguous transport failure'))
+    const timer = vi.spyOn(globalThis, 'setTimeout')
+    try {
+      const view = await createPlanning({ ...deps, timeoutMs: undefined, now: () => clock }, { requestId: 'timing', message: 'Party' })
+      expect(timer).toHaveBeenCalledWith(expect.any(Function), 55_000)
+      const saved = await db.repository.get('alice', view.id)
+      expect(saved?.pending?.expiresAt).toBe(clock + 90_000)
+      expect(saved?.pending?.message).toBe('Party')
+      expect(view.status).toBe('uncertain')
+    } finally {
+      timer.mockRestore()
+    }
+  })
+
   it('toggles snapshots, replaces only the venue, and checks exact versions', async () => {
     let view = await ready()
     for (const optionId of ['venue', 'cups', 'venue2', 'plates', 'cups']) {
