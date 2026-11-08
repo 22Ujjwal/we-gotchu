@@ -11,7 +11,7 @@ import { createFakeMail, createFakeNaive } from './fakes'
 import { createNaiveSessions } from './naive'
 
 // Production wiring from environment variables. Server-only.
-// ARRANGE_FAKE_PROVIDERS=true (development only) swaps AgentMail and Naïve for
+// ARRANGE_FAKE_PROVIDERS=true (development only) swaps AgentMail and Naive for
 // the in-memory fakes and takes the customer id from ARRANGE_LOCAL_CUSTOMER_ID,
 // so the whole slice runs against `bun run dev` on localhost with no provider
 // accounts and no Clerk session.

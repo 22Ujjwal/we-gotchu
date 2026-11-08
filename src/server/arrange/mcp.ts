@@ -49,7 +49,7 @@ export function createArrangeTools(app: Pick<ArrangeApp, 'ledger' | 'sendSupplie
   }
   const recordSupplierTerms: ToolDefinition<{ eventId: string; messageId: string; terms: { term: string; amountMinor?: number; currency?: string; note?: string; excerpt: string }[] }> = {
     name: 'record_supplier_terms',
-    description: 'Record terms a supplier stated in one of their emails. Each term needs an excerpt copied exactly from that email. Money is a whole number in minor units (cents) with a 3-letter currency, for example 9200 and "EUR" for €92.',
+    description: 'Record terms a supplier stated in one of their emails. Each term needs an excerpt copied exactly from that email. Money is a whole number in minor units (cents) with a 3-letter currency, for example 9200 and "EUR" for EUR 92.',
     input: z.object({
       eventId: id, messageId: id,
       terms: z.array(z.object({

@@ -4,7 +4,7 @@ import { createApp, type ArrangeApp } from './app'
 import { agentMailReply, createFakeMail, createFakeNaive, signAgentMailRequest } from './fakes'
 
 // Drives the real ARRANGE routes (MCP, AgentMail webhook, customer API) on PGlite
-// with fake AgentMail and Naïve adapters.
+// with fake AgentMail and Naive adapters.
 
 let app: ArrangeApp
 let customerId = 'maya'
@@ -35,7 +35,7 @@ beforeEach(async () => {
   customerId = 'maya'
   app = createApp({
     db: pg.db, mail: mail.provider, naive: naive.naive,
-    config: { seedContacts: [{ name: 'Café Botanico', email: VENUE, kind: 'venue' }], mcpBearer: BEARER, agentMailWebhookSecret: SECRET, evidenceMode: 'fixture' },
+    config: { seedContacts: [{ name: 'Cafe Botanico', email: VENUE, kind: 'venue' }], mcpBearer: BEARER, agentMailWebhookSecret: SECRET, evidenceMode: 'fixture' },
   })
 })
 afterEach(async () => { await close() })
@@ -73,7 +73,7 @@ describe('local spike: get_event over the MCP route', () => {
 
     const { isError, payload } = await callTool('get_event', { eventId })
     expect(isError).toBe(false)
-    expect(payload).toMatchObject({ id: eventId, brief, contactConsent: true, sessionId: 'ses_fake_1', stage: 'getting_started', contacts: [{ name: 'Café Botanico', email: VENUE }] })
+    expect(payload).toMatchObject({ id: eventId, brief, contactConsent: true, sessionId: 'ses_fake_1', stage: 'getting_started', contacts: [{ name: 'Cafe Botanico', email: VENUE }] })
     expect(payload.customerId).toBeUndefined()
   })
 
@@ -92,7 +92,7 @@ describe('local integration gate: one supplier exchange, same session', () => {
     const sent = await callTool('send_supplier_email', {
       eventId, contactId,
       subject: 'Team dinner for 25 on Friday 20 November',
-      body: 'Hello Café Botanico! Could you host a team dinner for 25 on Friday 20 November at 7pm? What would the price per head, the deposit and the cancellation terms be?',
+      body: 'Hello Cafe Botanico! Could you host a team dinner for 25 on Friday 20 November at 7pm? What would the price per head, the deposit and the cancellation terms be?',
       operationKey: 'venue-first-inquiry',
     })
     expect(sent.isError).toBe(false)
@@ -103,7 +103,7 @@ describe('local integration gate: one supplier exchange, same session', () => {
     const retry = await callTool('send_supplier_email', {
       eventId, contactId, operationKey: 'venue-first-inquiry',
       subject: 'Team dinner for 25 on Friday 20 November',
-      body: 'Hello Café Botanico! Could you host a team dinner for 25 on Friday 20 November at 7pm? What would the price per head, the deposit and the cancellation terms be?',
+      body: 'Hello Cafe Botanico! Could you host a team dinner for 25 on Friday 20 November at 7pm? What would the price per head, the deposit and the cancellation terms be?',
     })
     expect(retry.payload).toEqual(sent.payload)
     expect(mail.sent).toHaveLength(1)
@@ -113,8 +113,8 @@ describe('local integration gate: one supplier exchange, same session', () => {
     mail.registerInbound('<reply-1@botanico.test>', mail.sent[0].threadId)
     const replyBody = agentMailReply({
       inboxId: mail.provider.inboxId, messageId: '<reply-1@botanico.test>', inReplyTo: sentMessageId, threadId: mail.sent[0].threadId,
-      from: `Café Botanico <${VENUE}>`,
-      text: 'We can do the 20th. €92 per head for 25, 30% deposit, free cancellation until 13 Nov.',
+      from: `Cafe Botanico <${VENUE}>`,
+      text: 'We can do the 20th. EUR 92 per head for 25, 30% deposit, free cancellation until 13 Nov.',
     })
     const webhook = async (body: string, svixId?: string) => handlers(webhookRoute).POST({
       params: {}, request: signAgentMailRequest('http://localhost/api/arrange/agentmail/webhook', body, SECRET, svixId),
@@ -128,7 +128,7 @@ describe('local integration gate: one supplier exchange, same session', () => {
     expect(event.received).toHaveLength(1)
     expect(event.received[0].deliveryState).toBe('delivered')
     expect(naive.deliveries).toEqual([
-      { sessionId: event.sessionId, idempotencyKey: 'inbound:<reply-1@botanico.test>', message: expect.stringContaining('€92 per head') },
+      { sessionId: event.sessionId, idempotencyKey: 'inbound:<reply-1@botanico.test>', message: expect.stringContaining('EUR 92 per head') },
     ])
 
     // A duplicate delivery of the same webhook changes nothing.
@@ -141,7 +141,7 @@ describe('local integration gate: one supplier exchange, same session', () => {
     const terms = await callTool('record_supplier_terms', {
       eventId, messageId: '<reply-1@botanico.test>',
       terms: [
-        { term: 'price_per_head', amountMinor: 9200, currency: 'EUR', excerpt: '€92 per head' },
+        { term: 'price_per_head', amountMinor: 9200, currency: 'EUR', excerpt: 'EUR 92 per head' },
         { term: 'deposit', note: '30% of the total', excerpt: '30% deposit' },
         { term: 'cancellation', note: 'Free cancellation until 13 Nov', excerpt: 'free cancellation until 13 Nov' },
       ],
@@ -152,14 +152,14 @@ describe('local integration gate: one supplier exchange, same session', () => {
     const followUp = await callTool('send_supplier_email', {
       eventId, contactId, operationKey: 'venue-price-follow-up',
       subject: 'Re: Team dinner for 25 on Friday 20 November',
-      body: 'Thank you! Would €85 per head be possible for our group of 25?',
+      body: 'Thank you! Would EUR 85 per head be possible for our group of 25?',
     })
     expect(followUp.payload).toMatchObject({ status: 'sent' })
     expect(mail.sent).toHaveLength(2)
     expect(mail.sent[1].threadId).toBe(mail.sent[0].threadId)
     const update = await callTool('post_update', {
       eventId, kind: 'progress',
-      text: "Café Botanico can do the 20th at €92 per head. That's close to your budget, so I've asked whether €85 is possible.",
+      text: "Cafe Botanico can do the 20th at EUR 92 per head. That's close to your budget, so I've asked whether EUR 85 is possible.",
     })
     expect(update.isError).toBe(false)
 
@@ -168,15 +168,15 @@ describe('local integration gate: one supplier exchange, same session', () => {
     expect(view.status).toBe(200)
     const customer = await view.json() as any
     expect(customer.stage).toBe('negotiating')
-    expect(customer.headline).toContain('Café Botanico')
-    expect(customer.contacts).toEqual([{ id: contactId, name: 'Café Botanico', kind: 'venue', emailsSent: 2, replies: 1 }])
+    expect(customer.headline).toContain('Cafe Botanico')
+    expect(customer.contacts).toEqual([{ id: contactId, name: 'Cafe Botanico', kind: 'venue', emailsSent: 2, replies: 1 }])
     expect(customer.terms.map((t: any) => [t.term, t.amountMinor, t.supplier])).toEqual([
-      ['price_per_head', 9200, 'Café Botanico'], ['deposit', null, 'Café Botanico'], ['cancellation', null, 'Café Botanico'],
+      ['price_per_head', 9200, 'Cafe Botanico'], ['deposit', null, 'Cafe Botanico'], ['cancellation', null, 'Cafe Botanico'],
     ])
     expect(customer.activity.map((a: any) => a.kind)).toEqual(
       expect.arrayContaining(['email_sent', 'reply_received', 'progress']),
     )
-    expect(customer.activity.find((a: any) => a.kind === 'progress').text).toContain('€92')
+    expect(customer.activity.find((a: any) => a.kind === 'progress').text).toContain('EUR 92')
 
     // Another customer gets a 404.
     customerId = 'tom'

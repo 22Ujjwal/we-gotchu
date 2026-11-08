@@ -1,7 +1,8 @@
+import { ArrangeHeader } from '#/components/arrange/header'
 import { EventDecisions, type CustomerAction } from '#/components/arrange/event-decisions'
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Header } from '#/components/hostwell/ui'
+import { Button } from '#/components/hostwell/ui'
 import type { CustomerEventView } from '#/server/arrange/customer-view'
 
 // The customer's event page: the derived stage, a plain-language timeline,
@@ -66,7 +67,7 @@ function ArrangeEventPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header step="party" />
+      <ArrangeHeader />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pt-10 pb-12">
         {error && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-[14px] text-red-800">{error}</p>}
         {!view && !error && <p className="text-body">One moment...</p>}

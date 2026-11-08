@@ -19,13 +19,6 @@ import {
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>
 
-export type RefusalCode =
-  | 'invalid_brief' | 'unknown_event' | 'not_found' | 'session_conflict'
-  | 'no_consent' | 'contact_not_on_event' | 'send_cap_reached' | 'key_conflict'
-  | 'unknown_operation' | 'operation_final'
-  | 'message_not_on_event' | 'excerpt_not_in_message' | 'money_not_minor_units' | 'no_terms'
-  | 'empty_update' | 'invalid_update_kind'
-
 export class LedgerRefusal extends Error {
   constructor(readonly code: string, message: string) { super(message) }
 }
