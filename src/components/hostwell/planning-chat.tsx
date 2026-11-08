@@ -107,10 +107,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry && <PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
         disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} />}
-      {view.selections.some(option => option.kind === 'venue') && (!view.inquiry || view.inquiry.status === 'stale')
+      {view.selections.some(option => option.kind === 'venue') && (!view.inquiry || view.inquiry.status === 'stale' || view.inquiry.delivery?.status === 'failed')
         && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
           onClick={() => void session.submit({ kind: 'prepare_inquiry', requestId: crypto.randomUUID(), expectedVersion: view.version })}>
-          {view.inquiry ? 'Replace outdated inquiry draft' : 'Prepare venue inquiry'}
+          {view.inquiry?.delivery?.status === 'failed' ? 'Prepare a replacement inquiry' : view.inquiry ? 'Replace outdated inquiry draft' : 'Prepare venue inquiry'}
         </Button>}
       <p className="text-[14px] leading-6 text-stone">Selections save your preferences. Send a message when you want us to research changes. Nothing is booked or purchased.</p>
     </>}

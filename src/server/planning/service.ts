@@ -181,7 +181,7 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (command.kind === 'prepare_inquiry' || command.kind === 'save_inquiry') {
     if (record.pending || record.view.status !== 'ready') throw busy()
     if (record.view.inquiry?.delivery?.status === 'uncertain') throw busy()
-    if (command.kind === 'prepare_inquiry' && record.view.inquiry?.status === 'draft') {
+    if (command.kind === 'prepare_inquiry' && record.view.inquiry?.status === 'draft' && record.view.inquiry.delivery?.status !== 'failed') {
       throw new ApiError(409, 'draft_exists', 'An inquiry draft already exists. Edit the saved draft.')
     }
     let inquiry = record.view.inquiry
