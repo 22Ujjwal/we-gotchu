@@ -66,12 +66,20 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         </div>)}
       </section>
       <p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
-        : view.status === 'blocked' ? 'Research needs your approval.'
+        : view.status === 'blocked' ? "Research is paused for our team's review."
         : view.status === 'failed' ? 'We could not finish this research. Send a message to try again.'
           : view.status === 'uncertain' ? 'We could not confirm the research outcome. Refresh your plan to check for an update.'
             : 'Your options are ready to explore.'}</p>
-      {view.status === 'blocked' && <section aria-label="Research approvals" className="flex flex-col gap-4">
-        <p>Naive has paused an external research request. Review what will be sent before deciding. This approves one call only.</p>
+      {!!view.activity?.length && <section aria-label="Your planning team" className="flex flex-col gap-3">
+        <h2 className="text-[18px] font-semibold">Your planning team</h2>
+        {view.activity.map((item, index) => <div key={`${item.name}:${index}`} className="border-l-2 border-sand pl-4">
+          <p className="text-[16px] font-semibold">{item.name}</p>
+          <p className="text-[16px] text-stone">{item.detail}</p>
+        </div>)}
+      </section>}
+      {view.canReviewResearch && ['blocked', 'uncertain'].includes(view.status) && <details className="flex flex-col gap-4">
+        <summary className="cursor-pointer underline">Operator review for local testing</summary>
+        <p className="my-3">This is an internal research review, not a customer decision. Review the exact request before allowing or declining this one call.</p>
         {!view.approvals?.length && <p>This request needs operator attention. No research call can be approved here.</p>}
         {view.approvals?.map(approval => <div key={approval.id} className="flex flex-col gap-3 border border-sand p-4">
           <p>{approval.tool === 'monid.monid_discover' ? 'Find a research source'
@@ -79,14 +87,14 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
               : approval.tool === 'monid.monid_get_run' ? 'Read a research result' : 'Request supplier research'}</p>
           <pre className="whitespace-pre-wrap break-words text-[14px]">{JSON.stringify(approval.arguments, null, 2)}</pre>
           <div className="flex flex-wrap gap-3">{(['allow', 'deny'] as const).map(decision => <Button key={decision}
-            disabled={session.pending || session.loading || !!session.uncertain}
+            disabled={session.pending || session.loading || !!session.uncertain || view.status !== 'blocked'}
             className="px-5 py-3" onClick={() => void session.submit({ kind: 'confirm', requestId: crypto.randomUUID(),
               expectedVersion: view.version, approvalId: approval.id, decision })}>
             {decision === 'allow' ? 'Approve this research call' : 'Decline this research call'}
           </Button>)}</div>
         </div>)}
         <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Check research status</Button>
-      </section>}
+      </details>}
       {view.status === 'uncertain' && <Button className="self-start px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
       {view.proposal && !answerAlreadyShown && <div className="flex flex-col gap-3 text-[18px] leading-7">
         <p>{view.proposal.summary}</p>
