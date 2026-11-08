@@ -193,12 +193,13 @@ test('selection follows detail checkboxes and choosing the same venue preserves 
 for (const status of ['ready', 'failed', 'uncertain'] as const) {
   test(`automatic reads follow the ${status} state`, async () => {
     vi.useFakeTimers()
-    http(() => Response.json(view({ status, error: 'private_provider_session_id' })))
+    http(() => Response.json(view({ status, proposal: null, error: 'private_provider_session_id' })))
     render(<ConnectedPlanningPage id="plan-a" />)
     await act(async () => {})
     await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
     expect(fetch).toHaveBeenCalledTimes(status === 'uncertain' ? 7 : 1)
     expect(screen.queryByText('private_provider_session_id')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Research in progress')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /book|pay/i })).not.toBeInTheDocument()
   })
 }

@@ -186,6 +186,12 @@ describe('planning service', () => {
     expect((await getPlanning(deps, view.id)).status).toBe('uncertain')
     expect(agent.start).toHaveBeenCalledTimes(1)
     expect(agent.read).not.toHaveBeenCalled()
+    agent.recoverStart = vi.fn(async () => { throw Object.assign(new Error('conflict'), { status: 409, code: 'idempotency_conflict' }) })
+    const expired = { ...deps, now: () => Date.now() + 120_000 }
+    expect((await getPlanning(expired, view.id)).status).toBe('failed')
+    expect((await getPlanning(expired, view.id)).status).toBe('failed')
+    expect(agent.recoverStart).toHaveBeenCalledTimes(1)
+    expect((await db.repository.get('alice', view.id))?.pending).toBeNull()
   })
 
   it('bounds a hung send and never resends an uncertain request', async () => {
