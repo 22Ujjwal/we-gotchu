@@ -19,7 +19,7 @@ function AuthenticatedIntake({ onCreated }: { onCreated: (eventId: string) => vo
       const result = await createEventApi().create(brief)
       if (active.current) onCreated(result.event.eventId)
     } catch (error) {
-      if (active.current && (!(error instanceof EventApiError) || error.status === 0 || error.status >= 500 || error.code === 'invalid_response')) setUncertain(true)
+      if (active.current && (!(error instanceof EventApiError) || error.status === 0 || error.status >= 500 || error.code === 'invalid_response' || error.code === 'outcome_unknown')) setUncertain(true)
       throw error
     } finally { if (active.current) setPending(false) }
   }} />
