@@ -5,7 +5,7 @@ The draft is attached to the same planning conversation and survives reload.
 
 **Blocked by:** Stage two: Keep customer choices through changes and return visits, including resolution of its outstanding review findings.
 
-**Status:** preparation-in-progress; runtime implementation awaits stage-two review
+**Status:** implemented locally; controlled checks pass; real browser verification pending
 
 Owner: Tony.
 
@@ -25,3 +25,24 @@ Add a focused regression only if a reproduced failure warrants it.
 This ticket drafts an inquiry only; it does not send, reserve, charge, or promise availability.
 Keep Leo's existing design and coordinate any shared email or contract work with Ujjwal.
 Do not add a second email integration before checking whether the existing configured integration can support the next tickets.
+
+## Implementation checkpoint
+
+PR #59 is merged as `b986ab636725029fc6c1b694a1c34494a42a7bca`.
+The local `feat/planning-inquiry-drafts` branch implements preparation and editing through the existing planning command endpoint.
+The inquiry includes a saved venue snapshot, draft revision, contact source when available, and source conversation message IDs.
+It is stored in the existing conversation record, so no schema migration is required for this slice.
+
+The initial draft uses a deterministic inquiry template containing the customer's requirements in order.
+It does not make an additional research or language-model call.
+Only an email explicitly present in saved published evidence is prefilled; otherwise the address remains empty.
+Finding an address not already in the saved evidence remains a follow-up research task.
+
+The customer can edit and save the draft, then reload it.
+A changed venue or new customer message marks it stale.
+A concurrent draft edit retains typed text and offers an explicit way to load the newer saved draft.
+Sending and supplier reply interpretation are not connected in this slice.
+
+Controlled verification covers persistence through the migrated repository, stale revisions, replay, missing contact evidence, and rendered editing through the real client and hook with controlled fetch.
+No live browser, email, supplier contact, or payment claim is made.
+Before shipping, run the draft preparation, editing and reload recipe in the separate browser-testing session.

@@ -61,3 +61,20 @@ Run `npm test -- src/server/planning src/server/db/store.test.ts src/agent/plann
 The tests use migrated PGlite and injected fake agents, including a file-backed close-and-reopen test.
 They do not call a live provider or a hosted database.
 The lead owns generated route registration, combined application checks, and browser verification.
+
+## Venue inquiry drafts
+
+The `prepare_inquiry` command creates a draft for the saved selected venue when research is ready.
+The `save_inquiry` command requires the conversation version, inquiry ID and exact draft revision.
+Draft creation and editing never invoke the planner or email provider.
+The existing JSON conversation record stores the optional inquiry; old records remain valid.
+
+Draft text uses the customer's messages in order and asks for availability, capacity, total costs, deposits and cancellation terms.
+Prefilled contacts must appear in both a published fact and its source excerpt.
+An absent or ambiguous contact stays empty and can be entered manually.
+Changing the recipient removes the old source attribution.
+
+New customer messages and venue changes mark the saved draft stale.
+The customer must explicitly replace an outdated draft.
+Revision conflicts retain local editor text instead of silently adopting another tab's baseline.
+Email sending, inbound interpretation and supplier commitments belong to later integration slices.
