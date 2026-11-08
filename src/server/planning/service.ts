@@ -175,6 +175,11 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (record.pending && record.view.status !== 'uncertain' && record.pending.expiresAt > now(deps)) throw busy()
   const requests = { ...record.requests, [command.requestId]: fingerprint }
   if (record.view.inquiry?.delivery?.status === 'pending') throw busy()
+  if (command.kind === 'release_payment') {
+    if (!deps.offers) throw new ApiError(503, 'offer_unavailable', 'Offer preparation is not configured.')
+    return (await deps.offers.release(customerId, id, record.view.version, command.eventId,
+      { id: command.requestId, fingerprint })).view
+  }
   if (command.kind === 'prepare_payment') {
     if (!deps.offers) throw new ApiError(503, 'offer_unavailable', 'Offer preparation is not configured.')
     if (record.pending || record.view.status !== 'ready') throw busy()

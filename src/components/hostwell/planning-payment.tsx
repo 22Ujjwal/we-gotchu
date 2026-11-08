@@ -3,8 +3,8 @@ import type { PlanningPaymentLink } from '../../agent/planning/offer-contract'
 import { useEventSession } from '../../lib/hostwell/use-event-session'
 import { Button } from './ui'
 
-export function PlanningPayment({ link, identity, stale, onCheckout = url => window.location.assign(url) }: {
-  link: PlanningPaymentLink; identity: string | null; stale: boolean; onCheckout?: (url: string) => void;
+export function PlanningPayment({ link, identity, stale, onRelease, onCheckout = url => window.location.assign(url) }: {
+  link: PlanningPaymentLink; identity: string | null; stale: boolean; onRelease?: () => void; onCheckout?: (url: string) => void;
 }) {
   const session = useEventSession({ eventId: link.eventId, identity })
   const [approved, setApproved] = useState(false)
@@ -36,6 +36,13 @@ export function PlanningPayment({ link, identity, stale, onCheckout = url => win
       </>}
       {stale && <p role="alert">The offer changed. This payment plan cannot be approved.</p>}
       {view.event.cancelRequestedAt && <p>This payment plan was canceled.</p>}
+      {!view.event.cancelRequestedAt && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading}
+        onClick={() => { void session.cancel().catch(() => undefined) }}>Cancel sandbox payment plan</Button>}
+      {view.event.status === 'canceled' && onRelease && (!view.payment || view.payment.state === 'expired'
+        || view.payment.state === 'paid' && view.payment.refundState === 'succeeded')
+        && <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={onRelease}>
+          Update offer after cancellation
+        </Button>}
     </>}
     <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
       onClick={() => void session.refresh()}>Check payment status</Button>
