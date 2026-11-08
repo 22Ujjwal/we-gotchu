@@ -50,3 +50,29 @@ test('late old-revision reads cannot replace current state and different events 
 test('an older progress snapshot cannot undo payment state', () => {
   expect(mergeEventView(bookedEvent, planReadyEvent)).toBe(bookedEvent)
 })
+
+test('same-cursor reads cannot remove a committed cancellation or lower the plan revision', () => {
+  const canceled = { ...bookedEvent, event: { ...bookedEvent.event, cancelRequestedAt: '2026-11-08T02:00:00.000Z', status: 'canceling' as const } }
+  expect(mergeEventView(canceled, bookedEvent)).toBe(canceled)
+  const newerPlan = { ...planReadyEvent, event: { ...planReadyEvent.event, planRevision: 2 } }
+  expect(mergeEventView(newerPlan, planReadyEvent)).toBe(newerPlan)
+})
+
+test('same-cursor snapshots cannot roll back payment or refund settlement', () => {
+  const paid = { ...bookedEvent, event: { ...bookedEvent.event, progressSequence: 3 } }
+  expect(mergeEventView(paid, planReadyEvent)).toBe(paid)
+  const refunded = { ...paid, payment: { ...paid.payment!, refundState: 'succeeded' as const } }
+  expect(mergeEventView(refunded, paid)).toBe(refunded)
+})
+
+test('first full snapshot deduplicates and scopes progress, too', () => {
+  const next = { ...planReadyEvent, progress: [...planReadyEvent.progress].reverse().concat([
+    planReadyEvent.progress[0], { ...planReadyEvent.progress[0], eventId: 'other', sequence: 4 },
+  ]) }
+  expect(mergeEventView(null, next).progress.map(entry => entry.sequence)).toEqual([1, 2, 3])
+})
+
+test('a successful write with an unreadable body has an uncertain outcome', async () => {
+  const api = createEventApi(async () => new Response('invalid', { status: 200 }))
+  await expect(api.cancel('event')).rejects.toMatchObject({ code: 'outcome_unknown' })
+})
