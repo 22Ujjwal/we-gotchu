@@ -17,7 +17,10 @@ This triage label comes from the to-spec workflow and is separate from Wayfinder
 Publishing a spec does not create implementation tickets or close human decision tickets.
 A pushed branch publishes the local tracker artifact for team review; main changes only after its PR is merged.
 
-Current specification: [Research event options with verified evidence](../../.scratch/specs/agent-research.md).
+Published specifications:
+
+- Tony: [Research event options with verified evidence](../../.scratch/specs/agent-research.md).
+- Ujjwal: [Approve, pay, and cancel an event safely](../../.scratch/specs/transactions.md).
 
 ## Implementation tickets
 

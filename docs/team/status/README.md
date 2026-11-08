@@ -16,7 +16,9 @@ Ujji coordinates updates to this index; each person owns their individual status
 
 ## Known work under review
 
-[PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) proposes a Next.js workspace migration on feature/migrate-nextjs-workspace.
-It was open when this index was created; recheck its state before choosing paths or framework-specific dependencies.
-The merged baseline at that inspection was TanStack Start with Bun.
-This entry records a proposal and does not approve or implement the migration.
+[PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6), the proposed Next.js workspace migration, is closed without merging. The merged baseline remains TanStack Start with Bun.
+
+At main `14cab2e`, contracts #16, Clerk #17, standalone research #18, frontend #19, and backend core #20 are merged. Hosted integration is not established by those merges.
+The shared route repair [#26](https://github.com/22Ujjwal/we-gotchu/pull/26) is a dependency of deployment [#21](https://github.com/22Ujjwal/we-gotchu/pull/21) and the open integration work.
+Tony's research integration [#24](https://github.com/22Ujjwal/we-gotchu/pull/24) is stacked on supplier evidence [#25](https://github.com/22Ujjwal/we-gotchu/pull/25); both remain under review. Root CI [#27](https://github.com/22Ujjwal/we-gotchu/pull/27) also needs Ujjwal's review.
+Recheck current PR state before integrating; these entries record dependencies, not owner approval.
