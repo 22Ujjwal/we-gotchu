@@ -280,3 +280,11 @@ test('uncertain write status remains checkable after a temporary read failure', 
   expect(screen.getByRole('textbox')).toHaveValue('Keep the room')
   expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
 })
+
+test('a saved assistant answer is not repeated above the option cards', async () => {
+  const saved = view({ messages: [{ id: 'answer-1', role: 'assistant', text: 'Two options for dinner.\n\nWhat time should dinner start?', createdAt: '2026-11-07T12:00:00Z' }] })
+  http(() => Response.json(saved))
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await screen.findByRole('heading', { name: 'Garden room' })
+  expect(screen.getAllByText(/Two options for dinner\./)).toHaveLength(1)
+})
