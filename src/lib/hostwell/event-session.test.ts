@@ -71,7 +71,7 @@ test.each([401, 403, 404])('access error %i clears private state and stops reads
 
 test('stop aborts reads and rejects late responses; null identity makes no calls', async () => {
   const pending = deferred<Response>()
-  const fetcher = vi.fn(() => pending.promise)
+  const fetcher = vi.fn((_url: string, _init?: RequestInit) => pending.promise)
   const session = setup(fetcher)
   session.stop()
   expect(fetcher.mock.calls[0][1]?.signal?.aborted).toBe(true)
@@ -165,7 +165,7 @@ test('refund pending polls until authoritative refund completion', async () => {
 
 test('GET advances a slow research run through its deadline then stops on the terminal result', async () => {
   const start = Date.now()
-  const fetcher = vi.fn(async () => {
+  const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => {
     await new Promise(resolve => setTimeout(resolve, 2000))
     return json(Date.now() - start >= 120000
       ? { ...running(), event: { ...running().event, status: 'researched' }, run: { ...running().run!, state: 'partial' } }
