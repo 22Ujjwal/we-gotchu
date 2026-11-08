@@ -49,9 +49,11 @@ const rule = `<tr><td colspan="2" style="padding:10px 0;"><div style="border-top
 
 export function buildQuoteReadyEmail(input: QuoteReady, appUrl: string): QuoteReadyEmail {
   const { brief, plan, eventId } = input
-  const when = new Intl.DateTimeFormat('en-US', {
+  const dateFormat = new Intl.DateTimeFormat('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: brief.timezone,
-  }).format(new Date(brief.startsAt))
+  })
+  const minutes = brief.endsAt ? Math.round((Date.parse(brief.endsAt) - Date.parse(brief.startsAt)) / 60000) : 0
+  const when = `${dateFormat.format(new Date(brief.startsAt))}${brief.endsAt ? ` – ${dateFormat.format(new Date(brief.endsAt))}` : ''} (${brief.timezone})${minutes > 0 ? ` · ${Math.floor(minutes / 60)}h ${minutes % 60}m` : ''}`
   const link = `${appUrl.replace(/\/$/, '')}/events/${encodeURIComponent(eventId)}`
   const items = plan.actions.map((a) => ({
     what: a.target === a.supplierName ? a.supplierName : `${a.supplierName}: ${a.target}`,

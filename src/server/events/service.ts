@@ -28,7 +28,7 @@ function isAbsent(v: unknown): boolean {
 
 function parseBrief(input: unknown): Brief {
   const obj = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
-  const missing = BRIEF_FIELDS.filter((f) => isAbsent(obj[f]))
+  const missing = BRIEF_FIELDS.filter((f) => !Brief.shape[f].isOptional() && isAbsent(obj[f]))
   if (missing.length > 0) {
     throw new ApiError(422, 'missing_fields', `Missing required fields: ${missing.join(', ')}.`, { missing })
   }
