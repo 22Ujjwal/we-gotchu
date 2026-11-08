@@ -10,13 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
+import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
+import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.brief'
+import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEventsRoute = ApiEventsRouteImport.update({
+  id: '/api/events',
+  path: '/api/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMcpRoute = ApiMcpRouteImport.update({
@@ -34,39 +45,115 @@ const SignUpSplatRoute = SignUpSplatRouteImport.update({
   path: '/sign-up/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiEventsRoute,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEventsIdApproveRoute = ApiEventsIdApproveRouteImport.update({
+  id: '/approve',
+  path: '/approve',
+  getParentRoute: () => ApiEventsIdRoute,
+} as any)
+const ApiEventsIdBriefRoute = ApiEventsIdBriefRouteImport.update({
+  id: '/brief',
+  path: '/brief',
+  getParentRoute: () => ApiEventsIdRoute,
+} as any)
+const ApiEventsIdCancelRoute = ApiEventsIdCancelRouteImport.update({
+  id: '/cancel',
+  path: '/cancel',
+  getParentRoute: () => ApiEventsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/api/events/$id': typeof ApiEventsIdRouteWithChildren
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
+  '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
+  '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/api/events/$id': typeof ApiEventsIdRouteWithChildren
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
+  '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
+  '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/events': typeof ApiEventsRouteWithChildren
   '/api/mcp': typeof ApiMcpRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
+  '/api/events/$id': typeof ApiEventsIdRouteWithChildren
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
+  '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
+  '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/mcp' | '/sign-in/$' | '/sign-up/$'
+  fullPaths:
+    | '/'
+    | '/api/events'
+    | '/api/mcp'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/api/events/$id'
+    | '/api/stripe/webhook'
+    | '/api/events/$id/approve'
+    | '/api/events/$id/brief'
+    | '/api/events/$id/cancel'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/mcp' | '/sign-in/$' | '/sign-up/$'
-  id: '__root__' | '/' | '/api/mcp' | '/sign-in/$' | '/sign-up/$'
+  to:
+    | '/'
+    | '/api/events'
+    | '/api/mcp'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/api/events/$id'
+    | '/api/stripe/webhook'
+    | '/api/events/$id/approve'
+    | '/api/events/$id/brief'
+    | '/api/events/$id/cancel'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/events'
+    | '/api/mcp'
+    | '/sign-in/$'
+    | '/sign-up/$'
+    | '/api/events/$id'
+    | '/api/stripe/webhook'
+    | '/api/events/$id/approve'
+    | '/api/events/$id/brief'
+    | '/api/events/$id/cancel'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiMcpRoute: typeof ApiMcpRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -76,6 +163,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/events': {
+      id: '/api/events'
+      path: '/api/events'
+      fullPath: '/api/events'
+      preLoaderRoute: typeof ApiEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/mcp': {
@@ -99,14 +193,79 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignUpSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/events/$id': {
+      id: '/api/events/$id'
+      path: '/$id'
+      fullPath: '/api/events/$id'
+      preLoaderRoute: typeof ApiEventsIdRouteImport
+      parentRoute: typeof ApiEventsRoute
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/events/$id/approve': {
+      id: '/api/events/$id/approve'
+      path: '/approve'
+      fullPath: '/api/events/$id/approve'
+      preLoaderRoute: typeof ApiEventsIdApproveRouteImport
+      parentRoute: typeof ApiEventsIdRoute
+    }
+    '/api/events/$id/brief': {
+      id: '/api/events/$id/brief'
+      path: '/brief'
+      fullPath: '/api/events/$id/brief'
+      preLoaderRoute: typeof ApiEventsIdBriefRouteImport
+      parentRoute: typeof ApiEventsIdRoute
+    }
+    '/api/events/$id/cancel': {
+      id: '/api/events/$id/cancel'
+      path: '/cancel'
+      fullPath: '/api/events/$id/cancel'
+      preLoaderRoute: typeof ApiEventsIdCancelRouteImport
+      parentRoute: typeof ApiEventsIdRoute
+    }
   }
 }
 
+interface ApiEventsIdRouteChildren {
+  ApiEventsIdApproveRoute: typeof ApiEventsIdApproveRoute
+  ApiEventsIdBriefRoute: typeof ApiEventsIdBriefRoute
+  ApiEventsIdCancelRoute: typeof ApiEventsIdCancelRoute
+}
+
+const ApiEventsIdRouteChildren: ApiEventsIdRouteChildren = {
+  ApiEventsIdApproveRoute: ApiEventsIdApproveRoute,
+  ApiEventsIdBriefRoute: ApiEventsIdBriefRoute,
+  ApiEventsIdCancelRoute: ApiEventsIdCancelRoute,
+}
+
+const ApiEventsIdRouteWithChildren = ApiEventsIdRoute._addFileChildren(
+  ApiEventsIdRouteChildren,
+)
+
+interface ApiEventsRouteChildren {
+  ApiEventsIdRoute: typeof ApiEventsIdRouteWithChildren
+}
+
+const ApiEventsRouteChildren: ApiEventsRouteChildren = {
+  ApiEventsIdRoute: ApiEventsIdRouteWithChildren,
+}
+
+const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
+  ApiEventsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiMcpRoute: ApiMcpRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
