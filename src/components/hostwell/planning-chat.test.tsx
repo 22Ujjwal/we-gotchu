@@ -445,3 +445,23 @@ test('sending requires approval of the saved draft and locks the accepted messag
   expect(screen.getByRole('textbox', { name: 'Inquiry message' })).toHaveAttribute('readonly')
   expect(commands).toEqual([{ kind: 'send_inquiry', requestId: expect.any(String), expectedVersion: 1, inquiryId: 'inquiry-a', expectedDraftRevision: 1 }])
 })
+
+test('a reloaded pending inquiry checks saved status without resending', async () => {
+  let reads = 0
+  http(request => {
+    expect(request.method).toBe('GET')
+    reads++
+    return Response.json(view({ selections: [venue], canSendInquiry: true, inquiry: {
+      id: 'inquiry-a', revision: 1, status: 'draft', venue, recipient: 'venue@example.com', contactSourceUrl: null,
+      subject: 'Inquiry', text: 'Please confirm the date.', contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z',
+      delivery: { status: reads === 1 ? 'pending' : 'accepted', requestId: 'send-once', draftRevision: 1,
+        approvedAt: '2026-11-08T10:00:00Z', expiresAt: 1800000000000,
+        ...(reads > 1 ? { messageId: 'mail-1', threadId: 'thread-1', acceptedAt: '2026-11-08T10:00:01Z' } : {}),
+      },
+    } }))
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByText('Submitting your approved inquiry.')).toBeVisible()
+  expect(await screen.findByText(/Email provider accepted your inquiry/, {}, { timeout: 3500 })).toBeVisible()
+  expect(reads).toBe(2)
+})
