@@ -21,7 +21,7 @@ test('transport receipt atomically queues one reply and does not run interpretat
   const sent = await mail.transport.sendInquiry({ requestId: 'send', conversationId: 'conversation', inquiryId: 'inquiry', draftRevision: 1,
     to: 'venue@example.com', subject: 'Inquiry', text: 'Party' })
   expect(sent).toMatchObject({ status: 'accepted', threadId: 'thread' })
-  const raw = JSON.stringify({ event_id: 'event', event_type: 'message.received', message: { inbox_id: 'inbox', message_id: 'reply',
+  const raw = JSON.stringify({ type: 'event', event_id: 'event', event_type: 'message.received', message: { inbox_id: 'inbox', message_id: 'reply',
     thread_id: 'thread', in_reply_to: 'sent', from: 'venue@example.com', to: ['planner@example.com'], subject: 'Re: Inquiry',
     text: 'Which time?', timestamp: new Date().toISOString() } })
   expect(await mail.receiver.receive(raw)).toBe('processed')

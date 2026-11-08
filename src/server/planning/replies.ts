@@ -26,22 +26,24 @@ function updated(record: PlanningRecord, inquiry: PlanningInquiry): PlanningReco
 }
 
 // The transport authenticates the webhook and resolves the target from its saved send operation.
-export async function acceptIncomingReply(repository: PlanningRepository, target: ReplyTarget, input: unknown): Promise<SupplierReply> {
+export async function acceptIncomingReply(repository: PlanningRepository, target: ReplyTarget, input: unknown, receiptId?: string): Promise<SupplierReply> {
   const message = supplierMessageSchema.parse(input)
   for (let attempt = 0; attempt < 5; attempt++) {
     const { record, inquiry } = await load(repository, target)
     const delivery = inquiry.delivery
     const correlated = (message.inReplyTo && message.inReplyTo === delivery?.messageId)
+      || (delivery?.messageId && message.references?.includes(delivery.messageId))
       || (message.threadId && message.threadId === delivery?.threadId)
     if (!correlated || message.from.toLowerCase() !== inquiry.recipient.toLowerCase()) {
       throw new ApiError(422, 'unmatched_reply', 'Reply does not match this inquiry and recipient.')
     }
-    const existing = inquiry.replies?.find(reply => reply.message.provider === message.provider && reply.message.messageId === message.messageId)
+    const existing = inquiry.replies?.find(reply => (receiptId && reply.receiptId === receiptId) || (reply.message.provider === message.provider && reply.message.messageId === message.messageId))
     if (existing) {
       if (!isDeepStrictEqual(existing.message, message)) throw new ApiError(409, 'reply_conflict', 'This message identity already has different content.')
       return existing
     }
-    const reply: SupplierReply = { id: `reply_${randomUUID()}`, message, status: 'received' }
+    const reply: SupplierReply = { id: `reply_${randomUUID()}`, receiptId, message, status: message.text.trim() ? 'received' : 'failed',
+      ...(!message.text.trim() ? { error: 'This reply has no plain text to interpret. The original provider message is retained.' } : {}) }
     const replies = [...(inquiry.replies ?? []), reply].sort((a, b) => Date.parse(a.message.receivedAt) - Date.parse(b.message.receivedAt) || a.id.localeCompare(b.id))
     if (await repository.compareAndSet(record, updated(record, { ...inquiry, replies }))) return reply
   }

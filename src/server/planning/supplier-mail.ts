@@ -2,8 +2,8 @@ import { z } from 'zod'
 
 const id = z.string().min(1)
 export const inquirySendResultSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('accepted'), messageId: id, threadId: id.nullable(), acceptedAt: z.iso.datetime() }).strict(),
-  z.object({ status: z.literal('failed'), code: id, reason: id }).strict(),
+  z.object({ status: z.literal('accepted'), operationId: id.optional(), messageId: id, threadId: id.nullable(), acceptedAt: z.iso.datetime() }).strict(),
+  z.object({ status: z.literal('failed'), operationId: id.optional(), code: id, reason: id }).strict(),
   z.object({ status: z.literal('uncertain'), operationId: id, messageId: id.optional(), threadId: id.optional() }).strict(),
 ])
 export type InquirySendResult = z.infer<typeof inquirySendResultSchema>
