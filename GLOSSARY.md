@@ -41,3 +41,7 @@ The request does not itself establish that every supplier has canceled or refund
 A first customer event used to test whether we can deliver planning, purchasing, and cancellation.
 The customer pays supplier costs while our service is free.
 
+## Event ledger
+
+The ARRANGE module that stores event facts and checks ownership, supplier-send permission, offer evidence, approved payment amounts and supplier confirmations.
+It does not choose suppliers or decide what the agent does next.
