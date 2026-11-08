@@ -64,3 +64,34 @@ test('a new customer message marks the draft stale without changing its text', a
   await expect(commandPlanning(deps, view.id, { kind: 'save_inquiry', requestId: 'old-draft', expectedVersion: view.version,
     inquiryId: draft.id, expectedDraftRevision: draft.revision, recipient: draft.recipient, subject: draft.subject, text: draft.text })).rejects.toMatchObject({ status: 409 })
 })
+
+test('approves the exact saved draft once and records acceptance without claiming delivery', async () => {
+  let view = await selected()
+  view = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'draft', expectedVersion: view.version })
+  const draft = view.inquiry!
+  const sendInquiry = vi.fn(async () => ({ status: 'accepted' as const, messageId: 'mail-1', threadId: 'thread-1', acceptedAt: '2026-11-08T10:00:00Z' }))
+  deps.mail = { sendInquiry }
+  const command = { kind: 'send_inquiry', requestId: 'approved-send', expectedVersion: view.version, inquiryId: draft.id, expectedDraftRevision: draft.revision }
+  const result = await commandPlanning(deps, view.id, command)
+  expect(result.inquiry?.delivery).toMatchObject({ status: 'accepted', requestId: command.requestId, draftRevision: 1, messageId: 'mail-1' })
+  expect(sendInquiry).toHaveBeenCalledExactlyOnceWith({ requestId: command.requestId, conversationId: view.id,
+    inquiryId: draft.id, draftRevision: 1, to: draft.recipient, subject: draft.subject, text: draft.text })
+  expect((await commandPlanning(deps, view.id, command)).inquiry).toEqual(result.inquiry)
+  await expect(commandPlanning(deps, view.id, { ...command, requestId: 'second-click', expectedVersion: result.version })).rejects.toMatchObject({ status: 409 })
+  expect(sendInquiry).toHaveBeenCalledTimes(1)
+})
+
+test('an unconfirmed mail send persists uncertainty and cannot be resent or edited', async () => {
+  let view = await selected()
+  view = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'draft', expectedVersion: view.version })
+  deps.mail = { sendInquiry: vi.fn(async () => { throw new Error('Connection dropped after provider accepted mail') }) }
+  const draft = view.inquiry!
+  const command = { kind: 'send_inquiry', requestId: 'uncertain-send', expectedVersion: view.version, inquiryId: draft.id, expectedDraftRevision: draft.revision }
+  view = await commandPlanning(deps, view.id, command)
+  expect(view.inquiry?.delivery?.status).toBe('uncertain')
+  expect((await getPlanning(deps, view.id)).inquiry?.delivery?.status).toBe('uncertain')
+  await commandPlanning(deps, view.id, command)
+  await expect(commandPlanning(deps, view.id, { kind: 'save_inquiry', requestId: 'edit-sent', expectedVersion: view.version,
+    inquiryId: draft.id, expectedDraftRevision: draft.revision, recipient: draft.recipient, subject: draft.subject, text: 'Changed' })).rejects.toMatchObject({ status: 409 })
+  expect(deps.mail.sendInquiry).toHaveBeenCalledTimes(1)
+})
