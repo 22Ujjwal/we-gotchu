@@ -15,6 +15,7 @@ export type CheckoutSessionLike = {
 }
 
 export type StripeEventLike = {
+  livemode?: boolean
   id: string
   type: string
   created: number
@@ -117,7 +118,7 @@ export function createStripeAdapter(secretKey: string | undefined): StripeLike {
     webhooks: {
       async constructEventAsync(payload, header, secret) {
         const e = await webhooks.constructEventAsync(payload, header, secret)
-        return { id: e.id, type: e.type, created: e.created, data: { object: e.data.object } }
+        return { id: e.id, type: e.type, livemode: e.livemode, created: e.created, data: { object: e.data.object } }
       },
     },
   }

@@ -109,7 +109,7 @@ export function createCommerceLedger(db: Db, now: () => Date) {
       return change(eventId, customerId, facts => {
         const offer = facts.offers.at(-1)
         if (!offer || offer.id !== offerId || facts.approval?.offerId !== offerId) fail('offer_not_approved', 'Approve the current offer before paying.')
-        if (!facts.checkout) facts.checkout = { id: id('chk'), offerId, approvalId: facts.approval.id, amountMinor: offer.totalMinor, currency: offer.currency }
+        if (!facts.checkout) facts.checkout = { id: id('chk'), offerId, approvalId: facts.approval.id, amountMinor: offer.totalMinor, currency: offer.currency, expiresAt: now().getTime() + 3600000 }
         return facts.checkout
       })
     },

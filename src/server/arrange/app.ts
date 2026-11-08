@@ -1,3 +1,6 @@
+import type { StripeLike } from '../payments/stripe'
+import { createArrangePayments } from './payments'
+import type { EventNotificationSender } from './notifications'
 import { createIncomingReceiver } from '../email/supplier-inquiries/incoming'
 import type { EvidenceMode, IncomingReply, ReplyDisposition } from '../email/supplier-inquiries/incoming-types'
 import { createSupplierInquiryTransport } from '../email/supplier-inquiries/transport'
@@ -16,11 +19,13 @@ export type ArrangeConfig = {
   mcpBearer?: string
   agentMailWebhookSecret: string
   evidenceMode: EvidenceMode
+  stripeWebhookSecret?: string
+  appUrl?: string
 }
 
 export type ArrangeApp = ReturnType<typeof createApp>
 
-export function createApp(deps: { db: Db; mail: MailProvider; naive: NaiveSessions; config: ArrangeConfig; now?: () => Date }) {
+export function createApp(deps: { db: Db; mail: MailProvider; naive: NaiveSessions; config: ArrangeConfig; stripe?: StripeLike; notify?: EventNotificationSender; now?: () => Date }) {
   const { mail, naive, config } = deps
   const ledger = createEventLedger(deps.db, { seedContacts: config.seedContacts, sendCap: config.sendCap, now: deps.now })
   const transport = createSupplierInquiryTransport({ provider: mail, operations: ledger.mailOperations, now: deps.now })
@@ -68,10 +73,61 @@ export function createApp(deps: { db: Db; mail: MailProvider; naive: NaiveSessio
     return { status: 'matched', conversationId: inbound.eventId!, inquiryId: inbound.operationId! }
   }
 
+  async function flushDeliveries(eventId: string) {
+    const event = await ledger.readEvent(eventId)
+    const pending = event.commerce.deliveries.filter(d => !d.delivered)
+    if (!pending.length) return
+    const sessionId = await ensureSession(eventId)
+    for (const delivery of pending) {
+      await naive.deliver({ sessionId, message: delivery.message, idempotencyKey: delivery.id })
+      await ledger.recordDelivery(eventId, delivery.id)
+    }
+  }
+
+  async function flushNotifications(eventId: string) {
+    if (!deps.notify) return
+    const event = await ledger.readEvent(eventId)
+    for (const notification of event.commerce.notifications.filter(n => n.state === 'pending')) {
+      const claimed = await ledger.claimNotification(eventId, notification.id)
+      if (!claimed) continue
+      try {
+        const result = await deps.notify({ ...claimed, event })
+        await ledger.recordNotification(eventId, claimed.id, result.messageId)
+      } catch {
+        // An unknown send must not become a second email on a tool retry.
+        console.error('[arrange] customer email outcome unknown', claimed.id)
+      }
+    }
+  }
+
+  const payments = createArrangePayments({ ledger, stripe: deps.stripe, appUrl: config.appUrl, webhookSecret: config.stripeWebhookSecret, flush: flushDeliveries })
   const receiver = createIncomingReceiver({ provider: mail, receipts: ledger.mailReceipts, evidenceMode: config.evidenceMode, acceptIncomingReply, now: deps.now })
   const webhook = createSupplierMailWebhook({ secret: config.agentMailWebhookSecret, receiver, now: deps.now ? () => deps.now!().getTime() : undefined })
   const app = {
     ledger,
+    ...payments,
+    flushDeliveries,
+    flushNotifications,
+    async chooseOption(customerId: string, eventId: string, optionId: string) {
+      const choice = await ledger.chooseOption(customerId, eventId, optionId)
+      await flushDeliveries(eventId)
+      return choice
+    },
+    async answerQuestion(customerId: string, eventId: string, operationKey: string, answer: string) {
+      const result = await ledger.answerQuestion(customerId, eventId, operationKey, answer)
+      await flushDeliveries(eventId)
+      return result
+    },
+    async proposeOffer(eventId: string, operationKey: string, lines: unknown) {
+      const offer = await ledger.proposeOffer(eventId, operationKey, lines)
+      await flushNotifications(eventId)
+      return offer
+    },
+    async recordConfirmation(eventId: string, contactId: string, messageId: string, excerpt: string) {
+      const confirmation = await ledger.recordConfirmation(eventId, contactId, messageId, excerpt)
+      await flushNotifications(eventId)
+      return confirmation
+    },
     ensureSession,
     sendSupplierEmail,
     async createEventForCustomer(customerId: string, brief: unknown, contactConsent: boolean) {
