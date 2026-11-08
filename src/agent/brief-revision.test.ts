@@ -121,3 +121,40 @@ test('storage rejects an older completed response after a newer revision has pub
     expect(await publish.mock.results.at(-1)!.value).toEqual({ ok: false, reason: 'stale_brief' })
   } finally { release.resolve(); publish.mockRestore() }
 })
+
+test('delayed cleanup for an older update cannot reset a newer completed revision', async () => {
+  const { deps, research } = setup()
+  const entered = deferred<void>()
+  const release = deferred<void>()
+  const initial = await createEvent(deps, validBrief)
+  const cancel = research.cancelResearch.bind(research)
+  vi.spyOn(research, 'cancelResearch').mockImplementation(async run => {
+    if (run.runId === initial.run!.runId) {
+      entered.resolve()
+      await release.promise
+    }
+    await cancel(run)
+  })
+  const older = updateBrief(deps, initial.event.eventId, 1, { location: 'Oakland, CA' })
+  try {
+    await entered.promise
+    await updateBrief(deps, initial.event.eventId, 2, { budget: 10000 })
+    const latest = await finish(deps, initial.event.eventId)
+    expect(latest.event.status).toBe('researched')
+    release.resolve()
+    await older
+    const current = await getEventView(deps, initial.event.eventId)
+    expect(current.event).toMatchObject({ briefRevision: 3, status: 'researched' })
+    expect(current.researchResult).toEqual(latest.researchResult)
+  } finally { release.resolve(); await older }
+})
+
+test('an array is not a partial brief object and cannot replace the active run', async () => {
+  const { deps, research } = setup()
+  const initial = await createEvent(deps, validBrief)
+  const start = vi.spyOn(research, 'startResearch')
+  await expect(updateBrief(deps, initial.event.eventId, 1, []))
+    .rejects.toMatchObject({ status: 422, errorCode: 'invalid_input' })
+  expect((await store.getEvent(initial.event.eventId))!.briefRevision).toBe(1)
+  expect(start).not.toHaveBeenCalled()
+})
