@@ -12,9 +12,9 @@ Naive pi can run web search and return structured data in this account, but the 
 The application must reject unsupported conclusions even when the JSON shape passes.
 
 The fetched main baseline is `a54e054cc48a15c2b30ae170db662849d1597185`, which uses TanStack Start and Bun.
-The live GitHub check found [PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) OPEN, with no merge commit and head `9c45fa2aaafa7522420c987562c192bbf0ead792`.
-Its Next.js migration is proposed, not the merged framework baseline.
-Keep the research module independent of route conventions until that decision settles.
+The final live GitHub check found [PR #6](https://github.com/22Ujjwal/we-gotchu/pull/6) CLOSED without merge at `2026-11-08T00:43:04Z`, with null merge fields and head `9c45fa2aaafa7522420c987562c192bbf0ead792`.
+Its Next.js migration was not merged.
+Use the merged TanStack baseline for future route work and keep provider logic independent of route conventions.
 The implementation contract remains [version 0.1 draft](../contracts-draft.md), not an implemented shared schema.
 This research changes only this report and [Tony's status](../team/status/tony.md).
 
@@ -228,7 +228,7 @@ Structured-output reliability and recommendation quality remain blockers to acce
 Approval/resume, budget exhaustion, forced disconnect recovery, crash recovery, and adversarial tool denial remain unverified.
 Naive-to-Monid or direct-provider MCP connectivity and authentication remain unverified.
 The shared schemas, transaction service, chosen supplier access, secure checkout, and supplier confirmation and cancellation evidence remain prerequisites for commitments.
-The framework migration remains unresolved while PR #6 is open.
+PR #6 is closed without merge, so it is not a dependency to wait on and does not authorize changing framework paths.
 
 The agent spend endpoint returned HTTP 403 with the following error.
 
