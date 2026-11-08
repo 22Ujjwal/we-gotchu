@@ -5,7 +5,7 @@ The draft is attached to the same planning conversation and survives reload.
 
 **Blocked by:** Stage two: Keep customer choices through changes and return visits, including resolution of its outstanding review findings.
 
-**Status:** implemented locally; controlled checks pass; real browser verification pending
+**Status:** local draft browser verification passed; mail integration remains separate
 
 Owner: Tony.
 
@@ -44,5 +44,6 @@ A concurrent draft edit retains typed text and offers an explicit way to load th
 Sending and supplier reply interpretation are not connected in this slice.
 
 Controlled verification covers persistence through the migrated repository, stale revisions, replay, missing contact evidence, and rendered editing through the real client and hook with controlled fetch.
-No live browser, email, supplier contact, or payment claim is made.
-Before shipping, run the draft preparation, editing and reload recipe in the separate browser-testing session.
+The draft-only browser run subsequently passed on `f452e5503f30f2d57395cc21f474b3b67d946f99`.
+See [the browser evidence report](../../../docs/research/stage-three-draft-verification.md).
+No live email, supplier contact, or payment claim is made.
