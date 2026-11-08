@@ -12,8 +12,9 @@ function present(deps: PlanningDeps, view: PlanningView) {
 export const planningCollectionPost = (deps: PlanningDeps, request: Request) =>
   handle(async () => json(present(deps, await createPlanning(deps, await readJson(request))), 201))
 
-export const planningGet = (deps: PlanningDeps, id: string) =>
-  handle(async () => json(present(deps, await getPlanning(deps, id))))
+export const planningGet = (deps: PlanningDeps, id: string, request?: Request) =>
+  handle(async () => json(present(deps, await (request && new URL(request.url).searchParams.get('saved') === '1'
+    ? getPlanning(deps, id, { savedOnly: true }) : getPlanning(deps, id)))))
 
 export const planningPost = (deps: PlanningDeps, id: string, request: Request) =>
   handle(async () => json(present(deps, await commandPlanning(deps, id, await readJson(request)))))

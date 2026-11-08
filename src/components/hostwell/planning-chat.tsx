@@ -97,6 +97,8 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
         <Button className="self-start px-5 py-3" disabled={session.pending || session.loading} onClick={() => void session.refresh()}>Check research status</Button>
       </details>}
       {view.status === 'uncertain' && <Button className="self-start px-6 py-3" disabled={session.loading || session.pending} onClick={() => void session.refresh()}>Check for an update</Button>}
+      {view.status === 'ready' && <Button className="self-start px-5 py-3" disabled={session.loading || session.pending}
+        onClick={() => void session.refresh()}>Check for research updates</Button>}
       {view.proposal && !answerAlreadyShown && <div className="flex flex-col gap-3 text-[18px] leading-7">
         <p>{view.proposal.summary}</p>
         {view.proposal.nextQuestion && <p>{view.proposal.nextQuestion}</p>}

@@ -234,9 +234,10 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   return deliver(deps, reserved)
 }
 
-export async function getPlanning(deps: PlanningDeps, id: string): Promise<PlanningView> {
+export async function getPlanning(deps: PlanningDeps, id: string, options: { savedOnly?: boolean } = {}): Promise<PlanningView> {
   const customerId = await deps.requireCustomerId()
   let record = await owned(deps, customerId, id)
+  if (options.savedOnly) return record.view
   const inquiry = record.view.inquiry
   if (inquiry?.delivery?.status === 'pending' && inquiry.delivery.expiresAt <= now(deps)) {
     const recovered = await deps.repository.compareAndSet(record, { ...record, view: changed(record, {

@@ -465,3 +465,20 @@ test('a reloaded pending inquiry checks saved status without resending', async (
   expect(await screen.findByText(/Email provider accepted your inquiry/, {}, { timeout: 3500 })).toBeVisible()
   expect(reads).toBe(2)
 })
+
+test('restores the saved plan first and retains it when an explicit research refresh fails', async () => {
+  const paths: string[] = []
+  http(request => {
+    const url = new URL(request.url)
+    paths.push(url.pathname + url.search)
+    return url.searchParams.get('saved') === '1' ? Response.json(view({ selections: [venue] }))
+      : Response.json({ errorCode: 'provider_unavailable' }, { status: 503 })
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  expect(await screen.findByRole('button', { name: 'Prepare venue inquiry' })).toBeVisible()
+  expect(paths).toEqual(['/api/planning/plan-a?saved=1'])
+  await userEvent.click(screen.getByRole('button', { name: 'Check for research updates' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('We could not load your plan')
+  expect(screen.getByRole('heading', { name: 'Garden room' })).toBeVisible()
+  expect(paths).toEqual(['/api/planning/plan-a?saved=1', '/api/planning/plan-a'])
+})

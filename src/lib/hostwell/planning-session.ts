@@ -32,13 +32,13 @@ export function usePlanningSession(id?: string) {
     clearTimeout(state.current.timer)
     state.current.timer = setTimeout(() => void read(false), delay)
   }
-  async function read(manual: boolean, keepError = false) {
+  async function read(manual: boolean, keepError = false, savedOnly = false) {
     const current = state.current
     if (!id || !current.active || current.busy) return
     const generation = cancelRead()
     if (manual) setLoading(true)
     try {
-      const next = await api.read(id, current.controller.signal)
+      const next = await api.read(id, current.controller.signal, savedOnly)
       if (!current.active || generation !== current.generation) return
       accept(next)
       current.failures = 0
@@ -64,7 +64,7 @@ export function usePlanningSession(id?: string) {
   }
   useEffect(() => {
     state.current.active = true
-    void read(true)
+    void read(true, false, true)
     return () => { state.current.active = false; cancelRead() }
     // Account and route changes remount the owner rather than sharing its state.
     // eslint-disable-next-line react-hooks/exhaustive-deps

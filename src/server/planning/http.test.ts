@@ -46,3 +46,10 @@ it('keeps technical review requests out of the customer response', async () => {
   expect(operator.approvals).toHaveLength(1)
   expect(operator.canReviewResearch).toBe(true)
 })
+
+it('routes saved-state restoration without refreshing the provider', async () => {
+  service.getPlanning.mockResolvedValue({ id: 'plan', status: 'ready' })
+  const response = await planningGet(deps, 'plan', new Request('http://localhost/api/planning/plan?saved=1'))
+  expect(response.status).toBe(200)
+  expect(service.getPlanning).toHaveBeenCalledWith(deps, 'plan', { savedOnly: true })
+})

@@ -36,7 +36,7 @@ export function createPlanningApi() {
   const path = (id: string) => `/api/planning/${encodeURIComponent(id)}`
   return {
     create: (body: PlanningCreate, signal: AbortSignal) => request('/api/planning', signal, body),
-    read: (id: string, signal: AbortSignal) => request(path(id), signal),
+    read: (id: string, signal: AbortSignal, savedOnly = false) => request(`${path(id)}${savedOnly ? '?saved=1' : ''}`, signal),
     command: (id: string, body: PlanningCommand, signal: AbortSignal) => request(path(id), signal, body),
   }
 }
