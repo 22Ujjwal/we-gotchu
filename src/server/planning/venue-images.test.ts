@@ -17,3 +17,7 @@ it('handles structured venue images and decoded metadata', () => {
   const html = `<script type="application/ld+json">{"@type":"EventVenue","name":"Harbor Loft","image":["/room.jpg"]}</script><meta property="og:title" content="Harbor Loft"><meta property="og:image" content="/room.jpg"><meta property="og:image" content="/room2.jpg?a=1&amp;b=2">`
   expect(extractVenueImages(html, source, 'Harbor Loft').map(x => x.url)).toEqual(['https://harborloft.example.com/room.jpg', 'https://harborloft.example.com/room2.jpg?a=1&b=2'])
 })
+it('does not inherit directory preview images from a matching nested venue', () => {
+  const html = `<title>Top ten city venues</title><script type="application/ld+json">{"@graph":[{"@type":"EventVenue","name":"Harbor Loft","image":"/room.jpg"}]}</script><meta property="og:image" content="/other-venue.jpg">`
+  expect(extractVenueImages(html, source, 'Harbor Loft').map(x => x.url)).toEqual(['https://harborloft.example.com/room.jpg'])
+})

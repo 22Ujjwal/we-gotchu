@@ -36,7 +36,8 @@ export function extractVenueImages(html: string, source: string, venueName: stri
   const metadata = elements.filter(e => e.tagName === 'meta').map(attrs)
   const titles = [...elements.filter(e => e.tagName === 'title').map(text), ...metadata.filter(a => ['og:title', 'og:site_name'].includes(a.property)).map(a => a.content ?? '')]
   const candidates: Array<{ url: string; evidence: VenueImage['evidence']; description: string | null; rank: number }> = []
-  let identified = titles.some(title => matches(title, venueName))
+  const pageIdentified = titles.some(title => matches(title, venueName))
+  let identified = pageIdentified
   // Only image fields belonging to the named business, not arbitrary nested article/product objects.
   const inspect = (value: unknown, depth = 0): void => {
     if (depth > 8 || !value || typeof value !== 'object') return
@@ -64,7 +65,7 @@ export function extractVenueImages(html: string, source: string, venueName: stri
       candidates.push({ url: a['data-src'] || a.src || '', evidence: 'caption', description: a.alt, rank: 0 })
     }
   }
-  for (const meta of metadata.filter(a => a.property === 'og:image')) {
+  for (const meta of metadata.filter(a => pageIdentified && a.property === 'og:image')) {
     candidates.push({ url: meta.content ?? '', evidence: 'page-metadata', description: null, rank: 2 })
   }
   const seen = new Set<string>()
