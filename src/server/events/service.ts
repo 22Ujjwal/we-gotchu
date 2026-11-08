@@ -157,7 +157,9 @@ export async function updateBrief(
   if (typeof expectedBriefRevision !== 'number' || !Number.isInteger(expectedBriefRevision)) {
     throw new ApiError(422, 'invalid_input', 'expectedBriefRevision must be an integer.')
   }
-  if (!changes || typeof changes !== 'object') throw new ApiError(422, 'invalid_input', 'changes must be an object.')
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
+    throw new ApiError(422, 'invalid_input', 'changes must be an object.')
+  }
   const known = Object.fromEntries(Object.entries(changes).filter(([k]) => (BRIEF_FIELDS as string[]).includes(k)))
   const brief = parseBrief({ ...event.brief, ...known })
   deps.research.validateConfiguration?.()
@@ -177,7 +179,8 @@ export async function updateBrief(
       await deps.store.appendProgress(eventId, 'system', 'Previous research cleanup could not be confirmed; provider reconciliation is needed.')
     }
   }
-  await deps.store.setEventStatus(eventId, ['needs_input', 'researched', 'plan_ready', 'failed'], 'researching')
+  // Cleanup can outlast a newer revision's research; only change this revision's status.
+  await deps.store.setEventStatus(eventId, ['needs_input', 'researched', 'plan_ready', 'failed'], 'researching', res.event.briefRevision)
   await deps.store.appendProgress(eventId, 'customer', `Updated the brief (revision ${res.event.briefRevision}).`)
   await startRun(deps, res.event, res.run)
   return view(deps, eventId)
