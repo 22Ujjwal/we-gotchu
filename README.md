@@ -28,6 +28,7 @@ No live booking, payment, cancellation, or deployment has been verified.
 2. Review the [architecture](docs/architecture-draft.md) and [shared contracts](docs/contracts-draft.md).
 3. Pick your [team handoff](docs/team/README.md) and follow the ownership boundaries.
 4. Use the [demo acceptance checklist](docs/demo-acceptance.md) to distinguish working integrations from simulations.
+5. Follow the [demo plan](docs/team/demo-plan.md) for the hackathon critical path.
 
 The [decision map](.scratch/event-demo/map.md) records completed research and unresolved human decisions.
 The [research index](docs/research-index.md) links the two immutable research reports.

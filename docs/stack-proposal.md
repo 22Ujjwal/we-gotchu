@@ -9,10 +9,10 @@ Tony asked that elapsed time not constrain this planning discussion.
 
 Keep the existing single-package TanStack Start application with TypeScript, React, Tailwind, and Bun.
 Use the concrete layout in [ownership](team/ownership.md).
-Deployment hosting remains unverified and must support the selected TanStack build and separate worker process.
+Deployment hosting remains unverified and must support the selected TanStack build and the public HTTPS endpoint that Naive calls.
 Use Neon Postgres for durable event, approval, supplier-action, payment, and refund records.
 Use Drizzle for database access and migrations, and Zod schemas for shared request and response contracts.
-Use Vitest for workflow and contract behavior, with Playwright for the customer journey.
+Use Vitest for workflow and contract behavior; Playwright for the customer journey is deferred until after the hackathon.
 These are recommendations rather than verified installed dependencies.
 
 Propose Naive managed-agents with hosted pi for supplier research and tool use, based on the completed [research](research-index.md).

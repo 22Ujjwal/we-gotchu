@@ -2,12 +2,12 @@
 
 Owner: Ujjwal.
 Responsibility: transactions and integration.
-Updated: 2026-11-07T17:05:52-08:00
-Baseline: main at a54e054cc48a15c2b30ae170db662849d1597185 (merged PR #10).
-Branch and PR: docs/status-ujjwal (this file only), https://github.com/22Ujjwal/we-gotchu/pull/13.
-Other work, not yet published: feat/clerk-auth (Clerk code, local only) and docs/backend-decisions (draft doc updates, local only).
-Availability: proposed. The Clerk code exists only in a local clone (commit d47f35a) and is not published.
-Tested commit: d47f35a passed typecheck and build and served the home and sign-in pages in a dev server. The sign-in flow itself was not exercised.
+Updated: 2026-11-07T18:10:00-08:00
+Baseline: main at 073eafd (merged PR #14).
+Branch and PR: docs/backend-decisions (contract 0.4 and doc updates), PR link below once opened. Status PR #13 is merged.
+Other work, not published: feat/clerk-auth (Clerk code, local clone only).
+Availability: proposed. The Clerk code exists only in a local clone and is not published.
+Tested commit: the local Clerk commit passed typecheck and build and served the home and sign-in pages in a dev server. The sign-in flow itself was not exercised.
 
 ## Current result
 
@@ -16,7 +16,7 @@ The merged baseline is TanStack Start with Bun and a single package.json.
 On feat/clerk-auth, Clerk is wired in with sign-in and sign-up routes, request middleware, and a server-only requireCustomerId helper in src/server/auth.ts.
 Nothing else in the transaction service exists yet: no schemas, database, payment, or MCP endpoint code.
 
-## Decisions recorded (proposed until the team reviews them)
+## Decisions recorded (proposed until the team reviews the doc PR)
 
 - Customer authentication uses Clerk; the identity helper is the only dependency of ownership checks on it.
 - There is no separate worker process. Naive's agent session performs long supplier work, and the backend serves short guarded requests only.
@@ -35,7 +35,7 @@ Nothing else in the transaction service exists yet: no schemas, database, paymen
 
 ## Contracts and dependencies
 
-Contract version: 0.1 draft is merged; a 0.3 hackathon cut of the 0.2 draft is on docs/backend-decisions and needs review by Tony and Leo.
+Contract version: 0.1 draft is merged; a 0.4 hackathon cut aligned with Tony's research spec is on docs/backend-decisions and needs review by Tony and Leo.
 Needs from Tony: confirmation that supplier checkout runs inside the Naive session and that the agent can call a public HTTPS endpoint during a run.
 Needs from Leo: confirmation of the summary and progress fields the interface reads, and a review of the Clerk change to src/routes/__root.tsx.
 Needs from the team: sharing and claiming of one Clerk application, and a public URL for the MCP endpoint.

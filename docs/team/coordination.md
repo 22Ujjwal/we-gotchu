@@ -43,6 +43,7 @@ Ujji coordinates changes to src/contracts and shared fixtures.
 A proposed change must identify the problem, affected records or endpoints, old and new behavior, affected consumers, and whether it breaks compatibility.
 Tony reviews agent and supplier consumers; Leo reviews UI consumers.
 Record their review or agreement in the PR before integrating a breaking change.
+Until 11:00 AM on November 8, 2026, a reply in the team chat counts as that review if it is quoted in the PR.
 No coding agent should invent approval on another person's behalf.
 
 Publish compatible additions first when possible.

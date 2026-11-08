@@ -6,6 +6,15 @@ Leo owns frontend under the shared ownership contract.
 You own the customer journey from event intake to cancellation and refund visibility.
 Read the [contract draft](../contracts-draft.md) and [ownership rules](ownership.md) before implementation.
 
+## Hackathon deliverables
+
+Follow the [demo plan](demo-plan.md) milestone 6 and contract 0.4.
+Build one event page with intake and a "Use demo brief" button, the plan with the agent's reasons and sources, one approve-and-pay button, a progress log that polls GET /api/events/:id, and one cancel button.
+Mark the two customer steps as human and every other progress entry as agent in the log.
+Show `live`, `test`, or `simulated` beside each payment and action.
+Start from the contract fixtures and switch to the real API when milestone 4 lands.
+Plan editing is deferred; a different plan means a new event for the demo.
+
 ## Deliverables
 
 Build guided intake with follow-up questions for missing details.
@@ -31,7 +40,7 @@ Keep provider-specific details out of customer screens unless they affect a deci
 ## Acceptance
 
 Complete the happy path with simulated fixtures first.
-Also demonstrate stale-plan feedback, partial completion, outcome unknown, cancellation pending, and refund pending.
+For the demo, also show refund pending and an `unknown` attempt; stale-plan feedback and partial completion are deferred.
 Use accessible names and keyboard navigation, clear form errors, and reduced-motion support.
 Persist no secrets in browser storage.
 Give the pitch owner a stable demo URL only after deployment exists and has been verified.

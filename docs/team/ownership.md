@@ -9,7 +9,7 @@ Each implementation task has one owner, one branch, and a declared file set.
 | --- | --- |
 | Frontend, Leo | src/routes except src/routes/api; src/components; src/features; src/styles.css; public; UI tests alongside owned code. |
 | Agent workflow, Tony | src/agent; src/suppliers; tests alongside owned code. |
-| Transactions and integration, Ujjwal | src/routes/api; src/server; src/worker; src/contracts; database migrations; tests alongside owned code. |
+| Transactions and integration, Ujjwal | src/routes/api; src/server; src/contracts; database migrations; tests alongside owned code. |
 | Pitch | docs/pitch; presentation assets under assets/pitch. |
 
 The transaction owner also coordinates root package manifests, lockfiles, TypeScript configuration, build configuration, CI, environment-variable documentation, migrations, and shared fixtures.
