@@ -1,23 +1,17 @@
 # Architecture draft
 
-## Existing scaffold update
-
-The team has already added a TanStack Start scaffold under src on main.
-Preserve that implementation and its package manager.
-The earlier Next.js choice and apps/web paths below remain proposals, not migration instructions.
-Before editing, the developers must map the role boundaries to the existing src layout and agree on any framework change.
-Frontend owns UI routes and components; transactions owns server endpoints and shared configuration; agent workflow owns supplier and runtime modules.
-Coordinate shared route files through the transaction owner if UI and server code occupy the same file.
-
-## Original draft
-
 Status: proposed for team review, not an approved implementation or verified live integration.
 This draft uses the [research evidence](research-index.md), [product baseline](product-spec.md), and [stack proposal](stack-proposal.md).
 All four teammates have sponsor benefits according to Tony; credit budget is not a stack constraint.
 
 ## Proposed components
 
-Use TypeScript with Next.js, React, Tailwind, and Vercel for the web application and short API requests.
+Keep the existing TanStack Start, TypeScript, React, Tailwind, and Bun application as one package.
+Use src/routes/api for server route files and src/contracts for browser-safe shared schemas.
+Keep server implementations under src/server, agent code under src/agent, and supplier integrations under src/suppliers.
+A separate worker entrypoint lives under src/worker in the same package.
+Bun workspaces are not required for this baseline.
+Deployment hosting remains to be verified against the chosen build and worker runtime.
 Use Neon Postgres with Drizzle for authoritative state and migrations.
 Use shared Zod schemas for API and tool inputs and outputs.
 Use Vitest for approval and transaction behavior, and Playwright for the complete customer journey.
@@ -49,8 +43,9 @@ SDK or browser write permissions do not replace the application approval check.
 
 Store durable jobs and action attempts before external calls.
 Use a persistent worker to claim jobs with leases, invoke providers, and reconcile uncertain outcomes.
-A proposed Node worker on Render can handle this work if team access is available; another persistent host can serve the same contract.
-Render appeared in the earlier sponsor list but not the later slide, so do not assume credits.
+Run src/worker as a separate process from the web server using the same package.
+Ujji must verify provider SDK compatibility, add the worker command, and select a persistent deployment host during the foundation task.
+No worker command or deployment is implemented by these documents.
 A worker adds deployment work but avoids tying bookings to a web request or an open browser tab.
 The transaction owner owns the worker entrypoint; the agent owner supplies the runtime adapter it calls.
 

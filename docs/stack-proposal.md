@@ -1,16 +1,5 @@
 # Stack and team proposal
 
-## Existing scaffold update
-
-The team has already added a TanStack Start scaffold under src on main.
-Preserve that implementation and its package manager.
-The earlier Next.js choice and apps/web paths below remain proposals, not migration instructions.
-Before editing, the developers must map the role boundaries to the existing src layout and agree on any framework change.
-Frontend owns UI routes and components; transactions owns server endpoints and shared configuration; agent workflow owns supplier and runtime modules.
-Coordinate shared route files through the transaction owner if UI and server code occupy the same file.
-
-## Original draft
-
 Status: proposed, awaiting the team's decision.
 
 Tony set the team split to one pitch owner, one frontend owner, and two other developers.
@@ -18,7 +7,9 @@ Tony asked that elapsed time not constrain this planning discussion.
 
 ## Proposed stack
 
-Use TypeScript across the application, with Next.js and React for the customer interface and short server requests, Tailwind for styling, and Vercel for web deployment.
+Keep the existing single-package TanStack Start application with TypeScript, React, Tailwind, and Bun.
+Use the concrete layout in [ownership](team/ownership.md).
+Deployment hosting remains unverified and must support the selected TanStack build and separate worker process.
 Use Neon Postgres for durable event, approval, supplier-action, payment, and refund records.
 Use Drizzle for database access and migrations, and Zod schemas for shared request and response contracts.
 Use Vitest for workflow and contract behavior, with Playwright for the customer journey.
@@ -75,7 +66,6 @@ Invitation integrations remain optional.
 - [Monid discovery, inspection, and execution](https://docs.monid.ai/)
 - [AgentMail quickstart](https://www.agentmail.to/docs/quickstart)
 - [AgentMail webhook handling](https://docs.agentmail.to/webhooks-overview)
-- [Neon and Next.js integration](https://neon.com/docs/guides/nextjs)
 - [Vercel request execution limits](https://vercel.com/docs/functions/limitations)
 - [Stripe separate charges and transfers](https://docs.stripe.com/connect/separate-charges-and-transfers)
 

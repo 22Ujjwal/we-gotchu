@@ -6,6 +6,8 @@ Ujjwal owns transactions and integration under the shared ownership contract.
 You own authoritative state, shared contracts, approval enforcement, customer payments, refunds, durable execution, and integration coordination.
 Read the [contract draft](../contracts-draft.md), [payment research](../research-index.md), and [ownership rules](ownership.md).
 
+Start with the [foundation task](foundation.md) before the other developers integrate against shared schemas.
+
 ## Deliverables
 
 Publish versioned Zod schemas and fixtures for the other developers to review.
