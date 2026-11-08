@@ -1,3 +1,4 @@
+import type { SelectedOffer, PlanningPaymentLink } from './offer-contract'
 import { z } from 'zod'
 import { supplierReplySchema } from './reply-contract'
 
@@ -41,6 +42,9 @@ const requestId = text.max(128)
 export const planningCreateSchema = z.object({ requestId, message: text.max(8000) }).strict()
 const version = z.number().int().nonnegative()
 export const planningCommandSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('release_payment'), requestId, expectedVersion: version, eventId: text }).strict(),
+  z.object({ kind: z.literal('prepare_payment'), requestId, expectedVersion: version, offerId: text, offerRevision: z.number().int().positive() }).strict(),
+  z.object({ kind: z.literal('prepare_offer'), requestId, expectedVersion: version }).strict(),
   z.object({ kind: z.literal('retry_reply'), requestId, expectedVersion: version, inquiryId: text, replyId: text }).strict(),
   z.object({ kind: z.literal('send_inquiry'), requestId, expectedVersion: version,
     inquiryId: text, expectedDraftRevision: z.number().int().positive() }).strict(),
@@ -67,6 +71,8 @@ export type PlanningView = {
   proposal: PlanningProposal | null
   selections: PlanningOption[]
   inquiry?: PlanningInquiry
+  offer?: SelectedOffer
+  paymentLink?: PlanningPaymentLink
   progress: string | null
   error: string | null
   canSendInquiry?: boolean

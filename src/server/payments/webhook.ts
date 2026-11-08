@@ -138,7 +138,9 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
   if (await deps.store.hasStripeEvent(receipt)) return 'already_processed'
   const current = await deps.store.getEvent(approval.eventId)
   if (!current) throw new Error('Paid event was not found')
-  const late = approval.revokedAt !== null || paidAt.getTime() >= new Date(approval.expiresAt).getTime()
+  const plan = await deps.store.getPlan(approval.eventId)
+  const staleOffer = !!plan?.planningOffer && (plan.planId !== approval.planId || !(await deps.store.validatePlanOffer?.(plan, deps.now())))
+  const late = staleOffer || approval.revokedAt !== null || paidAt.getTime() >= new Date(approval.expiresAt).getTime()
   const started = ['executing', 'booked', 'partially_booked', 'failed'].includes(current.status)
   const moved = !late && !current.cancelRequestedAt &&
     (started || await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'executing'))
@@ -148,24 +150,35 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
     // fresh state; do not acknowledge this delivery or invoke either handoff.
     throw new Error('Payment event changed during handoff; retry delivery')
   }
-  if (!moved) {
-    // An interrupted handoff may have already committed suppliers before cancel.
-    const attempts = await deps.store.listAttempts(approval.eventId)
-    if (attempts.some(a => a.kind === 'commit' && ['running', 'pending', 'unknown', 'succeeded'].includes(a.state))) {
-      const result = await issueFinalRefund(deps, approval.eventId)
-      if (!result.ok) throw new Error('Payment cancellation is awaiting supplier settlement')
-    } else {
-      await refund(deps, paid, paid.amount, 'late_or_revoked')
-    }
-    await deps.store.recordStripeEvent(receipt)
-    await deps.store.appendProgress(approval.eventId, 'system', 'Payment cancellation refund was requested.')
-    return 'refunded_late_or_revoked'
-  }
+  if (!moved) return settleUnapprovedPayment(deps, approval.eventId, paid, receipt, staleOffer)
   if (changed) await deps.store.appendProgress(approval.eventId, 'system', `Payment confirmed (${paid.mode}).`)
   // Hooks must be idempotent by approval/payment identity because delivery is at least once.
   await onPaymentConfirmed(deps, { eventId: approval.eventId, approvalId: approval.approvalId, paymentId: paid.paymentId })
+  if (plan?.planningOffer && !(await deps.store.validatePlanOffer?.(plan, deps.now()))) {
+    return settleUnapprovedPayment(deps, approval.eventId, paid, receipt, true)
+  }
   await deps.store.recordStripeEvent(receipt)
   return 'paid'
+}
+
+async function settleUnapprovedPayment(deps: Deps, eventId: string, paid: Payment, receipt: string, staleOffer: boolean): Promise<WebhookOutcome> {
+  if (staleOffer) {
+    await deps.store.requestCancel(eventId, deps.now())
+    await deps.store.revokeApprovals(eventId, deps.now())
+  }
+  // An interrupted handoff may already have committed suppliers before the offer changed.
+  const attempts = await deps.store.listAttempts(eventId)
+  if (attempts.some(attempt => attempt.kind === 'commit' && ['running', 'pending', 'unknown', 'succeeded'].includes(attempt.state))) {
+    if (staleOffer) await deps.hooks.startSupplierCancellation({ eventId, paidApprovalIds: [paid.approvalId] })
+    const result = await issueFinalRefund(deps, eventId)
+    if (!result.ok) throw new Error('Payment cancellation is awaiting supplier settlement')
+  } else {
+    await refund(deps, paid, paid.amount, 'late_or_revoked')
+    if (staleOffer) await deps.store.setEventStatus(eventId, ['canceling'], 'canceled')
+  }
+  await deps.store.recordStripeEvent(receipt)
+  await deps.store.appendProgress(eventId, 'system', 'Payment cancellation refund was requested.')
+  return 'refunded_late_or_revoked'
 }
 
 /** Hook point: starts the execution session for a paid approval. Wired later via Deps.hooks. */

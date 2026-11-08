@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getDeps } from '../../server/events/deps'
+import { getRequestDeps } from '../../server/events/local-runtime'
 import { handle, json, readJson } from '../../server/events/errors'
 import { approve } from '../../server/events/service'
 
@@ -10,7 +10,7 @@ export const Route = createFileRoute('/api/events/$id/approve')({
       POST: ({ request, params }) =>
         handle(async () => {
           const body = ((await readJson(request)) ?? {}) as Record<string, unknown>
-          return json(await approve(getDeps(), params.id, body.planId, body.planRevision))
+          return json(await approve(await getRequestDeps(), params.id, body.planId, body.planRevision))
         }),
     },
   },

@@ -22,6 +22,7 @@ export type PlanningRecord = {
   pending: PendingWrite | null
   requests: Record<string, string>
   view: PlanningView
+  paymentHistory?: import('../../agent/planning/offer-contract').PlanningPaymentLink[]
   inquiryHistory?: PlanningInquiry[]
 }
 export type ReplyJob = { customerId: string; conversationId: string; inquiryId: string; replyId: string }

@@ -388,3 +388,27 @@ it('preserves the host end time through creation and reload', async () => {
   const restored = await getEventView(deps, created.event.eventId)
   expect(restored.event.brief.endsAt).toBe(endsAt)
 })
+
+describe('linked offer expiry', () => {
+  it('refuses Checkout when the quote expires before the existing payment window', async () => {
+    const { deps, store, eventId, view } = await planReady()
+    const plan = view.plan!
+    plan.planningOffer = { conversationId: 'conversation', offerId: 'offer', revision: 1,
+      expiresAt: new Date(deps.now().getTime() + 60_000).toISOString() }
+    store.plans.set(plan.planId, plan)
+    deps.store.validatePlanOffer = async () => true
+    await expectApiError(approve(deps, eventId, plan.planId, plan.revision), 422, 'offer_expires_soon')
+    expect(store.approvals.size).toBe(0)
+  })
+})
+
+it('linked offer Checkout returns to the same planning conversation', async () => {
+  const { deps, store, stripe, eventId, view } = await planReady()
+  const plan = view.plan!
+  plan.planningOffer = { conversationId: 'planning_saved', offerId: 'offer', revision: 1, expiresAt: null }
+  store.plans.set(plan.planId, plan)
+  deps.store.validatePlanOffer = async () => true
+  await approve(deps, eventId, plan.planId, plan.revision)
+  expect(stripe.createCalls[0].params.success_url).toBe('http://localhost:3000/planning/planning_saved?checkout=success')
+  expect(stripe.createCalls[0].params.cancel_url).toBe('http://localhost:3000/planning/planning_saved?checkout=canceled')
+})
