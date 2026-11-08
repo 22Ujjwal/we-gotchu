@@ -1,11 +1,12 @@
-import { createClient, type ProxyCompletionCreate } from '@usenaive-sdk/managed-agents'
+import { createClient } from '@usenaive-sdk/managed-agents'
 import { z } from 'zod'
 import { replyInterpretationSchema } from './reply-contract'
 import { createPlanningFetch } from './transport'
 import type { ReplyInterpreter } from '../../server/planning/replies'
 
+export type ReplyCompletionInput = Parameters<ReturnType<typeof createClient>['proxy']['completions']>[0]
 export interface ReplyCompletionClient {
-  completions(input: ProxyCompletionCreate): Promise<{ choices: { message: { content: string | null }; finish_reason: string }[] }>
+  completions(input: ReplyCompletionInput): Promise<{ choices: { message: { content: string | null }; finish_reason: string }[] }>
 }
 
 export function createReplyInterpreter(client: ReplyCompletionClient, model: string): ReplyInterpreter {
