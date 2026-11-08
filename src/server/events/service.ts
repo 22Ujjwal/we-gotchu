@@ -259,6 +259,7 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
   }
   const metadata = { approvalId: approval.approvalId, eventId, planRevision: String(plan.revision) }
   const base = deps.config.appUrl.replace(/\/$/, '')
+  const returnPath = plan.planningOffer ? `/planning/${encodeURIComponent(plan.planningOffer.conversationId)}` : `/events/${eventId}`
   const session = await deps.stripe.checkout.sessions.create(
     {
       mode: 'payment',
@@ -273,8 +274,8 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
         },
       ],
       expires_at: expiresAtSec,
-      success_url: `${base}/events/${eventId}?checkout=success`,
-      cancel_url: `${base}/events/${eventId}?checkout=canceled`,
+      success_url: `${base}${returnPath}?checkout=success`,
+      cancel_url: `${base}${returnPath}?checkout=canceled`,
       client_reference_id: eventId,
       metadata,
       payment_intent_data: { metadata },
