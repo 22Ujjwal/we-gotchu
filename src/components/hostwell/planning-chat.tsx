@@ -1,3 +1,5 @@
+import { PlanningPayment } from './planning-payment'
+import { calculateOfferCosts } from '../../agent/planning/offer-contract'
 import { PlanningOfferReview } from './planning-offer'
 import { useUser } from '@clerk/tanstack-react-start'
 import { useEffect, useRef, useState } from 'react'
@@ -22,6 +24,7 @@ export function ConnectedPlanningPage({ id }: { id: string }) {
   </main>
 }
 function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string) => void }) {
+  const { user } = useUser()
   const session = usePlanningSession(id)
   const [draft, setDraft] = useState('')
   const alert = useRef<HTMLParagraphElement>(null)
@@ -50,6 +53,13 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   for (const option of view?.selections ?? []) options.set(option.id, option)
   const selected = new Set(view?.selections.map(option => option.id))
   const proposalText = view?.proposal && [view.proposal.summary, view.proposal.nextQuestion].filter(Boolean).join('\n\n')
+  const offer = view?.offer
+  const offerStale = !!offer && (view?.inquiry?.status === 'stale'
+    || view?.inquiry?.replies?.at(-1)?.id !== offer.replyId
+    || offer.contextMessageIds.join('|') !== view?.messages.filter(message => message.role === 'user').map(message => message.id).join('|')
+    || offer.lines.map(line => line.option.id).sort().join('|') !== view?.selections.map(option => option.id).sort().join('|')
+    || !!offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now())
+  const offerCosts = offer && calculateOfferCosts(offer)
   const answerAlreadyShown = view?.messages.some(message => message.role === 'assistant' && message.text === proposalText)
   return <div className="flex w-full max-w-[900px] flex-col gap-8">
     <h1 className="text-[34px] leading-tight font-light tracking-[-0.02em] lg:text-[56px]">{id ? 'Your event, coming together.' : "What are you planning?"}</h1>
@@ -112,9 +122,12 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
       </section>}
       {view.inquiry && <PlanningInquiryEditor key={view.inquiry.id} inquiry={view.inquiry} version={view.version}
         disabled={!!blocked || view.status !== 'ready'} canSend={!!view.canSendInquiry} submit={session.submit} />}
-      {view.offer && <PlanningOfferReview offer={view.offer} stale={view.inquiry?.status === 'stale'
-        || view.offer.contextMessageIds.join('|') !== view.messages.filter(message => message.role === 'user').map(message => message.id).join('|')
-        || view.offer.lines.map(line => line.option.id).sort().join('|') !== view.selections.map(option => option.id).sort().join('|')} />}
+      {view.offer && <PlanningOfferReview offer={view.offer} stale={offerStale} />}
+      {view.paymentLink && <PlanningPayment key={view.paymentLink.eventId} link={view.paymentLink} identity={user?.id ?? null} stale={offerStale} />}
+      {view.offer && !view.paymentLink && !offerStale && !view.offer.missing.length && offerCosts?.ok && offerCosts.total > 0
+        && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
+          onClick={() => void session.submit({ kind: 'prepare_payment', requestId: crypto.randomUUID(), expectedVersion: view.version,
+            offerId: view.offer!.id, offerRevision: view.offer!.revision })}>Review sandbox payment</Button>}
       {!view.paymentLink && view.inquiry?.status === 'draft' && view.inquiry.replies?.at(-1)?.status === 'ready'
         && ['quote', 'confirmation'].includes(view.inquiry.replies.at(-1)?.interpretation?.kind ?? '')
         && <Button className="self-start px-5 py-3" disabled={!!blocked || view.status !== 'ready'}
