@@ -3,9 +3,9 @@
 Owner: Ujjwal.
 Updated: 2026-11-07T20:08:53-08:00
 Baseline: main `1d584e9` (through #37).
-Branch and PR: [test/dom-harness](https://github.com/22Ujjwal/we-gotchu/tree/test/dom-harness); DOM setup PR pending publication.
+Branch and PR: [test/dom-harness](https://github.com/22Ujjwal/we-gotchu/tree/test/dom-harness); DOM setup [PR #39](https://github.com/22Ujjwal/we-gotchu/pull/39) is open.
 Availability: DOM test infrastructure on branch; transaction fixes #28 merged; hosting handoff #33 open at last check.
-Tested application baseline: `1d584e9`; new configuration and verification evidence below.
+Tested implementation commit: `d8cfaf3`, based on main `1d584e9`; the following commit only adds this PR link and tested SHA.
 
 ## Current result
 
