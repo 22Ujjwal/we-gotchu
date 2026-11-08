@@ -44,8 +44,12 @@ The first reply turn required recovery after discovering that the newly created 
 That attachment is now configured, but a fresh uninterrupted run still needs verification.
 
 A regression reproduces and fixes rejection of replies to follow-ups that use a new provider thread.
-The complete quote, customer approval, sandbox payment and final customer receipt have not passed together for this arrangement.
-The final receipt email and alternate-vendor journey remain unfinished.
+The recovered complete quote passed customer approval and one USD 300 Stripe sandbox payment on 2026-11-08.
+The customer returned to the application and reloaded with the paid state and both simulated fulfillment attempts preserved.
+The verified payment webhook sent the customer a payment confirmation email with the saved amount, event details and payment reference.
+Provider readback confirmed the outgoing email; recipient delivery of this final email has not been independently confirmed.
+This email is an application payment confirmation, not a Stripe-hosted receipt.
+Customer approval by email and the alternate-vendor journey remain unfinished.
 The first research result can contain one venue rather than three, and source photos are not yet connected to these cards.
 Email wording is natural; controlled-recipient routing and sandbox execution remain configured internally.
 No real supplier booking or purchase has been verified.
