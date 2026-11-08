@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowUp } from './icons'
-import { Button, FeatureRow, Header, Photo } from './ui'
-import { EventHeading } from './event-heading'
+import { Button, FeatureRow, Guests, Header, MetaLine, Photo } from './ui'
+import { to24h } from '#/lib/hostwell/fixture'
 import type { Brief, Venue } from '#/lib/hostwell/fixture'
 
-type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'>
+type SettingVenue = Pick<Venue, 'id' | 'name' | 'photos' | 'cardFeatures'> & { evidence?: ReactNode; photoCredit?: ReactNode }
 
 const suggestions = ['Cheaper candles', 'Closer to U-Bahn', 'More venues']
 
@@ -39,7 +39,20 @@ export function SettingsView({
     <div className={`flex w-full flex-col overflow-x-clip ${embedded ? '' : 'min-h-screen'}`}>
       {!embedded && <Header step="setting" />}
       <section className="venue-reveal flex flex-col items-center gap-6 px-5 pt-8 pb-10 lg:gap-10 lg:px-12 lg:pt-10 lg:pb-14">
-        <EventHeading brief={brief} editBrief={editBrief} />
+        <div className="flex flex-col items-center gap-2 text-center lg:gap-3.5">
+          <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
+            {brief?.occasion || 'Your event options'}
+          </h1>
+          {brief && <MetaLine>
+            <span>
+              {brief.date}, {to24h(brief.from)}
+            </span>
+            <span>{brief.area}</span>
+            <Guests n={brief.guests} />
+            <span>Up to ${brief.budget.replace(/^\$/, '')}</span>
+            {editBrief}
+          </MetaLine>}
+        </div>
 
         {summary}
         <section
@@ -52,18 +65,20 @@ export function SettingsView({
             className="gold-frame order-first flex w-full max-w-[468px] shrink-0 lg:w-[468px] p-0.5 shadow-[0_24px_56px_#966E1E2E] lg:order-none"
           >
             <article className="flex w-full flex-col overflow-hidden bg-white">
-              <Photo
+              {current.photos.length ? <Photo
                 photos={current.photos}
                 alt={current.name}
                 className="h-[230px] w-full lg:h-[290px]"
-              />
+              /> : <p className="bg-cream px-6 py-5 text-[14px] text-stone">Photo not available</p>}
               <div className="flex flex-col gap-[18px] p-6 lg:gap-[22px] lg:p-[34px]">
+                {current.photoCredit}
                 <CardTitle venue={current} large />
                 <ul className="m-0 flex list-none flex-col gap-3.5 p-0 lg:gap-[18px] lg:pt-1.5">
                   {current.cardFeatures.map((f) => (
                     <FeatureRow key={f.label} feature={f} />
                   ))}
                 </ul>
+                {current.evidence}
                 <Button
                   type="button"
                   disabled={disabled}
@@ -128,20 +143,22 @@ function CardTitle({ venue, large }: { venue: SettingVenue; large?: boolean }) {
 function SideCard({ venue, onSelect, disabled = false }: { venue: SettingVenue; onSelect: () => void; disabled?: boolean }) {
   return (
     <article className="flex w-full max-w-[468px] shrink-0 lg:w-[340px] lg:max-w-[340px] flex-col overflow-hidden border border-line bg-white shadow-[0_12px_32px_#1F1B160F]">
-      <Photo
+      {venue.photos.length ? <Photo
         key={venue.id}
         photos={venue.photos}
         alt={venue.name}
         className="h-[190px] w-full lg:h-[210px]"
         arrows={false}
-      />
+      /> : <p className="bg-cream px-6 py-5 text-[14px] text-stone">Photo not available</p>}
       <div className="flex flex-col gap-4 px-6 pt-[22px] pb-[26px] lg:gap-5 lg:px-8 lg:pt-8 lg:pb-10">
+        {venue.photoCredit}
         <CardTitle venue={venue} />
         <ul className="m-0 flex list-none flex-col gap-3 p-0 lg:gap-[18px] lg:pt-1.5">
           {venue.cardFeatures.map((f) => (
             <FeatureRow key={f.label} feature={f} />
           ))}
         </ul>
+        {venue.evidence}
         <button
           type="button"
           disabled={disabled}

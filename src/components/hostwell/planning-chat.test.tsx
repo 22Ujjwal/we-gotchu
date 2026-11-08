@@ -6,6 +6,8 @@ import { ConnectedPlanningPage, PlanningIntake } from './planning-chat'
 
 const auth = vi.hoisted(() => ({ user: { id: 'customer-a' } as { id: string } | null, isLoaded: true }))
 vi.mock('@clerk/tanstack-react-start', () => ({ useUser: () => auth }))
+// Photo requests have their own upstream tests and must not consume planning responses.
+vi.mock('../../lib/hostwell/planning-images', () => ({ usePlanningImages: () => ({ images: {}, canRetry: false, retry: vi.fn() }) }))
 const venue: PlanningOption = { id: 'venue-a', kind: 'venue', name: 'Garden room', url: 'https://example.com/room',
   why: 'Room for dinner.', facts: [{ label: 'Room hire', value: 'USD 200', basis: 'published', sourceUrl: 'https://example.com/rates', quote: 'Room hire is $200.' }], unknowns: ['Confirm your date.'] }
 const supply: PlanningOption = { ...venue, id: 'supply-a', kind: 'supply', name: 'Paper plates' }

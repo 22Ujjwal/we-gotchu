@@ -8,6 +8,7 @@ import type { Order } from '#/lib/hostwell/store'
 
 export function VenueView({
   venue,
+  photoCredit,
   brief,
   order,
   back,
@@ -20,6 +21,7 @@ export function VenueView({
   receipt,
   action,
 }: {
+  photoCredit?: ReactNode
   venue: Pick<Venue, 'name' | 'neighbourhood' | 'photos' | 'description' | 'detailFeatures'> & Partial<Venue>
   brief: Brief
   order?: Order
@@ -46,25 +48,24 @@ export function VenueView({
           <h1 className="m-0 font-script text-[34px] leading-[48px] font-normal lg:text-[46px] lg:leading-16">
             {venue.name}
           </h1>
-          <MetaLine>
-            <span>
-              {brief.date}, {to24h(brief.from)}
-            </span>
-            <span>{venue.neighbourhood}</span>
-            <Guests n={brief.guests} />
-            <span className="hidden lg:inline">≤ ${brief.budget.replace(/^\$/, '')}</span>
+          {(brief.date || brief.from || venue.neighbourhood || brief.guests || brief.budget || back) && <MetaLine>
+            {(brief.date || brief.from) && <span>{[brief.date, brief.from ? to24h(brief.from) : ''].filter(Boolean).join(', ')}</span>}
+            {venue.neighbourhood && <span>{venue.neighbourhood}</span>}
+            {brief.guests && <Guests n={brief.guests} />}
+            {brief.budget && <span className="hidden lg:inline">Up to ${brief.budget.replace(/^\$/, '')}</span>}
             {back}
-          </MetaLine>
+          </MetaLine>}
         </div>
 
         <div className="flex w-full max-w-[1100px] flex-col items-start gap-8 lg:flex-row lg:gap-14">
           <div className="flex w-full min-w-0 flex-1 flex-col">
-            <Photo
+            {venue.photos.length ? <Photo
               photos={venue.photos}
               alt={venue.name}
               className="-mx-5 aspect-[390/260] w-[calc(100%+40px)] lg:mx-0 lg:aspect-[664/400] lg:w-full"
-            />
-            <div className="flex flex-col gap-4 pt-6 lg:gap-[18px] lg:pt-8">
+            /> : <p className="border-b border-sand py-5 text-[14px] text-stone">Photo not available</p>}
+            {photoCredit && <div className="mt-2 flex flex-wrap gap-2">{photoCredit}</div>}
+            {(venue.description || venue.detailFeatures.length > 0) && <div className="flex flex-col gap-4 pt-6 lg:gap-[18px] lg:pt-8">
               <p className="m-0 font-body text-[16px] leading-[26px] text-body lg:text-[18px] lg:leading-[29px]">
                 {venue.description}
               </p>
@@ -73,7 +74,7 @@ export function VenueView({
                   <FeatureRow key={f.label} feature={f} />
                 ))}
               </ul>
-            </div>
+            </div>}
             {extras}
             {addOns && (
               <section className="flex flex-col pt-8 lg:pt-10">

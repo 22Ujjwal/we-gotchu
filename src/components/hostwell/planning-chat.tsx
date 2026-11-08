@@ -1,3 +1,5 @@
+import { usePlanningImages } from '../../lib/hostwell/planning-images'
+import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
 import { ArrangingView } from './arranging-view'
 import { PlanningArrangement } from './planning-arrangement'
 import { PlanningConversation } from './planning-conversation'
@@ -24,7 +26,7 @@ export function ConnectedPlanningPage({ id }: { id: string }) {
   if (!isLoaded) return <p role="status">Loading sign-in...</p>
   if (!user) return <a href={`/sign-in?redirect_url=${encodeURIComponent(`/planning/${encodeURIComponent(id)}`)}`}
     className="text-[17px] font-semibold underline">Sign in to view your plan</a>
-  return <main className="flex flex-1 justify-center px-5 pt-10 pb-8 lg:px-12">
+  return <main className="flex flex-1 justify-center">
     <PlanningChat key={`${user.id}:${id}`} id={id} />
   </main>
 }
@@ -58,6 +60,7 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
   for (const option of view?.proposal?.options ?? []) options.set(option.id, option)
   // Saved snapshots remain authoritative even if a later proposal changes or omits the option.
   for (const option of view?.selections ?? []) options.set(option.id, option)
+  const { images: venueImages, canRetry: canRetryPhotos, retry: retryPhotos } = usePlanningImages(view?.id, [...options.values()], view?.version ?? 0)
   const selected = new Set(view?.selections.map(option => option.id))
   const offer = view?.offer
   const offerStale = !!offer && (view?.inquiry?.status === 'stale'
@@ -67,9 +70,10 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     || !!offer.expiresAt && Date.parse(offer.expiresAt) <= Date.now())
   const offerCosts = offer && calculateOfferCosts(offer)
   const venueOptions = [...options.values()].filter(option => option.kind === 'venue')
-  const venueCards = venueOptions.map(option => ({ id: option.id, name: option.name, photos: [] as string[],
+  const venueCards = venueOptions.map(option => ({ id: option.id, name: displayCopy(option.name), photos: (venueImages[option.id] ?? []).map(image => image.url),
+    photoCredit: (venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[12px] text-stone underline">{image.attribution.text}</a>),
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
-      : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: fact.value.split(/(?<=[.!?])\s/)[0] })) }))
+      : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: displayFactValue(fact.value).split(/(?<=[.!?])\s/)[0] })) }))
   const needsAnswer = !!view?.proposal?.nextQuestion
   const messageForm = <form className="flex w-full max-w-[760px] flex-col gap-3" onSubmit={event => { event.preventDefault(); void send() }}>
       {view?.proposal?.nextQuestion && venueCards.length > 0 && <p className="text-[18px] leading-7">{view.proposal.nextQuestion}</p>}
@@ -131,11 +135,12 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
           if (selected.has(optionId)) return
           void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId })
         }} />}
+      {canRetryPhotos && <Button className="self-center px-5 py-3" onClick={retryPhotos}>Retry photos</Button>}
       {!view.selections.some(option => option.kind === 'venue') && options.size > 0 && <section aria-label="Supplies and sources" className="mx-auto grid w-full max-w-[1000px] gap-5 md:grid-cols-2">
         {[...options.values()].filter(option => option.kind === 'supply' || selected.has(option.id)).map(option => <PlanningOptionCard key={option.id} option={option} selected={selected.has(option.id)} disabled={!!blocked}
           onSelect={() => void session.submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: option.id })} />)}
       </section>}
-      {!browsingSettings && <PlanningArrangement customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
+      {!browsingSettings && <PlanningArrangement images={venueImages} customerEmail={user?.primaryEmailAddress?.emailAddress ?? ''} view={view} disabled={!!blocked} submit={session.submit} onBack={() => setBrowsingSettings(true)} />}
       {!view.paymentLink && !browsingSettings && view.selections.some(option => option.kind === 'venue') && <div className="mx-auto w-full max-w-[760px]">{messageForm}</div>}
       {view.offer && (view.paymentLink ? <details><summary className="cursor-pointer underline">Quoted terms and sources</summary><PlanningOfferReview offer={view.offer} stale={offerStale} /></details>
         : <PlanningOfferReview offer={view.offer} stale={offerStale} />)}
