@@ -38,6 +38,13 @@ export function validateSupplierOffer(record: PlanningRecord, input: unknown): S
     if (amounts.some(amount => amount != null && amount > 0 && !quotesContainAmount(line.sourceQuotes, amount, extracted.currency))) {
       throw new Error('Offer amount is not in the quoted evidence.')
     }
+    // Missing charges must not become free merely because extraction supplied zero.
+    if (!quotesContainAmount(line.sourceQuotes, 0, extracted.currency)) {
+      for (const field of ['unitAmount', 'tax', 'delivery', 'fees'] as const) {
+        if (line[field] === 0) line[field] = null
+      }
+      if (line.deposit.amount === 0) line.deposit = { amount: null, treatment: 'unknown' }
+    }
     const sourceReply = [...supplierReplies].reverse().find(item => line.sourceQuotes.every(quote => item.message.text.includes(quote)))
     return { ...line, option, sourceReplyId: sourceReply?.id ?? null }
   })
