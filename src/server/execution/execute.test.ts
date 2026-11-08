@@ -122,6 +122,16 @@ describe('execute_action success and replay', () => {
     expect(store.attempts).toHaveLength(2)
   })
 
+  it('returns the stored attempt on a retry after the approval expired', async () => {
+    const { store, execute, commit } = setup()
+    const venue = await execute(VENUE)
+    if (!venue.ok) throw new Error('unreachable')
+    store.approvals.find((a) => a.approvalId === venue.attempt.approvalId)!.expiresAt = '2026-11-08T01:09:00.000Z'
+    const again = await execute(VENUE)
+    expect(again).toMatchObject({ ok: true, replayed: true, attempt: { attemptId: venue.attempt.attemptId, state: 'succeeded' } })
+    expect(commit).toHaveBeenCalledTimes(1)
+  })
+
   it('records unknown when the adapter times out, and reconcile resolves it without a new purchase', async () => {
     const adapter = new SimulatedSupplierAdapter({ failure: 'timeout', failureTarget: 'venue_booking' })
     const { store, execute, commit, deps } = setup({ adapter })

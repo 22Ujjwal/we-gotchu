@@ -71,6 +71,7 @@ export interface Store {
   /** Returns an unexpired, unrevoked approval for this plan revision with its payment, if any. */
   findOpenApproval(eventId: string, planRevision: number, now: Date): Promise<{ approval: Approval; payment: Payment } | null>
   /** Inserts approval and its pending payment together. */
+  /** Throws OpenApprovalExistsError when another open approval for the same plan revision won the race. */
   createApproval(approval: Approval, payment: Payment): Promise<void>
   getApproval(approvalId: string): Promise<Approval | null>
   revokeApprovals(eventId: string, at: Date): Promise<Approval[]>
@@ -98,4 +99,12 @@ export interface Store {
   // Progress
   /** Increments Event.progressSequence and inserts the entry in one transaction. */
   appendProgress(eventId: string, actor: ProgressEntry['actor'], message: string): Promise<ProgressEntry>
+}
+
+/** A concurrent approve already created an open approval for this plan revision. */
+export class OpenApprovalExistsError extends Error {
+  constructor(eventId: string, planRevision: number) {
+    super(`An open approval already exists for event ${eventId} revision ${planRevision}`)
+    this.name = 'OpenApprovalExistsError'
+  }
 }

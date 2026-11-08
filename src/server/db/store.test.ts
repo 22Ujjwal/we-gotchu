@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { planReadyEvent, researchResultFixture, type Attempt, type Brief, type ResearchResult } from '../../contracts'
-import type { Store } from '../store'
+import { OpenApprovalExistsError, type Store } from '../store'
 import { createTestStore } from './client'
 
 const brief: Brief = planReadyEvent.event.brief
@@ -285,6 +285,40 @@ describe('publishResearchResult', () => {
 })
 
 describe('approval and payment', () => {
+  it('refuses a second open approval for the same plan revision (concurrent approve)', async () => {
+    const { event, run } = await store.createEvent({ customerId: 'cust_1', brief })
+    const { plan } = await approve(event.eventId, run.runId)
+    const now = new Date()
+    const second = {
+      approvalId: `appr_${event.eventId}_2`,
+      eventId: event.eventId,
+      planId: plan.planId,
+      planRevision: 1,
+      actionIds: plan.actions.map((a) => a.actionId),
+      approvedTotal: plan.total,
+      currency: plan.currency,
+      approvedAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 31 * 60_000).toISOString(),
+      revokedAt: null,
+    }
+    await expect(
+      store.createApproval(second, {
+        paymentId: `pay_${event.eventId}_2`,
+        approvalId: second.approvalId,
+        checkoutSessionId: `cs_${event.eventId}_2`,
+        paymentIntentId: null,
+        amount: plan.total,
+        currency: plan.currency,
+        state: 'pending',
+        refundId: null,
+        refundState: 'none',
+        refundReason: null,
+        mode: 'simulated',
+      }),
+    ).rejects.toBeInstanceOf(OpenApprovalExistsError)
+    expect(await store.getApproval(second.approvalId)).toBeNull()
+  })
+
   it('finds an open approval, marks payment paid only once, and stores refunds', async () => {
     const { event, run } = await store.createEvent({ customerId: 'cust_1', brief })
     const { approvalId, checkoutSessionId } = await approve(event.eventId, run.runId)

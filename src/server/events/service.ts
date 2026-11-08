@@ -1,3 +1,4 @@
+import { OpenApprovalExistsError } from '../store'
 import { randomUUID } from 'node:crypto'
 import {
   assessPlanForApproval,
@@ -261,6 +262,15 @@ export async function approve(deps: Deps, eventId: string, planId: unknown, plan
     await deps.store.createApproval(approval, payment)
   } catch (err) {
     await deps.stripe.checkout.sessions.expire(session.id).catch(() => undefined)
+    if (err instanceof OpenApprovalExistsError) {
+      // A concurrent approve won; hand back its Checkout instead of a second one.
+      const winner = await deps.store.findOpenApproval(eventId, planRevision, now)
+      if (winner && winner.payment.state === 'pending') {
+        const existing = await deps.stripe.checkout.sessions.retrieve(winner.payment.checkoutSessionId)
+        if (existing.url) return { ...winner, checkoutUrl: existing.url }
+      }
+      throw new ApiError(409, 'approval_in_progress', 'This plan is already being approved. Reload and try again.')
+    }
     throw err
   }
   await deps.store.setEventStatus(eventId, ['plan_ready'], 'awaiting_payment')

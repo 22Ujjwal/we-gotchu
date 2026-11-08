@@ -212,7 +212,9 @@ function newAttempt(input: { event: Event; actionId: string; approvalId: string;
     approvalId: input.approvalId,
     kind: input.kind,
     executionKey: input.executionKey,
-    state: 'pending',
+    // Inserted directly as running: one atomic write claims the key, so a crash
+    // never leaves a pending row that nothing will move.
+    state: 'running',
     providerReference: null,
     actualAmount: null,
     evidence: null,
@@ -222,13 +224,9 @@ function newAttempt(input: { event: Event; actionId: string; approvalId: string;
   }
 }
 
-/** Inserts the attempt once and moves it pending -> running. `replayed` true means this call must not call the supplier. */
+/** Inserts the attempt once, already running. `replayed` true means this call must not call the supplier. */
 async function claimAttempt(store: Store, attempt: Attempt): Promise<{ attempt: Attempt; replayed: boolean }> {
-  const inserted = await store.insertAttempt(attempt)
-  if (inserted.replayed) return inserted
-  const running = await store.transitionAttempt(inserted.attempt.attemptId, 'pending', 'running', {})
-  if (!running) return { attempt: inserted.attempt, replayed: true }
-  return { attempt: running, replayed: false }
+  return store.insertAttempt(attempt)
 }
 
 const EXECUTION_STATUSES: readonly EventStatus[] = ['plan_ready', 'awaiting_payment', 'executing', 'booked', 'partially_booked', 'failed']
@@ -289,6 +287,15 @@ export async function executeAction(deps: ExecutionDeps, input: { eventId: strin
   const event = await loadEvent(store, input.eventId)
   if (isRefusal(event)) return event
   await store.appendProgress(event.eventId, 'agent', input.reason)
+
+  // A retry of a commit that already ran returns the stored attempt, even if the
+  // approval has since expired or the event is canceling: the result is the
+  // truth, and no supplier call happens. Failed and skipped attempts can be retried
+  // under a new approval, so they are not replays.
+  const prior = (await store.listAttempts(event.eventId)).find(
+    (a) => a.kind === 'commit' && a.actionId === input.actionId && a.state !== 'failed' && a.state !== 'skipped',
+  )
+  if (prior) return { ok: true, attempt: prior, replayed: true, eventStatus: event.status }
 
   const checked = await checkCommit(deps, event, input.actionId)
   if (!checked.ok) {

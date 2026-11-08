@@ -14,7 +14,7 @@ import {
   canTransitionAttempt,
   type EventStatus,
 } from '../../contracts'
-import type { Store } from '../store'
+import { OpenApprovalExistsError, type Store } from '../store'
 import { approvals, attempts, events, payments, plans, progressEntries, researchResults, runs, schema, stripeEvents } from './schema'
 
 // Store implementation over Drizzle. Works with any Postgres driver Drizzle
@@ -516,6 +516,20 @@ export function createStore(db: Db): Store {
           )
           .for('update', { of: events })
         if (locked.length === 0) throw new Error(`createApproval: plan ${approval.planId} revision ${approval.planRevision} is not current`)
+        // Re-check under the event lock: a concurrent approve may have inserted first.
+        const [open] = await tx
+          .select({ id: approvals.id })
+          .from(approvals)
+          .where(
+            and(
+              eq(approvals.eventId, approval.eventId),
+              eq(approvals.planRevision, approval.planRevision),
+              isNull(approvals.revokedAt),
+              gt(approvals.expiresAt, new Date(approval.approvedAt)),
+            ),
+          )
+          .limit(1)
+        if (open) throw new OpenApprovalExistsError(approval.eventId, approval.planRevision)
         await tx.insert(approvals).values({
           id: approval.approvalId,
           eventId: approval.eventId,
