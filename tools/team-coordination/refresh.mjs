@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { mkdirSync, writeFileSync, renameSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { buildQueue, renderMarkdown } from './queue.mjs';
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -50,7 +50,7 @@ function main() {
   console.log(join(output, 'queue.md'));
   if (!queue.complete) process.exitCode = 1;
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   try { main(); }
   catch { console.error('Refresh failed. Check the checkout, Node, and gh setup. Previous output may be stale.'); process.exitCode = 1; }
 }
