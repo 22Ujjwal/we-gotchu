@@ -22,10 +22,16 @@ export const inquiryFieldsSchema = z.object({
   subject: text.max(200),
   text: text.max(60000),
 })
+export const inquiryDeliverySchema = z.object({
+  status: z.enum(['pending', 'accepted', 'failed', 'uncertain']), requestId: text,
+  draftRevision: z.number().int().positive(), approvedAt: z.iso.datetime(), expiresAt: z.number().int(),
+  messageId: text.optional(), threadId: text.nullable().optional(), acceptedAt: z.iso.datetime().optional(),
+  operationId: text.optional(), error: text.optional(),
+}).strict()
 export const planningInquirySchema = inquiryFieldsSchema.extend({
   id: text, revision: z.number().int().positive(), status: z.enum(['draft', 'stale']),
   venue: planningOptionSchema, contactSourceUrl: publicUrl.nullable(),
-  contextMessageIds: z.array(text), updatedAt: z.iso.datetime(),
+  contextMessageIds: z.array(text), updatedAt: z.iso.datetime(), delivery: inquiryDeliverySchema.optional(),
 }).strict()
 export type PlanningInquiry = z.infer<typeof planningInquirySchema>
 
@@ -33,6 +39,8 @@ const requestId = text.max(128)
 export const planningCreateSchema = z.object({ requestId, message: text.max(8000) }).strict()
 const version = z.number().int().nonnegative()
 export const planningCommandSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('send_inquiry'), requestId, expectedVersion: version,
+    inquiryId: text, expectedDraftRevision: z.number().int().positive() }).strict(),
   z.object({ kind: z.literal('prepare_inquiry'), requestId, expectedVersion: version }).strict(),
   inquiryFieldsSchema.extend({ kind: z.literal('save_inquiry'), requestId, expectedVersion: version,
     inquiryId: text, expectedDraftRevision: z.number().int().positive() }).strict(),
@@ -58,6 +66,7 @@ export type PlanningView = {
   inquiry?: PlanningInquiry
   progress: string | null
   error: string | null
+  canSendInquiry?: boolean
   canReviewResearch?: boolean
   activity?: PlanningActivity[]
   approvals?: PlanningApproval[]

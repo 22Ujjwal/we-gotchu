@@ -1,3 +1,4 @@
+import { inquirySendResultSchema, type SupplierMailTransport } from './supplier-mail'
 import { prepareInquiry, staleInquiry } from './inquiry'
 import { isDeepStrictEqual } from 'node:util'
 import { randomUUID } from 'node:crypto'
@@ -8,6 +9,7 @@ import type { PlanningRecord, PlanningRepository } from './repository'
 
 export type PlanningDeps = {
   repository: PlanningRepository
+  mail?: SupplierMailTransport
   agent: () => PlanningAgent
   requireCustomerId: () => Promise<string>
   allowResearchReview?: boolean
@@ -89,6 +91,36 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord): Promise<Plan
   return saved?.view ?? (await owned(deps, record.customerId, record.id)).view
 }
 
+async function deliverInquiry(deps: PlanningDeps, reserved: PlanningRecord): Promise<PlanningView> {
+  const inquiry = reserved.view.inquiry!
+  const approved = inquiry.delivery!
+  let delivery: typeof approved
+  try {
+    const result = inquirySendResultSchema.parse(await bounded(() => deps.mail!.sendInquiry({
+      requestId: approved.requestId, conversationId: reserved.id, inquiryId: inquiry.id,
+      draftRevision: approved.draftRevision, to: inquiry.recipient, subject: inquiry.subject, text: inquiry.text,
+    }), timeout(deps)))
+    delivery = result.status === 'failed'
+      ? { ...approved, status: 'failed', error: 'The email provider rejected this inquiry. Nothing was confirmed sent.' }
+      : { ...approved, ...result }
+  } catch {
+    delivery = { ...approved, status: 'uncertain', operationId: approved.requestId,
+      error: 'We could not confirm whether the inquiry was sent. It will not be sent again automatically.' }
+  }
+  // Only retry the database settlement, never the external send.
+  let current = reserved
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const savedInquiry = current.view.inquiry
+    if (savedInquiry?.id !== inquiry.id || savedInquiry.delivery?.requestId !== approved.requestId
+      || savedInquiry.delivery.status !== 'pending') return current.view
+    const saved = await deps.repository.compareAndSet(current, { ...current,
+      view: changed(current, { inquiry: { ...savedInquiry, delivery } }) })
+    if (saved) return saved.view
+    current = await owned(deps, reserved.customerId, reserved.id)
+  }
+  return current.view
+}
+
 export async function createPlanning(deps: PlanningDeps, input: unknown): Promise<PlanningView> {
   const customerId = await deps.requireCustomerId()
   const parsed = planningCreateSchema.safeParse(input)
@@ -131,21 +163,40 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
   if (command.expectedVersion !== record.view.version) throw stale()
   if (record.pending && record.view.status !== 'uncertain' && record.pending.expiresAt > now(deps)) throw busy()
   const requests = { ...record.requests, [command.requestId]: fingerprint }
+  if (record.view.inquiry?.delivery?.status === 'pending') throw busy()
+  if (command.kind === 'send_inquiry') {
+    if (!deps.mail) throw new ApiError(503, 'mail_unavailable', 'Inquiry sending is not connected yet.')
+    if (record.pending || record.view.status !== 'ready') throw busy()
+    const inquiry = record.view.inquiry
+    if (!inquiry || inquiry.id !== command.inquiryId || inquiry.revision !== command.expectedDraftRevision
+      || inquiry.status !== 'draft' || inquiry.delivery) throw stale()
+    if (!inquiry.recipient) throw new ApiError(422, 'recipient_required', 'Add the venue email address before approving the inquiry.')
+    const reserved = await save(deps, record, { ...record, requests, view: changed(record, {
+      inquiry: { ...inquiry, delivery: { status: 'pending', requestId: command.requestId,
+        draftRevision: inquiry.revision, approvedAt: new Date(now(deps)).toISOString(),
+        expiresAt: now(deps) + timeout(deps) + 5_000 } },
+    }) })
+    return deliverInquiry(deps, reserved)
+  }
   if (command.kind === 'prepare_inquiry' || command.kind === 'save_inquiry') {
     if (record.pending || record.view.status !== 'ready') throw busy()
+    if (record.view.inquiry?.delivery?.status === 'uncertain') throw busy()
     if (command.kind === 'prepare_inquiry' && record.view.inquiry?.status === 'draft') {
       throw new ApiError(409, 'draft_exists', 'An inquiry draft already exists. Edit the saved draft.')
     }
     let inquiry = record.view.inquiry
     if (command.kind === 'prepare_inquiry') inquiry = prepareInquiry(record.view, now(deps))
     else {
-      if (!inquiry || inquiry.status !== 'draft' || inquiry.id !== command.inquiryId
+      if (!inquiry || inquiry.delivery || inquiry.status !== 'draft' || inquiry.id !== command.inquiryId
         || inquiry.revision !== command.expectedDraftRevision) throw stale()
       inquiry = { ...inquiry, revision: inquiry.revision + 1, recipient: command.recipient,
         subject: command.subject, text: command.text, updatedAt: new Date(now(deps)).toISOString(),
         contactSourceUrl: command.recipient === inquiry.recipient ? inquiry.contactSourceUrl : null }
     }
-    return (await save(deps, record, { ...record, requests, view: changed(record, { inquiry }) })).view
+    return (await save(deps, record, { ...record, requests,
+      ...(command.kind === 'prepare_inquiry' && record.view.inquiry
+        ? { inquiryHistory: [...(record.inquiryHistory ?? []), record.view.inquiry] } : {}),
+      view: changed(record, { inquiry }) })).view
   }
   if (command.kind === 'select') {
     const selections = toggle(record.view.selections, record.view.proposal?.options ?? [], command.optionId)
@@ -186,6 +237,14 @@ export async function commandPlanning(deps: PlanningDeps, id: string, input: unk
 export async function getPlanning(deps: PlanningDeps, id: string): Promise<PlanningView> {
   const customerId = await deps.requireCustomerId()
   let record = await owned(deps, customerId, id)
+  const inquiry = record.view.inquiry
+  if (inquiry?.delivery?.status === 'pending' && inquiry.delivery.expiresAt <= now(deps)) {
+    const recovered = await deps.repository.compareAndSet(record, { ...record, view: changed(record, {
+      inquiry: { ...inquiry, delivery: { ...inquiry.delivery, status: 'uncertain', operationId: inquiry.delivery.requestId,
+        error: 'We could not confirm whether the inquiry was sent. It will not be sent again automatically.' } },
+    }) })
+    record = recovered ?? await owned(deps, customerId, id)
+  }
   if (record.pending && record.view.status !== 'uncertain') {
     if (record.pending.expiresAt > now(deps)) return record.view
     const recovered = await deps.repository.compareAndSet(record, {

@@ -7,7 +7,7 @@ const viewSchema: z.ZodType<PlanningView> = z.object({
   messages: z.array(z.object({ id: z.string(), role: z.enum(['user', 'assistant']), text: z.string(), createdAt: z.string() })),
   proposal: planningProposalSchema.nullable(), inquiry: planningInquirySchema.optional(), selections: z.array(planningOptionSchema),
   progress: z.string().nullable(), error: z.string().nullable(), approvals: z.array(planningApprovalSchema).optional(),
-  activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(),
+  activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(), canSendInquiry: z.boolean().optional(),
 })
 export type PlanningCreate = { requestId: string; message: string }
 export class PlanningApiError extends Error {

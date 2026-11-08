@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
-import type { PlanningOption, PlanningView } from '../../agent/planning/contract'
+import type { PlanningInquiry, PlanningOption, PlanningView } from '../../agent/planning/contract'
 import { planningConversations, schema } from '../db/schema'
 
 export type PendingWrite = {
@@ -22,6 +22,7 @@ export type PlanningRecord = {
   pending: PendingWrite | null
   requests: Record<string, string>
   view: PlanningView
+  inquiryHistory?: PlanningInquiry[]
 }
 export interface PlanningRepository {
   get(customerId: string, id: string): Promise<PlanningRecord | null>
