@@ -1,6 +1,6 @@
 ---
 name: verify-we-gotchu
-description: Verify the real local We Gotchu web app, including planning submission, sourced proposals, reload and the existing event screens, with recorded evidence.
+description: Verify the real local We Gotchu web app, including planning submission, sourced proposals, reload, venue inquiries and supplier replies, and the existing event screens, with recorded evidence.
 ---
 
 # Verify We Gotchu
@@ -69,3 +69,9 @@ The existing tools/agent-research-proof/planning.ts runs a live SDK proof with a
 It can spend provider credits and is not a dry run.
 Its success proves the SDK path only, not the browser flow.
 Use the real browser recipe above for product acceptance.
+
+The controlled supplier-reply helper is `tools/planning-reply-proof/run.ts`.
+Its exact invocation and limitations are in features/venue-inquiries.md.
+It creates a new labeled test conversation without changing the source conversation, calls the real interpretation model, and never sends email.
+Passing its controlled reply ID instead of the source ID retries interpretation of the same saved reply after failure.
+Run it only with the local database server stopped, then start the application to inspect the result through its actual UI.

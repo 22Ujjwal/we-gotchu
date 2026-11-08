@@ -122,3 +122,28 @@ A later read-only probe found the saved conversation ready at version 9 and sequ
 Both provider GETs succeeded during that later probe, so the earlier 503's underlying cause remains unconfirmed.
 The controlled regression reproduced the separate application weakness that provider refresh failure blocked returning saved work.
 This change removes that dependency; it does not claim to fix or explain a provider outage.
+
+## Supplier transport and reply processing
+
+The runtime composes Ujjwal's supplier transport when AGENTMAIL_API_KEY, AGENTMAIL_INBOX_ID and AGENTMAIL_WEBHOOK_SECRET are present.
+Migration 0003_supplier_mail adds durable send operations and inbound receipts.
+Apply committed migrations separately before hosting; startup does not migrate Neon.
+
+POST /api/supplier-mail/webhook verifies the provider signature before receiving mail.
+Its awaited application callback saves a normalized reply and its pending interpretation state in one conversation compare-and-set.
+The receipt ID, provider message ID and original provider reference remain attached to that entry.
+Repeated callbacks return the stored reply without creating another pending job.
+Missing plain text is retained as a failed interpretation rather than a fabricated offer.
+
+GET /api/planning/reply-jobs requires Authorization: Bearer CRON_SECRET.
+It processes one durable reply job per invocation using the configured NAIVE_REPLY_MODEL or NAIVE_PLANNING_MODEL.
+Configure a supported scheduler to invoke it without a customer browser.
+The route itself does not install a scheduler.
+Processing uses an expiring lease and token-checked settlement so a late result cannot replace a newer worker's result.
+Failed interpretation retains the original reply; retries must operate on that saved entry, never resend an inquiry.
+
+The model receives supplier text as data, has no tools, and returns classified facts with verbatim supporting excerpts.
+The UI shows quoted facts and missing information, and never treats this extraction as a booking or a complete payment amount.
+Check for venue replies reads saved state only.
+The live model check used controlled supplier text and sent no email.
+Recipient delivery, signed hosted receipt, and hosted scheduling remain separate verification gates.
