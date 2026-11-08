@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { selectedOfferSchema, planningPaymentLinkSchema } from '../../agent/planning/offer-contract'
 import { planningInquirySchema, planningOptionSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
 
 const viewSchema: z.ZodType<PlanningView> = z.object({
@@ -8,6 +9,7 @@ const viewSchema: z.ZodType<PlanningView> = z.object({
   proposal: planningProposalSchema.nullable(), inquiry: planningInquirySchema.optional(), selections: z.array(planningOptionSchema),
   progress: z.string().nullable(), error: z.string().nullable(), approvals: z.array(planningApprovalSchema).optional(),
   activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(), canSendInquiry: z.boolean().optional(),
+  offer: selectedOfferSchema.optional(), paymentLink: planningPaymentLinkSchema.optional(),
 })
 export type PlanningCreate = { requestId: string; message: string }
 export class PlanningApiError extends Error {

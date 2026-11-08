@@ -21,9 +21,11 @@ export const selectedOfferSchema = z.object({
 export type SelectedOffer = z.infer<typeof selectedOfferSchema>
 
 
-export type PlanningPaymentLink = {
-  eventId: string; planId: string; planRevision: number; offerId: string; offerRevision: number;
-}
+export const planningPaymentLinkSchema = z.object({
+  eventId: text, planId: text, planRevision: z.number().int().positive(),
+  offerId: text, offerRevision: z.number().int().positive(),
+}).strict()
+export type PlanningPaymentLink = z.infer<typeof planningPaymentLinkSchema>
 
 export function calculateOfferCosts(offer: SelectedOffer): { ok: true; amounts: number[]; total: number } | { ok: false; reason: string } {
   const fail = (reason: string): { ok: false; reason: string } => ({ ok: false, reason })
