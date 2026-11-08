@@ -41,3 +41,21 @@ test('a plan from an older brief is not approvable', () => {
   render(<EventDetails view={view} {...callbacks} />)
   expect(screen.queryByRole('button', { name: /Approve/ })).not.toBeInTheDocument()
 })
+
+test('customer cards stay concise while diagnostic evidence remains collapsed', () => {
+  const view = structuredClone(planReadyEvent)
+  view.plan = null
+  view.researchResult!.outcome = 'partial'
+  view.researchResult!.budgetFit = 'unknown'
+  view.researchResult!.warnings = ['Private research diagnostic', 'Private research diagnostic']
+  const candidate = view.researchResult!.candidates[0]
+  candidate.verification.capacity = { status: 'unknown', note: 'Detailed capacity excerpt' }
+  render(<EventDetails view={view} {...callbacks} />)
+  expect(screen.getByText('We found options, but could not finish checking them.')).toBeVisible()
+  expect(screen.getByText('We cannot confirm whether these options fit your budget yet.')).toBeVisible()
+  expect(screen.getAllByText('Private research diagnostic')).toHaveLength(1)
+  expect(screen.getByText('Private research diagnostic').closest('details')).not.toHaveAttribute('open')
+  expect(screen.getByText(/Detailed capacity excerpt/).closest('details')).not.toHaveAttribute('open')
+  expect(screen.getAllByText(/Not yet verified:/).length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Simulated option').length).toBeGreaterThan(0)
+})
