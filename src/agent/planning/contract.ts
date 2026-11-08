@@ -28,6 +28,10 @@ export type PlanningCommand = z.infer<typeof planningCommandSchema>
 export type PlanningMessage = { id: string; role: 'user' | 'assistant'; text: string; createdAt: string }
 export const planningApprovalSchema = z.object({ id: text, tool: text, arguments: z.record(z.string(), z.unknown()) }).strict()
 export type PlanningApproval = z.infer<typeof planningApprovalSchema>
+export const planningActivitySchema = z.object({
+  name: text, status: z.enum(['working', 'waiting', 'blocked', 'done', 'failed']), detail: text,
+}).strict()
+export type PlanningActivity = z.infer<typeof planningActivitySchema>
 export type PlanningView = {
   id: string
   version: number
@@ -37,6 +41,7 @@ export type PlanningView = {
   selections: PlanningOption[]
   progress: string | null
   error: string | null
+  activity?: PlanningActivity[]
   approvals?: PlanningApproval[]
 }
 
@@ -45,7 +50,8 @@ export interface PlanningAgent {
   start(input: { conversationId: string; requestId: string; message: string }): Promise<{ sessionId: string; sequence: number }>
   send(input: { sessionId: string; requestId: string; message: string; selections: PlanningOption[] }): Promise<{ sequence: number }>
   confirm?(input: { sessionId: string; approvalId: string; decision: 'allow' | 'deny' }): Promise<void>
-  read(input: { sessionId: string; afterSequence: number }): Promise<{
-    status: PlanningView['status']; sequence: number; proposal: PlanningProposal | null; progress: string | null; error: string | null; approvals?: PlanningApproval[]
+  read(input: { sessionId: string; afterSequence: number; approvalId?: string }): Promise<{
+    status: PlanningView['status']; sequence: number; proposal: PlanningProposal | null; progress: string | null; error: string | null; approvals?: PlanningApproval[]; activity?: PlanningActivity[]
+    confirmation?: { id: string; state: 'pending' | 'closed' }
   }>
 }

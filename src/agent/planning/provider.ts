@@ -22,8 +22,8 @@ export const planningOutputSchema = z.toJSONSchema(planningProposalSchema)
 export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 }: {
   client: PlanningClient; agentId: string; budgetMicroUsd?: number
 }): PlanningAgent {
-  async function family(parent: Snapshot): Promise<ApprovalSnapshot[]> {
-    if (parent.stop_reason !== 'awaiting_delegation') return [parent]
+  async function family(parent: Snapshot, inspectChildren = false): Promise<ApprovalSnapshot[]> {
+    if (parent.stop_reason !== 'awaiting_delegation' && !inspectChildren) return [parent]
     if (!client.sessions.threads) throw new Error('Team status lookup is unavailable.')
     const members: ApprovalSnapshot[] = [parent]
     let after: string | undefined
@@ -68,17 +68,21 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
       if (['failed', 'cancelled'].includes(session.status) || ['error', 'budget_paused', 'max_iterations', 'context_exhausted'].includes(session.stop_reason ?? '')) {
         return { ...result, status: 'failed', progress: null, error: 'Research stopped before the next proposal was ready. Your saved options are still available.' }
       }
-      const sessions = await family(session)
+      const sessions = await family(session, !!input.approvalId)
+      const approvals = pendingResearch(sessions).map(action => action.view)
+      const confirmation = input.approvalId ? { id: input.approvalId,
+        state: approvals.some(action => action.id === input.approvalId) ? 'pending' as const : 'closed' as const } : undefined
+      const state = { ...result, ...(confirmation ? { confirmation } : {}) }
       if (sessions.some(isBlocked)) {
-        return { ...result, status: 'blocked', progress: null,
-          error: 'Research is paused for a decision.', approvals: pendingResearch(sessions).map(action => action.view) }
+        return { ...state, status: 'blocked', progress: null,
+          error: 'Research is paused for a decision.', approvals }
       }
-      if (session.stop_reason === 'awaiting_delegation') return { ...result, progress: 'Your research team is checking options.' }
+      if (session.stop_reason === 'awaiting_delegation') return { ...state, progress: 'Your research team is checking options.' }
       // An accepted follow-up can briefly read the previous turn's idle snapshot.
-      if (session.last_seq <= input.afterSequence || !['idle', 'completed'].includes(session.status)) return result
+      if (session.last_seq <= input.afterSequence || !['idle', 'completed'].includes(session.status)) return state
       const proposal = planningProposalSchema.safeParse(session.structured_output)
-      if (!proposal.success) return { ...result, status: 'failed', progress: null, error: 'Research finished without a usable proposal. Your saved options are still available.' }
-      return { ...result, status: 'ready', proposal: proposal.data, progress: null }
+      if (!proposal.success) return { ...state, status: 'failed', progress: null, error: 'Research finished without a usable proposal. Your saved options are still available.' }
+      return { ...state, status: 'ready', proposal: proposal.data, progress: null }
     },
   }
 }

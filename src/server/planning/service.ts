@@ -176,14 +176,20 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
   if (!record.sessionId) return record.view
   let result: Awaited<ReturnType<PlanningAgent['read']>>
   try {
-    result = await bounded(() => deps.agent().read({ sessionId: record.sessionId!, afterSequence: record.sequence }), timeout(deps))
+    result = await bounded(() => deps.agent().read({ sessionId: record.sessionId!, afterSequence: record.sequence,
+      ...(record.pending?.kind === 'confirm' && record.pending.approval ? { approvalId: record.pending.approval.id } : {}),
+    }), timeout(deps))
     if (!Number.isSafeInteger(result.sequence) || result.sequence < 0) throw new Error('Invalid sequence.')
     if (result.approvals) result.approvals = result.approvals.map(approval => planningApprovalSchema.parse(approval))
     if (result.proposal) result.proposal = planningProposalSchema.parse(result.proposal)
   } catch {
     throw new ApiError(503, 'provider_unavailable', 'Could not refresh this conversation. Your saved work is unchanged.')
   }
-  if (result.sequence < record.sequence || (result.sequence === record.sequence && !['failed', 'blocked'].includes(result.status))) return record.view
+  // Closing a specific approval is observable without claiming that a message or purchase succeeded.
+  const confirmationClosed = record.pending?.kind === 'confirm' && !!record.pending.approval
+    && result.confirmation?.id === record.pending.approval.id && result.confirmation.state === 'closed'
+  const pending = confirmationClosed ? null : record.pending
+  if (result.sequence < record.sequence || (result.sequence === record.sequence && !confirmationClosed && !['failed', 'blocked'].includes(result.status))) return record.view
   const proposal = result.proposal ?? record.view.proposal
   const messages = [...record.view.messages]
   const answersNewTurn = result.status === 'ready' && messages.at(-1)?.role === 'user'
@@ -198,14 +204,14 @@ export async function getPlanning(deps: PlanningDeps, id: string): Promise<Plann
     }
   }
   const after: PlanningRecord = {
-    ...record,
+    ...record, pending,
     // The provider can report the final sequence before it reports completion.
     sequence: ['working', 'blocked'].includes(result.status) ? record.sequence : result.sequence,
     view: changed(record, {
-      proposal, messages, progress: result.progress, approvals: result.approvals ?? [],
+      proposal, messages, progress: result.progress, activity: result.activity ?? [], approvals: result.approvals ?? [],
       // A read cannot prove whether an unacknowledged write was accepted.
-      status: record.pending ? 'uncertain' : result.status,
-      error: record.pending ? uncertainError : result.error,
+      status: pending ? 'uncertain' : result.status,
+      error: pending ? uncertainError : result.error,
     }),
   }
   if (after.sequence === record.sequence && isDeepStrictEqual({ ...after.view, version: record.view.version }, record.view)) return record.view
