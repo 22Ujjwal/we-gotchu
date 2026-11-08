@@ -111,8 +111,8 @@ test('the real connected screen restores the persisted brief after a reload', as
 })
 
 for (const [scenario, evidence] of [
-  ['partial', 'Research: partial. Budget fit: unknown.'],
-  ['failed', 'Research: failed. Budget fit: unknown.'],
+  ['partial', 'We found options, but could not finish checking them.'],
+  ['failed', 'We could not complete this search.'],
   ['missingInput', 'Missing information: location'],
 ] as const) {
   test(`${scenario} research renders evidence without offering an absent plan for approval`, async () => {
@@ -291,7 +291,7 @@ test('a revised brief wins over an older in-flight research response', async () 
   await act(async () => { late.resolve(Response.json(old)) })
   expect(screen.getByText('New location')).toBeVisible()
   expect(screen.queryByText('San Francisco, CA')).not.toBeInTheDocument()
-  expect(screen.getByText('Research: partial. Budget fit: unknown.')).toBeVisible()
+  expect(screen.getByText('We found options, but could not finish checking them.')).toBeVisible()
 })
 
 test('conflicting edits keep the typed answers while current server state is restored', async () => {
@@ -421,7 +421,7 @@ test('temporary read failure retains saved evidence and reconnects without anoth
   expect(screen.getByText('San Francisco, CA')).toBeVisible()
   await advance()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-  expect(screen.getByText('Research: partial. Budget fit: unknown.')).toBeVisible()
+  expect(screen.getByText('We found options, but could not finish checking them.')).toBeVisible()
   expect(count).toBe(3)
 })
 
@@ -495,7 +495,8 @@ test('returning after the research deadline shows the server failure without res
   returned = true
   render(<EventPage eventId="evt_ui_1" identity="customer_ui_1" />)
   await flush()
-  expect(screen.getByText('Research reached its time limit; retry with a revised brief.')).toBeVisible()
+  expect(screen.getByText('We could not complete this search.')).toBeVisible()
+  expect(screen.getByText('Research reached its time limit; retry with a revised brief.').closest('details')).not.toHaveAttribute('open')
   expect(screen.getByRole('status')).toHaveTextContent('failed')
   expect(screen.queryByText(/Cancellation requested at/)).not.toBeInTheDocument()
   await advance(5000)

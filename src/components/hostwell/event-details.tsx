@@ -8,22 +8,37 @@ function SourceLink({ url, children }: { url: string; children: React.ReactNode 
   return <a href={url} target="_blank" rel="noopener noreferrer" className="underline">{children}</a>
 }
 
+const fieldLabels: Record<string, string> = {
+  price: 'price', availability: 'availability', capacity: 'guest capacity', cancellation: 'cancellation terms',
+  quantity: 'quantity', delivery: 'delivery', listingPrice: 'listing price', packSize: 'pack size', listingStock: 'stock',
+}
+
 function CandidateEvidence({ candidate, currency }: { candidate: Candidate; currency: string }) {
+  const unchecked = Object.entries(candidate.verification).filter(([, evidence]) => evidence.status !== 'known')
+    .map(([field]) => fieldLabels[field] ?? field)
+  const source = candidate.sources.find(source => source.stage === 'discovery') ?? candidate.sources[0]
   return <>
     <h2 className="font-script text-[30px] leading-[42px]">{candidate.name}</h2>
-    <p>Evidence mode: {candidate.evidenceMode}</p>
-    <p>{candidate.priceEstimate === null ? 'Price unknown' : formatMoney(candidate.priceEstimate, currency)}; price basis: {candidate.priceProvenance}</p>
-    <p>Taxes and delivery: {candidate.taxesAndDelivery}</p>
-    <p>{candidate.whyChosenOrRejected}</p>
-    {candidate.quantityInfo && <p>Quantity: {candidate.quantityInfo.needed} needed; {candidate.quantityInfo.packs} packs of {candidate.quantityInfo.packSize}.</p>}
-    <p>Cancellation: {candidate.cancellationTerms.known ? candidate.cancellationTerms.summary || 'Known terms; review the source.' : 'Unknown'}</p>
-    {candidate.cancellationTerms.sourceUrl && <SourceLink url={candidate.cancellationTerms.sourceUrl}>Cancellation source</SourceLink>}
-    <ul>{Object.entries(candidate.verification).map(([field, evidence]) => <li key={field}>
-      {field}: {evidence.status}{evidence.note ? `. ${evidence.note}` : ''}
-      {evidence.sourceUrl && <> <SourceLink url={evidence.sourceUrl}>Verification source</SourceLink></>}
-    </li>)}</ul>
-    <ul>{candidate.sources.map((source, i) => <li key={i}><SourceLink url={source.url}>{source.tool} - {source.stage}</SourceLink> retrieved {source.retrievedAt}</li>)}</ul>
-    <p>Observed {candidate.observedAt}. Supplier details can change; this is not a booking confirmation.</p>
+    {candidate.evidenceMode === 'simulated' && <p>Simulated option</p>}
+    <p>{candidate.priceEstimate === null ? 'Price unknown' : `${formatMoney(candidate.priceEstimate, currency)} (${candidate.priceProvenance === 'quote' ? 'quoted price' : 'estimate'})`}</p>
+    {candidate.taxesAndDelivery === 'unknown' && <p>Taxes and delivery are not confirmed.</p>}
+    {source && <SourceLink url={source.url}>View source</SourceLink>}
+    {unchecked.length > 0 && <p>Not yet verified: {unchecked.join(', ')}.</p>}
+    {candidate.quantityInfo && <p>{candidate.quantityInfo.packs} packs of {candidate.quantityInfo.packSize} for {candidate.quantityInfo.needed} needed.</p>}
+    <details>
+      <summary className="cursor-pointer underline">Sources and verification</summary>
+      <p>Evidence mode: {candidate.evidenceMode}; price basis: {candidate.priceProvenance}.</p>
+      <p>Taxes and delivery: {candidate.taxesAndDelivery}</p>
+      <p>{candidate.whyChosenOrRejected}</p>
+      <p>Cancellation: {candidate.cancellationTerms.known ? candidate.cancellationTerms.summary || 'Review the source terms.' : 'Unknown'}</p>
+      {candidate.cancellationTerms.sourceUrl && <SourceLink url={candidate.cancellationTerms.sourceUrl}>Cancellation source</SourceLink>}
+      <ul>{Object.entries(candidate.verification).map(([field, evidence]) => <li key={field}>
+        {fieldLabels[field] ?? field}: {evidence.status}{evidence.note ? `. ${evidence.note}` : ''}
+        {evidence.sourceUrl && <> <SourceLink url={evidence.sourceUrl}>Verification source</SourceLink></>}
+      </li>)}</ul>
+      <ul>{candidate.sources.map((source, i) => <li key={i}><SourceLink url={source.url}>{source.tool} - {source.stage}</SourceLink> retrieved {source.retrievedAt}</li>)}</ul>
+      <p>Observed {candidate.observedAt}. This is not a booking confirmation.</p>
+    </details>
     {candidate.affiliateDisclosure && <p>{candidate.affiliateDisclosure}</p>}
   </>
 }
@@ -53,19 +68,28 @@ export function EventDetails({ view, pending, onApprove, onCancel, onEdit }: {
     </div>
     <section aria-label="Research results" className="flex w-full flex-col items-center gap-5 lg:gap-12 lg:pt-2">
       {currentResult && <div className="w-full max-w-[900px] text-[16px] leading-6 text-body">
-        <p>Research: {result.outcome.replaceAll('_', ' ')}. Budget fit: {result.budgetFit}.</p>
-        <p>{result.budgetBasis}</p>
+        <p>{result.outcome === 'partial' ? 'We found options, but could not finish checking them.'
+          : result.outcome === 'failed' ? 'We could not complete this search.'
+          : result.outcome === 'awaiting_input' ? 'We need more information to continue.'
+          : result.outcome === 'canceled' ? 'Research stopped.' : 'Your research results are ready to review.'}</p>
+        <p>{result.budgetFit === 'unknown' ? 'We cannot confirm whether these options fit your budget yet.'
+          : result.budgetFit === 'over' ? 'The selected options exceed your budget.' : 'The selected options fit the reported budget.'}</p>
         {result.missing.length > 0 && <p>Missing information: {result.missing.join(', ')}</p>}
-        {result.warnings.map((warning, i) => <p key={i}>{warning}</p>)}
-        {result.sourceChecks.map((source, i) => <p key={i}><SourceLink url={source.url}>{source.tool}</SourceLink>: {source.outcome}. {source.reason} Missing: {source.missingFields.join(', ') || 'none reported'}.</p>)}
+        {!currentPlan && <p>Prices and availability still need confirmation before booking.</p>}
+        <details>
+          <summary className="cursor-pointer underline">Research details</summary>
+          <p>{result.budgetBasis}</p>
+          {[...new Set(result.warnings)].map(warning => <p key={warning}>{warning}</p>)}
+          {result.sourceChecks.map((source, i) => <p key={i}><SourceLink url={source.url}>{source.tool}</SourceLink>: {source.outcome}. {source.reason} Missing: {source.missingFields.join(', ') || 'none reported'}.</p>)}
+        </details>
       </div>}
       {ordered.map(candidate => {
         const recommendation = result!.recommendations.find(r => r.candidateId === candidate.candidateId)
         return <article key={candidate.candidateId} className="gold-frame rise flex w-full max-w-[468px] shrink-0 p-0.5 shadow-[0_24px_56px_#966E1E2E]">
           <div className="flex w-full flex-col gap-[18px] bg-white p-6 lg:gap-[22px] lg:p-[34px]">
             <CandidateEvidence candidate={candidate} currency={result!.currency} />
-            {recommendation && <><p>Matched: {recommendation.matched.join(', ') || 'none confirmed'}</p>
-              <p>Unmet: {recommendation.unmet.join(', ') || 'none reported'}</p><p>Unchecked: {recommendation.unchecked.join(', ') || 'none reported'}</p></>}
+            {recommendation && <details><summary className="cursor-pointer underline">Why this option</summary><p>Matched: {recommendation.matched.join(', ') || 'none confirmed'}</p>
+              <p>Unmet: {recommendation.unmet.join(', ') || 'none reported'}</p><p>Unchecked: {recommendation.unchecked.join(', ') || 'none reported'}</p></details>}
           </div>
         </article>
       })}
