@@ -117,12 +117,24 @@ function Blank({
   onChange: (v: string) => void
 }) {
   const ref = useRef<HTMLSpanElement>(null)
+  // An invisible text anchor gives the browser a native caret position while
+  // the field is empty. It never becomes part of the brief's value.
+  const emptyAnchor = '\u200b'
+  const focusEmptyField = (field: HTMLSpanElement) => {
+    const range = document.createRange()
+    range.setStart(field.firstChild!, 0)
+    range.collapse(true)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
 
   useEffect(() => {
     const field = ref.current
     if (!field) return
     // Keep React out of the editable DOM so typing never resets the caret.
-    if (field.textContent !== value) field.textContent = value
+    const text = value || emptyAnchor
+    if (field.textContent !== text) field.textContent = text
   }, [value])
 
   useEffect(() => {
@@ -140,11 +152,27 @@ function Blank({
       contentEditable="plaintext-only"
       suppressContentEditableWarning
       data-placeholder={placeholder}
-      onClick={(e) => e.currentTarget.focus()}
+      data-empty={!value}
+      onFocus={(e) => {
+        if (!value) focusEmptyField(e.currentTarget)
+      }}
+      onClick={(e) => {
+        e.currentTarget.focus()
+        if (!value) focusEmptyField(e.currentTarget)
+      }}
       onInput={(e) => {
         const field = e.currentTarget
-        const text = field.textContent ?? ''
-        if (!text) field.replaceChildren()
+        const text = (field.textContent ?? '').replaceAll(emptyAnchor, '')
+        if (text && field.firstChild?.nodeType === Node.TEXT_NODE) {
+          // Remove the anchor in place so the browser preserves the caret.
+          const node = field.firstChild as Text
+          const anchorIndex = node.data.indexOf(emptyAnchor)
+          if (anchorIndex !== -1) node.deleteData(anchorIndex, 1)
+        }
+        if (!text) {
+          field.textContent = emptyAnchor
+          focusEmptyField(field)
+        }
         onChange(text)
       }}
       onKeyDown={(e) => {

@@ -54,12 +54,12 @@ body {
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
-.blank:empty::before {
+.blank[data-empty="true"]::after {
   content: attr(data-placeholder);
   color: var(--color-faint);
   pointer-events: none;
 }
-.blank:empty:not([data-placeholder])::before {
+.blank[data-empty="true"]:not([data-placeholder])::after {
   content: "\00a0\00a0\00a0";
 }
 
