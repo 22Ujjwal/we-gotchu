@@ -2,12 +2,15 @@
 
 ## Review-fix verification
 
-The current tested implementation is `b3113c5d255e0c04633332d3efc2555dc5482cdc`.
+The current tested coordination implementation is `42b8a2590e0b6d04bae6db4503720a22996e7714`.
 It includes the identical shared route repair `60e20a03cc2cb9bf10782ab905e39d23836d2485` from [PR #26](https://github.com/22Ujjwal/we-gotchu/pull/26), merged into this branch without creating another repair patch.
-All 21 coordination tests pass on Node 26.6.0 and Node 22.23.4.
+All 22 coordination tests pass on Node 26.6.0 and Node 22.23.4.
 The CLI regressions run real subprocesses with offline Git and GitHub command fixtures, replace old output, and cover direct invocation, directory symlinks, script symlinks, and the macOS `/tmp` alias.
 The original implementation passed direct invocation but failed all three alias cases with exit zero and no output.
-Application typecheck, all 135 tests across nine files, and the client/server production build pass with Bun 1.4.4.
+Application typecheck, all 135 tests across nine files, and the client/server production build passed with Bun 1.4.4 at integrated implementation `b3113c5`.
+The later inventory fix changes only standalone coordination code and tests.
+A real-Git regression reproduced the subdirectory-relative inventory error, and `--full-tree` fixes it.
+The final live refresh at `42b8a25` completed with eleven handoff documents and 29 review items.
 The build leaves the tracked generated route identical to the shared repair.
 
 ```sh
