@@ -13,3 +13,5 @@ Design: preserve existing colors, typography and venue-card/detail layouts. Make
 Delegation: planning UI agent owns planning-chat, planning-arrangement and settings-view plus planning-chat tests; API agent owns planning HTTP/runtime tests and connected journey tests; visual agent owns ignored screenshot harness/evidence only. Root coordinates integration and final checks.
 
 Screenshot-driven additions: connect the existing per-option images endpoint asynchronously (maximum four, retain attribution, safe missing-image fallback), and disable competing arrangement requests when an inquiry delivery already exists, matching the backend guard. Keep uncertain-send explanation next to recovery controls. These are integration repairs identified from actual desktop/mobile frames, not a visual redesign.
+
+Completion evidence: implementation ee61df1 passes 732 application tests, 31 tooling tests, 5 MCP client tests, typechecks and builds. Independent review found no blockers. Screenshot-driven broken-photo and uncertain-action defects were reproduced, fixed and visually rechecked. See ui-integration-verification.md for exact scope and remaining limits.
