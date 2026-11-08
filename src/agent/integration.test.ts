@@ -276,3 +276,23 @@ test('a stalled discovery request terminates within the configured step bound', 
   expect(discover).toHaveBeenCalledTimes(1)
   expect(session.start).not.toHaveBeenCalled()
 })
+
+test('a brief revision after result publication keeps the newer run researching', async () => {
+  const { deps } = setup()
+  const started = await createEvent(deps, researchBriefFixture)
+  for (let i = 0; i < 6; i++) await getEventView(deps, started.event.eventId)
+  expect((await store.researchCheckpoints!.read(started.run!.runId))!.stage).toBe('done')
+  const original = store.publishResearchResult.bind(store)
+  const spy = vi.spyOn(store, 'publishResearchResult').mockImplementation(async (result, lease) => {
+    const published = await original(result, lease)
+    if (published.ok) await store.updateBrief({ eventId: result.eventId, expectedBriefRevision: 1,
+      brief: { ...researchBriefFixture, location: 'Revised after publication' } })
+    return published
+  })
+  try {
+    const view = await getEventView(deps, started.event.eventId)
+    expect(view.event.briefRevision).toBe(2)
+    expect(view.event.status).toBe('researching')
+    expect(view.researchResult).toBeNull()
+  } finally { spy.mockRestore() }
+})
