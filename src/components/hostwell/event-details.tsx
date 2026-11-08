@@ -78,7 +78,7 @@ export function EventDetails({ view, pending, onApprove, onCancel, onEdit }: {
       <p>Maximum acceptable cancellation loss: {formatMoney(event.brief.maximumCancellationLoss, event.brief.currency)}</p>
       {plan.warnings.map((warning, i) => <p key={i}>{warning}</p>)}
       <ul>{plan.actions.map(action => <li key={action.actionId} className="py-[13px]">
-        <p>{action.description} - {action.quantityOrSchedule}</p><p>Action {action.actionId}; mode: {action.mode}; maximum {formatMoney(action.maximumAmount, action.currency)}.</p>
+        <p>{action.supplierName}: {action.target} - {action.quantityOrSchedule}</p><SourceLink url={action.sourceUrl}>Supplier source</SourceLink><p>Action {action.actionId}; mode: {action.mode}; maximum {formatMoney(action.maximumAmount, plan.currency)}.</p>
         <p>Cancellation: {action.cancellationTerms.known ? action.cancellationTerms.summary || 'Review source terms.' : 'Unknown'}</p>
         {action.cancellationTerms.sourceUrl && <SourceLink url={action.cancellationTerms.sourceUrl}>Action terms</SourceLink>}
       </li>)}</ul>
@@ -93,7 +93,7 @@ export function EventDetails({ view, pending, onApprove, onCancel, onEdit }: {
         <p>{attempt.kind === 'cancel' ? 'Cancellation' : 'Commitment'} {attempt.actionId}: {attempt.state}; mode: {attempt.mode}</p>
         {attempt.evidence ? <p>Supplier evidence: {attempt.evidence.providerReference}. {attempt.evidence.confirmation}</p> : <p>No supplier confirmation evidence recorded.</p>}
         {attempt.actualAmount !== null && <p>Actual amount: {plan?.actions.find(a => a.actionId === attempt.actionId)
-          ? formatMoney(attempt.actualAmount, plan.actions.find(a => a.actionId === attempt.actionId)!.currency) : `${attempt.actualAmount} minor units; currency unavailable`}</p>}
+          ? formatMoney(attempt.actualAmount, plan.currency) : `${attempt.actualAmount} minor units; currency unavailable`}</p>}
         {attempt.errorReason && <p>{attempt.errorReason}</p>}
         {attempt.state === 'unknown' && <p>Outcome unknown. Do not repeat this supplier action; reconciliation is needed.</p>}
       </article>)}

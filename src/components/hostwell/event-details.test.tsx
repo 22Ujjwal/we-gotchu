@@ -25,6 +25,8 @@ test('shows the exact backend plan and keeps payment distinct from booking', () 
   expect(screen.getByText(`Plan ${planReadyEvent.plan!.planId}, revision ${planReadyEvent.plan!.revision}`)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Approve plan and continue to Checkout' })).toBeEnabled()
   expect(screen.getByText(/Payment does not confirm a supplier booking/)).toBeInTheDocument()
+  const action = planReadyEvent.plan!.actions[0]
+  expect(screen.getByText(`${action.supplierName}: ${action.target} - ${action.quantityOrSchedule}`)).toBeInTheDocument()
 })
 
 test('pending refund is not described as completed', () => {
