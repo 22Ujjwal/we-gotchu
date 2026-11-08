@@ -1,4 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "NITRO_PRESET=vercel bun run build"
+  "buildCommand": "NITRO_PRESET=vercel bun run build",
+  "git": {
+    "deploymentEnabled": {
+      "feat/planning-inquiry-drafts": false,
+      "feat/planning-offer-checkout": false,
+      "feat/local-journey-rehearsal": false
+    }
+  }
 }
