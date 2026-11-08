@@ -8,7 +8,7 @@ export function interiorInspiration(venueId: string) {
   return {
     photos: [...photos.slice(offset), ...photos.slice(0, offset)],
     alt: 'Illustrative indoor space',
-    label: 'Illustrative photo',
+    label: 'Reference image',
     href: '/images/interior-inspiration/credits.html',
   }
 }
