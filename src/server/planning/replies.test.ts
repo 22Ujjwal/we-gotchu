@@ -92,3 +92,19 @@ test('a repeated awaited transport callback uses one stored reply and one interp
   expect(interpret).toHaveBeenCalledTimes(1)
   expect((await db.repository.get('customer', 'conversation'))?.view.inquiry?.replies).toHaveLength(1)
 })
+
+test('customer retries interpretation by queueing the saved reply without another email', async () => {
+  const { commandPlanning } = await import('./service')
+  const reply = await acceptIncomingReply(db.repository, target, incoming)
+  await interpretReply(db.repository, target, reply.id, async () => { throw new Error('Offline') })
+  const before = (await db.repository.getById('conversation'))!
+  const mail = { sendInquiry: vi.fn() }
+  const deps = { repository: db.repository, requireCustomerId: async () => 'customer', mail,
+    agent: () => { throw new Error('Research must not be called') } }
+  const command = { kind: 'retry_reply', requestId: 'retry', expectedVersion: before.view.version, inquiryId: 'inquiry', replyId: reply.id }
+  const view = await commandPlanning(deps, 'conversation', command)
+  expect(view.inquiry?.replies?.[0].status).toBe('received')
+  expect((await commandPlanning(deps, 'conversation', command)).version).toBe(view.version)
+  expect(await db.repository.pendingReplyJobs(10, Date.now())).toHaveLength(1)
+  expect(mail.sendInquiry).not.toHaveBeenCalled()
+})
