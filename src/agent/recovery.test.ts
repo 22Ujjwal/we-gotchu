@@ -9,7 +9,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { createStore } from '../server/db/store-impl'
 import { schema } from '../server/db/schema'
 import type { Store } from '../server/store'
-import { createEvent, getEventView } from '../server/events/service'
+import { CONTRACT_VERSION } from '../contracts'
+import { createEvent, getEventView, cancel, updateBrief } from '../server/events/service'
 import { makeDeps } from '../server/events/testFakes'
 import { createResearchIntegration } from './integration'
 import { discoveryFixture, researchBriefFixture } from './integration.test-fixtures'
@@ -196,3 +197,73 @@ test('read failures exhaust the same durable budget across replacements', async 
   expect(session.poll).toHaveBeenCalledTimes(3)
   expect(completed.progress.filter(p => p.message.includes('connection interrupted'))).toHaveLength(1)
 })
+
+for (const action of ['cancel', 'revise'] as const) {
+  test(`${action} remains authoritative after restart and fences a stale worker`, async () => {
+    const { eventId, runId } = await startRanking()
+    const oldEvent = (await store.getEvent(eventId))!
+    const oldRun = (await store.claimRunAdvance(runId, new Date(), 30000))!
+    if (action === 'cancel') await cancel(deps, eventId)
+    else await updateBrief(deps, eventId, 1, { location: 'New location' })
+    await restart()
+    await deps.research.advanceResearch({ event: oldEvent, run: oldRun })
+    expect(session.poll).not.toHaveBeenCalled()
+    expect(await store.getResearchResult(runId)).toBeNull()
+    const view = await getEventView(deps, eventId)
+    if (action === 'cancel') {
+      expect(view.run!.state).toBe('canceled')
+      expect(view.event.status).toBe('canceled')
+      expect(session.start).toHaveBeenCalledTimes(1)
+    } else {
+      expect(view.event.briefRevision).toBe(2)
+      expect(view.researchResult).toBeNull()
+      const completed = await finish(eventId)
+      expect(completed.researchResult!.briefRevision).toBe(2)
+      expect(await store.getResearchResult(runId)).toBeNull()
+    }
+  })
+}
+
+test('delayed initialization cannot revive a superseded run after replacement', async () => {
+  const started = await createEvent(deps, researchBriefFixture)
+  const second = await store.updateBrief({ eventId: started.event.eventId, expectedBriefRevision: 1,
+    brief: { ...researchBriefFixture, location: 'Second location' } })
+  if (!second.ok) throw new Error('Expected revision two')
+  await updateBrief(deps, started.event.eventId, 2, { location: 'Third location' })
+  await restart()
+  await deps.research.startResearch({ contractVersion: CONTRACT_VERSION, eventId: second.event.eventId,
+    runId: second.run.runId, briefRevision: 2, brief: second.event.brief })
+  expect(await store.researchCheckpoints!.read(second.run.runId)).toBeNull()
+  const completed = await finish(started.event.eventId)
+  expect(completed.researchResult!.briefRevision).toBe(3)
+  expect(session.start).toHaveBeenCalledTimes(1)
+})
+
+for (const kind of ['agent', 'session', 'correction'] as const) {
+  test(`interruption after recording ${kind} intent never repeats an uncertain write`, async () => {
+    const started = await createEvent(deps, researchBriefFixture)
+    const { eventId } = started.event
+    await getEventView(deps, eventId)
+    if (kind !== 'agent') await getEventView(deps, eventId)
+    if (kind === 'correction') {
+      await getEventView(deps, eventId)
+      vi.mocked(session.poll).mockResolvedValueOnce({ id: 'session', status: 'idle', stop_reason: 'end_turn',
+        last_seq: 7, structured_output: { candidateIds: ['invented'] } })
+      await getEventView(deps, eventId)
+    }
+    const checkpoints = store.researchCheckpoints!
+    const save = checkpoints.save.bind(checkpoints)
+    vi.spyOn(checkpoints, 'save').mockImplementation(async (run, version, checkpoint, message) => {
+      const saved = await save(run, version, checkpoint, message)
+      if (checkpoint.stage === 'uncertain') throw new Error('process interrupted before dispatch')
+      return saved
+    })
+    await getEventView(deps, eventId)
+    await restart()
+    const completed = await finish(eventId)
+    expect(completed.researchResult!.warnings.join(' ')).toContain('uncertain outcome')
+    expect(session.createAgent).toHaveBeenCalledTimes(kind === 'agent' ? 0 : 1)
+    expect(session.start).toHaveBeenCalledTimes(kind === 'correction' ? 1 : 0)
+    expect(session.correct).not.toHaveBeenCalled()
+  })
+}
