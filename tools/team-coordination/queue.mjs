@@ -6,7 +6,7 @@ export function buildQueue(snapshot) {
     add({ id: `collection:${index}`, kind: 'collection-error', priority: 0, summary: error, evidence: { observedAt: snapshot.generatedAt } });
   }
   if (snapshot.remoteHead && snapshot.remoteHead !== snapshot.baseline) {
-    add({ id: 'baseline', kind: 'baseline-drift', priority: 2, summary: 'Local committed handoffs differ from the current main baseline. Check relevant changes before relying on them.', evidence: { local: snapshot.baseline, remote: snapshot.remoteHead } });
+    add({ id: 'baseline', kind: 'baseline-drift', priority: 2, summary: "Local HEAD differs from current main. This may be this branch's own commits; compare handoff changes before treating it as stale.", evidence: { local: snapshot.baseline, remote: snapshot.remoteHead } });
   }
   for (const pr of snapshot.prs.filter(x => x.state === 'OPEN')) {
     const checks = pr.statusCheckRollup ?? [];
@@ -21,14 +21,14 @@ export function buildQueue(snapshot) {
   for (const document of snapshot.documents) {
     document.text.split(/\r?\n/).forEach((line, index) => {
       const evidence = { path: document.path, line: index + 1, sha256: document.sha256, commit: document.commit, excerpt: line };
-      const addLine = (kind, priority, summary) => add({ id: `${document.path}:${index + 1}:${kind}`, kind, priority, summary, evidence });
+      const addLine = (kind, priority, summary, suffix = '') => add({ id: `${document.path}:${index + 1}:${kind}${suffix}`, kind, priority, summary, evidence });
       if (/awaiting the owner's first update/i.test(line)) addLine('missing-report', 4, 'Owner report unavailable. Activity elsewhere is unknown.');
       if (/^Blockers?:/i.test(line) && !/^Blockers?:\s*(none\b|no\b)/i.test(line)) addLine('blocker', 1, `Reported blocker, unverified: ${line}`);
       if (/^Needs? from\b|^Decision(?: needed)?:/i.test(line)) addLine('decision', 2, `Reported request, unverified: ${line}`);
       const numbers = [...line.matchAll(/(?:PR\s*#|\/pull\/)(\d+)/g)].map(x => Number(x[1]));
       for (const number of new Set(numbers)) {
         const pr = snapshot.prs.find(x => x.number === number);
-        if (pr && pr.state !== 'OPEN') addLine('reconcile', 2, `Source references PR #${number}, now ${pr.state.toLowerCase()}. Check whether the handoff needs an owner update.`);
+        if (pr && pr.state !== 'OPEN') addLine('reconcile', 2, `Source references PR #${number}, now ${pr.state.toLowerCase()}. Check whether the handoff needs an owner update.`, `:${number}`);
       }
     });
   }
