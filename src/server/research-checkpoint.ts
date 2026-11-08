@@ -1,11 +1,12 @@
 import type { ResearchInput, ResearchResult, Run } from '../contracts'
 
 // Private server state, deliberately excluded from EventView and model prompts.
-export type ResearchCleanup = { agentId: string | null; sessionId: string | null; confirmed: boolean; sessionStopped?: boolean; agentDeleted?: boolean }
+export type ResearchCleanup = { agentId: string | null; sessionId: string | null; confirmed: boolean; sessionStopped?: boolean; agentDeleted?: boolean; unresolvedOperation?: boolean }
 export type ResearchCheckpoint = Pick<Run, 'naiveSessionId' | 'lastSequence' | 'correctionsUsed'> & {
   cleanup?: ResearchCleanup | null
   sessionStopped?: boolean
   readFailures?: number
+  pendingOperation?: { kind: 'agent' | 'session' | 'correction'; idempotencyKey: string; startedAt: string } | null
   version: number
   input: ResearchInput
   stage: 'discovery' | 'investigating' | 'agent' | 'session' | 'ranking' | 'correcting' | 'cleanup' | 'delete_agent' | 'done' | 'uncertain'

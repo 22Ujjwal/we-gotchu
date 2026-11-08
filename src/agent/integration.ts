@@ -4,7 +4,7 @@ import type { ResearchPort } from '../server/events/deps'
 import type { Store } from '../server/store'
 import type { ResearchCheckpoint } from '../server/research-checkpoint'
 import { researchEvent, rankingCandidates, type Discovery, type ResearchProviders } from './research'
-import { RESEARCH_BUDGET_MICRO_USD, type ResearchSession } from './session'
+import { RESEARCH_BUDGET_MICRO_USD, researchOperationKey, type ResearchSession } from './session'
 
 export type IntegrationProviders = {
   discover: ResearchProviders['discover']
@@ -87,6 +87,9 @@ export function createResearchIntegration(options: {
         const result = await validate(c!, async () => { throw new Error('No usable ranking') })
         await save({ ...processed, result: { ...result, warnings: [...result.warnings, warning] }, stage: 'cleanup' }, warning)
       }
+      const pendingOperation = (kind: 'agent' | 'session' | 'correction') => ({
+        kind, idempotencyKey: researchOperationKey(run.runId, kind), startedAt: new Date().toISOString(),
+      })
       // Provider calls are awaited, bounded and never detached from the request.
       const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
         signal.throwIfAborted()
@@ -140,16 +143,16 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'agent': {
-            await save({ stage: 'uncertain' })
+            await save({ stage: 'uncertain', pendingOperation: pendingOperation('agent') })
             const agentId = await bounded(() => session.createAgent(c!.input, signal))
-            try { await save({ agentId, stage: 'session' }) }
+            try { await save({ agentId, stage: 'session', pendingOperation: null }) }
             catch (error) { if (error instanceof LostLease) await discard(null, agentId); throw error }
             return running
           }
           case 'session': {
-            await save({ stage: 'uncertain' })
+            await save({ stage: 'uncertain', pendingOperation: pendingOperation('session') })
             const sessionId = await bounded(() => session.start(c!.input, rankingCandidates(c!.evidence!.candidates), c!.agentId!, signal))
-            try { await save({ naiveSessionId: sessionId, stage: 'ranking' }, 'Comparing the retrieved candidates.') }
+            try { await save({ naiveSessionId: sessionId, stage: 'ranking', pendingOperation: null }, 'Comparing the retrieved candidates.') }
             catch (error) { if (error instanceof LostLease) await discard(sessionId, c.agentId); throw error }
             return running
           }
@@ -201,9 +204,10 @@ export function createResearchIntegration(options: {
             return running
           }
           case 'correcting': {
-            await save({ stage: 'uncertain', correctionsUsed: 1 })
+            await save({ stage: 'uncertain', pendingOperation: pendingOperation('correction'), correctionsUsed: 1 })
             const accepted = await bounded(() => session.correct(c!.naiveSessionId!, c!.input.runId, signal))
-            await save({ correctionAfter: Math.max(accepted, c.lastSequence), stage: 'ranking' }, 'Checking the recommendation format once more.')
+            await save({ correctionAfter: Math.max(accepted, c.lastSequence), stage: 'ranking', pendingOperation: null,
+              sessionStopped: false }, 'Checking the recommendation format once more.')
             return running
           }
           case 'uncertain':

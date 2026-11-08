@@ -13,7 +13,12 @@ export async function cleanupResearchResources(options: {
   session: ResearchSession
 }): Promise<ResearchCleanup> {
   const { checkpoints, session, runId, sessionId, agentId } = options
-  const previous = (await checkpoints.read(runId))?.cleanup
+  const checkpoint = await checkpoints.read(runId)
+  const previous = checkpoint?.cleanup
+  // A missing create response can hide a resource that neither known ID identifies.
+  const unresolvedOperation = checkpoint?.pendingOperation?.kind === 'agent' ||
+    checkpoint?.pendingOperation?.kind === 'session' ||
+    (checkpoint?.stage === 'uncertain' && !checkpoint.pendingOperation)
   let sessionStopped = !sessionId || options.sessionStopped === true ||
     (previous?.sessionId === sessionId && (previous.sessionStopped === true || previous.confirmed))
   let agentDeleted = !agentId ||
@@ -28,7 +33,8 @@ export async function cleanupResearchResources(options: {
     try { await session.deleteAgent(agentId!, AbortSignal.timeout(perCallMs)); agentDeleted = true }
     catch { /* A failed deletion must remain retryable without repeating a confirmed stop. */ }
   }
-  const cleanup = { sessionId, agentId, sessionStopped, agentDeleted, confirmed: sessionStopped && agentDeleted }
+  const cleanup = { sessionId, agentId, sessionStopped, agentDeleted, unresolvedOperation,
+    confirmed: sessionStopped && agentDeleted && !unresolvedOperation }
   await checkpoints.recordCleanup(runId, cleanup)
   return cleanup
 }
