@@ -45,9 +45,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Inline brief fields use native inputs for reliable focus and text entry. */
+/* Inline brief fields wrap naturally with the surrounding sentence. */
 .blank {
   caret-color: var(--color-ink);
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.blank[data-empty="true"]::after {
+  content: attr(data-placeholder);
+  color: var(--color-faint);
+  pointer-events: none;
+}
+.blank[data-empty="true"]:not([data-placeholder])::after {
+  content: "\00a0\00a0\00a0";
 }
 
 .gold-frame {

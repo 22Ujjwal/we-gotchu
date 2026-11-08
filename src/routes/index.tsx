@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button, Header } from '#/components/hostwell/ui'
 import type { Brief } from '#/lib/hostwell/fixture'
@@ -116,23 +116,72 @@ function Blank({
   autoFocus?: boolean
   onChange: (v: string) => void
 }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  // A word joiner gives the native caret a text position and prevents a line
+  // break between it and the placeholder. It is never saved in the brief.
+  const emptyAnchor = '\u2060'
+  const focusEmptyField = (field: HTMLSpanElement) => {
+    const range = document.createRange()
+    range.setStart(field.firstChild!, 0)
+    range.collapse(true)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+
+  useEffect(() => {
+    const field = ref.current
+    if (!field) return
+    // Keep React out of the editable DOM so typing never resets the caret.
+    const text = value || emptyAnchor
+    if (field.textContent !== text) field.textContent = text
+  }, [value])
+
+  useEffect(() => {
+    if (autoFocus) ref.current?.focus()
+  }, [autoFocus])
+
   return (
-    <input
-      type="text"
+    <span
+      ref={ref}
+      role="textbox"
       aria-label={label}
-      value={value}
-      placeholder={placeholder}
-      autoFocus={autoFocus}
-      autoComplete="off"
-      onChange={(e) => onChange(e.currentTarget.value)}
+      aria-placeholder={placeholder}
+      aria-multiline={false}
+      tabIndex={0}
+      contentEditable="plaintext-only"
+      suppressContentEditableWarning
+      data-placeholder={placeholder}
+      data-empty={!value}
+      onFocus={(e) => {
+        if (!value) focusEmptyField(e.currentTarget)
+      }}
+      onClick={(e) => {
+        e.currentTarget.focus()
+        if (!value) focusEmptyField(e.currentTarget)
+      }}
+      onInput={(e) => {
+        const field = e.currentTarget
+        const text = (field.textContent ?? '').replaceAll(emptyAnchor, '')
+        if (text && field.firstChild?.nodeType === Node.TEXT_NODE) {
+          // Remove the anchor in place so the browser preserves the caret.
+          const node = field.firstChild as Text
+          const anchorIndex = node.data.indexOf(emptyAnchor)
+          if (anchorIndex !== -1) node.deleteData(anchorIndex, 1)
+        }
+        if (!text) {
+          field.textContent = emptyAnchor
+          focusEmptyField(field)
+        }
+        onChange(text)
+      }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
-          e.currentTarget.form?.requestSubmit()
+          e.currentTarget.closest('form')?.requestSubmit()
         }
       }}
-      style={{ width: `${Math.max((value || placeholder || '').length, 3)}ch` }}
-      className={`blank mx-1 max-w-full min-w-[3ch] border-0 bg-transparent p-0 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none placeholder:text-faint [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
+      className={`blank mx-1 font-script text-[34px] font-normal tracking-[-0.02em] underline decoration-1 underline-offset-[0.12em] outline-none [text-decoration-skip-ink:none] lg:text-[54px] ${value ? 'decoration-sand' : 'decoration-ink'}`}
     />
   )
 }
