@@ -42,7 +42,11 @@ export function usePlanningSession(id?: string) {
       if (!current.active || generation !== current.generation) return
       accept(next)
       current.failures = 0
-      if (!keepError) setError(previous => previous?.uncertain ? previous : null)
+      const confirmationClosed = uncertain && 'kind' in uncertain && uncertain.kind === 'confirm'
+        && next.version > uncertain.expectedVersion && next.status !== 'uncertain' && next.canReviewResearch
+        && next.approvals && !next.approvals.some(approval => approval.id === uncertain.approvalId)
+      if (confirmationClosed) { setUncertain(null); setError(null) }
+      else if (!keepError) setError(previous => previous?.uncertain ? previous : null)
       if (next.status === 'working') schedule(2000)
       else if (next.status === 'blocked') schedule(5000)
     } catch (cause) {
