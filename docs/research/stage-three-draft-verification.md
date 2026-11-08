@@ -48,3 +48,33 @@ The video attachment ends in `4a2d273b-1127-472b-ae32-03af1c49b7e9-mp4.mp4` in t
 The tester stopped the owned Bun 1.4.4 server and preserved sign-in, the result tab, saved records and configuration.
 No code or configuration changed during the browser run.
 The next external verification is the approved controlled-inbox send after the real transport is integrated.
+
+## Controlled reply browser check
+
+The separate browser session passed reply rendering and reload checks at `a249277c599776283ab092137151a74ac4bbd289`.
+The controlled conversation was `planning_replyproof_fdf5ac7c-6686-47c2-a3c9-66571f497105`.
+It showed the USD 200 room quote, the USD 50 deposit included in that price, unknown tax and cleaning charges, pending cancellation terms, and the original supplier text.
+No payment or booking control appeared.
+An actual reload preserved the reply and selection.
+The original picnic conversation remained unchanged at version 14 with an empty-recipient draft.
+
+This was controlled receipt data, not actual email acceptance or delivery.
+The generic acceptance sentence was confusing beside the controlled reply.
+Commit `739da56` separates controlled inquiries and received replies from the real acceptance message.
+That copy correction still needs a browser recheck.
+Bounded network capture could not establish request uniqueness.
+Evidence remains under `.scratch/verification/stage3-replies-a249277/`.
+
+## Local recovery checks
+
+Commit `260c8de` lets the customer retry a failed reply summary using the saved original message.
+The retry queues interpretation without sending mail or calling the research planner.
+The focused reply and chat checks passed 41 tests, and typecheck passed.
+The transport integration check also closes and reopens a temporary file-backed database before processing the reply.
+It verifies durable receipt deduplication, one interpretation, preserved original text and selections, and no additional send.
+That check uses a controlled provider and interpreter, not live services.
+
+The user deferred remaining live checks until tomorrow and selected `arrange@agentmail.to` for a controlled self-send check.
+That address is also the configured sender, so self-send alone will not prove delivery to a separate inbox.
+No deployment is authorized.
+Local implementation continues; the real mail journey and later payment journey remain incomplete.

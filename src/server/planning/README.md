@@ -147,3 +147,8 @@ The UI shows quoted facts and missing information, and never treats this extract
 Check for venue replies reads saved state only.
 The live model check used controlled supplier text and sent no email.
 Recipient delivery, signed hosted receipt, and hosted scheduling remain separate verification gates.
+
+A failed nonempty reply offers Retry reply summary.
+This command records its request ID and changes that saved reply back to pending interpretation.
+The worker processes it on its next invocation.
+Repeating the same command does not enqueue another logical reply or send another inquiry.
