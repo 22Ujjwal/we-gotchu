@@ -1,3 +1,4 @@
+import { planningCopy } from './copy'
 import type { AgentPatch } from '@usenaive-sdk/managed-agents'
 import { planningDefinition } from './definition'
 import { planningOutputSchema } from './provider'
@@ -34,6 +35,7 @@ A useful proposal includes published prices and clear specific unknowns, not rep
 Do not turn reviews into official supplier policies. Do not claim availability or booking from a listing. Do not invent totals or declare the entire event within budget when costs are missing.
 When asked for cheaper supplies while keeping a venue, preserve the venue and delegate only the supplies change unless venue facts need refreshing.
 Use summary for a short conversational answer and nextQuestion for one useful follow-up or null. Do not expose internal tool names, run IDs or diagnostic logs.
+${planningCopy}
 This flow researches and saves choices. Do not contact suppliers, reserve venues, purchase supplies or take payments.`,
     mcp_servers: [], handoffs: 'team',
     multiagent: { type: 'coordinator', agents: members.map(member => ({ type: 'agent', ...member })), board: false },
