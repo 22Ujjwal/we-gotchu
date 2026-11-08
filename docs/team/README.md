@@ -18,7 +18,7 @@ The fourth teammate owns pitch; their name has not been specified.
 
 | Role | Assigned teammate | Start document | Main deliverable |
 | --- | --- | --- | --- |
-| Pitch owner | Unassigned | [Pitch brief](pitch.md) | Customer story, demo script, and evidence-backed presentation. |
+| Pitch owner | Ferdinand | [Pitch brief](pitch.md) | Customer story, demo script, and evidence-backed presentation. |
 | Frontend developer | Leo | [Frontend brief](frontend.md) | Intake through cancellation and refund status. |
 | Agent-workflow developer | Tony | [Agent brief](agent-workflow.md) | Naive runtime, research, and supplier adapters. |
 | Transaction developer | Ujjwal | [Transaction brief](transactions.md) | Shared contracts, state, approvals, payments, and worker execution. |
