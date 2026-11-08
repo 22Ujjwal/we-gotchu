@@ -40,6 +40,7 @@ test('ready proposals keep choices visible without routine status, activity or r
   render(<ConnectedPlanningPage id="plan-a" />)
   expect(await screen.findByRole('button', { name: 'Choose Garden room' })).toBeEnabled()
   expect(screen.queryByText('Your options are ready to explore.')).not.toBeInTheDocument()
+  expect(screen.queryByText('What time should dinner start?')).not.toBeInTheDocument()
   expect(screen.queryByText('Research activity')).not.toBeInTheDocument()
   expect(screen.queryByText(/Selections save your preferences/)).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Plan another event' })).not.toBeInTheDocument()
@@ -72,7 +73,7 @@ test('saved conversation messages stay out of the customer screen while the curr
   expect(screen.queryByText('Conversation history')).not.toBeInTheDocument()
   expect(screen.queryByText('Earlier private research discussion')).not.toBeInTheDocument()
   expect(screen.queryByText('Two options for dinner.')).not.toBeInTheDocument()
-  expect(screen.getByText('What time should dinner start?')).toBeVisible()
+  expect(screen.queryByText('What time should dinner start?')).not.toBeInTheDocument()
   expect(screen.getByRole('figure', { name: 'Event estimate' })).toBeVisible()
 })
 

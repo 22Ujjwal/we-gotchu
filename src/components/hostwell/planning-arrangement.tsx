@@ -41,7 +41,7 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
         {venue.unknowns.map((unknown, index) => <p key={index} className="mt-2">{displayCopy(unknown)}</p>)}
         {venue.facts.map((fact, index) => <p key={index} className="mt-3">{displayFactValue(fact.value)} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">Source</a></p>)}
       </details>
-      <button type="button" className="self-start text-[14px] text-stone underline" aria-label={`Remove ${venueName}`} aria-pressed="true" disabled={disabled || !!view.paymentLink}
+      <button type="button" className="self-start border border-sand px-3 py-1.5 text-[14px] font-medium text-ink hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50" aria-label={`Remove ${venueName}`} aria-pressed="true" disabled={disabled || !!view.paymentLink}
         onClick={() => void submit({ kind: 'select', requestId: crypto.randomUUID(), expectedVersion: view.version, optionId: venue.id })}>Remove venue</button>
     </div>
   const receipt = <PlanningEstimate view={view} />
