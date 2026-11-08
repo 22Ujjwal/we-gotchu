@@ -26,6 +26,7 @@ const client = createClient({ apiKey: process.env.NAIVE_API_KEY, baseUrl: 'https
 try {
   const desired = planningDefinition(process.env.NAIVE_MODEL)
   const current = await client.agents.get(record.agentId)
+  if (current.multiagent) throw new Error('This agent now leads a team. Use team-setup.ts rather than replacing its configuration.')
   const updated = current.system === desired.system && current.tools.configs['monid.monid_run']?.permission === 'allow'
     ? current : await client.agents.update(record.agentId, desired)
   record.planningAgentVersion = updated.current_version

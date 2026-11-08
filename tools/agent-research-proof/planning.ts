@@ -9,11 +9,12 @@ if (process.env.RESEARCH_LIVE_SMOKE !== '1' || !process.env.NAIVE_API_KEY) throw
 const connection = JSON.parse(await readFile(new URL('./output/connection-3f382d84-e7b7-4cab-a2d1-1c49143be8c7/result.json', import.meta.url), 'utf8'))
 if (!connection.planningAgentVersion) throw new Error('Configure the existing agent before testing')
 const client = createClient({ apiKey: process.env.NAIVE_API_KEY, baseUrl: 'https://api.vetta.sh', fetch: createPlanningFetch() })
+const currentAgent = await client.agents.get(connection.agentId)
 const agent = createPlanningAgent({ client, agentId: connection.agentId })
 const id = randomUUID()
 const directory = new URL(`./output/planning-${id}/`, import.meta.url)
 await mkdir(directory, { recursive: true, mode: 0o700 })
-const record: Record<string, unknown> = { id, agentId: connection.agentId, agentVersion: connection.planningAgentVersion, turns: [] }
+const record: Record<string, unknown> = { id, agentId: connection.agentId, agentVersion: currentAgent.current_version, turns: [] }
 const save = () => writeFile(new URL('result.json', directory), JSON.stringify(record, null, 2).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')), { mode: 0o600 })
 let sessionId: string | undefined
 async function wait(baseline: number): Promise<PlanningProposal> {
@@ -63,7 +64,7 @@ try {
   if (sessionId) {
     try {
       const events = await client.sessions.events(sessionId, { after_seq: 0, limit: 1000 })
-      record.toolEvents = events.data.filter(event => /tool|degraded/.test(event.type))
+      record.toolEvents = events.data.filter(event => /tool|degraded|thread/.test(event.type))
     } catch { record.eventsUnavailable = true }
     try { await client.sessions.cancel(sessionId); record.sessionStopped = true } catch { record.sessionStopped = false }
   }
