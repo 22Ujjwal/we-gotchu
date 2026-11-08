@@ -28,3 +28,13 @@ test('a complete brief returns source-backed venue and supply candidates under i
   expect(result.candidates.map(c => c.kind)).toContain('venue')
   expect(result.candidates[0].sources).toEqual(candidates[0].sources)
 })
+
+test('missing essential requirements return focused fields without paid discovery', async () => {
+  const discover = vi.fn()
+  const recommend = vi.fn()
+  const result = await researchEvent({ ...input, brief: { ...input.brief, location: '', startsAt: undefined } }, { discover, recommend })
+  expect(result.outcome).toBe('awaiting_input')
+  expect(result.missing.sort()).toEqual(['location', 'startsAt'])
+  expect(discover).not.toHaveBeenCalled()
+  expect(recommend).not.toHaveBeenCalled()
+})
