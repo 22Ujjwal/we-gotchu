@@ -34,8 +34,8 @@ export function planningDefinition(model: string, research: 'monid' | 'native' =
     budget: { cap_micro_usd: 20_000_000, max_task_micro_usd: 500_000, period: 'month' },
     mcp_servers: research === 'native' ? [] : [{ name: 'monid', url: 'https://mcp.monid.ai/v1' }],
     tools: { default_config: { permission: 'deny' }, configs: research === 'native' ? {
-      web_search: { permission: 'allow' }, web_fetch: { permission: 'allow' },
-      data_search: { permission: 'allow' }, data_describe: { permission: 'allow' }, data_run: { permission: 'allow' },
+      web_search: { enabled: true, permission: 'allow' }, web_fetch: { enabled: true, permission: 'allow' },
+      data_search: { enabled: true, permission: 'allow' }, data_describe: { enabled: true, permission: 'allow' }, data_run: { enabled: true, permission: 'allow' },
     } : {
       'monid.monid_discover': { permission: 'allow' },
       'monid.monid_inspect': { permission: 'allow' },

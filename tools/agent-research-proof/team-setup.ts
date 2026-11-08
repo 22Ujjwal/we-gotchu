@@ -36,6 +36,8 @@ async function mutate<T>(name: string, action: () => Promise<T>, accept: (value:
   }
 }
 try {
+  state.configured = false
+  await save()
   for (const role of ['venue', 'supply'] as const) {
     if (!state.members[role]) {
       const definition = specialistDefinition(role, model)
