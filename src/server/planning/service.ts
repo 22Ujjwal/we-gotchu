@@ -66,6 +66,7 @@ function changed(record: PlanningRecord, update: Partial<PlanningView>): Plannin
 async function deliver(deps: PlanningDeps, record: PlanningRecord, recover = false): Promise<PlanningView> {
   const pending = record.pending!
   let acknowledgement: { sessionId: string; sequence: number } | undefined
+  let conflicted = false
   try {
     const result = await bounded(async () => {
       const agent = deps.agent()
@@ -86,6 +87,7 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord, recover = fal
     acknowledgement = { sessionId, sequence: result.sequence }
   } catch (error) {
     const failure = error as { name?: string; code?: string; status?: number; requestId?: string }
+    conflicted = failure?.status === 409 && failure?.code === 'idempotency_conflict'
     console.error('Planning dispatch could not be confirmed', { kind: pending.kind, recovery: recover,
       name: failure?.name, code: failure?.code, status: failure?.status, requestId: failure?.requestId })
     // An uncertain provider write retains its original request for reconciliation.
@@ -97,7 +99,10 @@ async function deliver(deps: PlanningDeps, record: PlanningRecord, recover = fal
     const after: PlanningRecord = acknowledgement
       ? { ...current, sessionId: acknowledgement.sessionId, sequence: Math.max(current.sequence, acknowledgement.sequence), pending: null,
           view: changed(current, { status: 'working', error: null, approvals: [] }) }
-      : { ...current, view: changed(current, { status: 'uncertain', progress: null, error: uncertainError }) }
+      : conflicted
+        ? { ...current, pending: null, view: changed(current, { status: 'failed', progress: null,
+          error: 'The research request conflicted with an earlier attempt. Automatic retries have stopped. Your brief is saved.' }) }
+        : { ...current, view: changed(current, { status: 'uncertain', progress: null, error: uncertainError }) }
     const saved = await deps.repository.compareAndSet(current, after)
     if (saved) return saved.view
     current = await owned(deps, record.customerId, record.id)
