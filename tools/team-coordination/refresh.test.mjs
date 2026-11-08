@@ -66,3 +66,12 @@ test('collector ignores foreign PR URLs including their Markdown labels', () => 
   assert.deepEqual(calls.filter(([cmd, args]) => cmd === 'gh' && args[1] === 'view').map(([, args]) => args[2]), ['16']);
   assert.deepEqual(result.errors, []);
 });
+
+test('real Git discovers committed reports when commands run inside the tool directory', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const result = collect((cmd, args) => cmd === 'git'
+    ? execFileSync('git', args, { cwd: new URL('.', import.meta.url), encoding: 'utf8' })
+    : args[0] === 'api' ? 'remote' : args[1] === 'list' ? '[]' : JSON.stringify({ number: Number(args[2]), state: 'MERGED' }));
+  assert.ok(result.documents.some(x => x.path === 'docs/team/status/tony.md'));
+  assert.deepEqual(result.errors, []);
+});
