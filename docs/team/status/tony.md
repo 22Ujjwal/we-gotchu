@@ -1,11 +1,10 @@
 # Tony's status
 
 Owner: Tony.
-Updated: 2026-11-08T00:47:54+00:00.
-Baseline: origin/main at `a54e054cc48a15c2b30ae170db662849d1597185`.
-Branch: [research/agent-readiness](https://github.com/22Ujjwal/we-gotchu/tree/research/agent-readiness).
-PR: none, as requested for this research handoff.
-Availability: on branch, research documentation only.
+Updated: 2026-11-07, America/Los_Angeles.
+Planning baseline: main at `49dea780b34c68ed41d54fb84ee22a59df04c425`.
+Branch: docs/research-handoff-tickets.
+Availability: research handoff and approved ticket breakdown prepared for merge; no application implementation.
 Tested report commit: `f756c9bd1cd86b779ebc6fe418da75b914bd9a68`.
 
 ## Current result
@@ -37,6 +36,13 @@ Temporary SDK dependencies were removed, while credential-free snapshots remain 
 The existing .entire metadata was preserved.
 
 ## Contracts and next steps
+
+The [research specification](../../../.scratch/specs/agent-research.md) is approved and merged through PR #11.
+Tony approved six implementation slices covering discovery, supplier details, recommendations, brief changes, progress, and recovery.
+The local implementation tracker publishes those slices separately with explicit dependencies.
+Ujjwal's PR #13 reports that schemas, database, and MCP endpoint implementation have not started.
+His proposed backend changes require review and do not establish a working integration.
+Leo's PR #12 provides an application shell and contract questions, not the research interface.
 
 Tony and Ujjwal should agree the research-result schema and provenance rules before coding against src/contracts.
 Tony can then implement bounded research, quantity normalization, semantic evidence validation, and progress persistence using shared fixtures.
