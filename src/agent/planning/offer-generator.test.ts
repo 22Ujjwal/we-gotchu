@@ -47,3 +47,20 @@ test.each([
     lines: [{ ...extracted.lines[0], ...change }],
   }), 'model')(record)).rejects.toThrow()
 })
+
+test.each([
+  ['Room for 200 guests. Price is USD 250.', 20000, false],
+  ['The room costs USD 200.50.', 20000, false],
+  ['The room costs USD 1,200.', 20000, false],
+  ['The room costs USD 200.', 20000, true],
+  ['The room costs $200.50.', 20050, true],
+  ['The room costs 1,200 USD.', 120000, true],
+])('checks the complete monetary token in %s', async (text, unitAmount, supported) => {
+  const current = structuredClone(record)
+  current.view.inquiry!.replies![0].message.text = text
+  const result = createOfferGenerator(client({ ...extracted, lines: [{ ...extracted.lines[0],
+    unitAmount, deposit: { amount: null, treatment: 'unknown' }, sourceQuotes: [text],
+  }] }), 'model')(current)
+  if (supported) await expect(result).resolves.toMatchObject({ lines: [{ unitAmount }] })
+  else await expect(result).rejects.toThrow('Offer amount is not in the quoted evidence.')
+})

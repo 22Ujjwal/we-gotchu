@@ -9,7 +9,7 @@ import type { PlanningRecord } from '../../server/planning/repository'
 const outputSchema = selectedOfferSchema.omit({ id: true, revision: true, inquiryId: true, replyId: true,
   contextMessageIds: true, mode: true, lines: true }).extend({
   lines: z.array(selectedOfferSchema.shape.lines.element.omit({ option: true, sourceReplyId: true, sourceQuotes: true })
-    .extend({ optionId: z.string().min(1), sourceQuotes: z.array(z.string().min(1)).min(1) })).min(1),
+    .extend({ optionId: z.string().min(1), sourceQuotes: z.array(z.string().min(8)).min(1) })).min(1),
 })
 export type OfferGenerator = (record: PlanningRecord) => Promise<SelectedOffer>
 
@@ -46,12 +46,33 @@ Use a supplier expiry only if stated, otherwise null. maximumCancellationLoss de
       if (!option) throw new Error('Offer extraction invented an option.')
       const evidence = option.kind === 'venue' ? [reply.message.text] : option.facts.map(fact => fact.quote)
       if (line.sourceQuotes.some(quote => !evidence.some(source => source.includes(quote)))) throw new Error('Offer quotation is not in the saved evidence.')
+      const amounts = [line.unitAmount, line.tax, line.delivery, line.fees, line.deposit?.amount]
+      if (amounts.some(amount => amount != null && amount > 0 && !quotesContainAmount(line.sourceQuotes, amount, extracted.currency))) {
+        throw new Error('Offer amount is not in the quoted evidence.')
+      }
       return { ...line, option, sourceReplyId: option.kind === 'venue' ? reply.id : null }
     })
     return selectedOfferSchema.parse({ ...extracted, lines, id: record.view.offer?.id ?? `offer_${randomUUID()}`,
       revision: (record.view.offer?.revision ?? 0) + 1, inquiryId: inquiry.id, replyId: reply.id,
       contextMessageIds: messages.map(message => message.id), mode: reply.message.mode })
   }
+}
+
+function quotesContainAmount(quotes: string[], amount: number, currency: string): boolean {
+  const digits = new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2
+  const code = currency.toUpperCase()
+  const symbol = ({ USD: '\\$', GBP: '\u00a3', EUR: '\u20ac', JPY: '\u00a5' } as Record<string, string>)[code]
+  const prefix = new RegExp(`(?:\\b${code}|${symbol ?? `\\b${code}`})\\s*$`, 'i')
+  const suffix = new RegExp(`^\\s*${code}\\b`, 'i')
+  // Compare decimal digits as integers; floating point rounding must not make a different price match.
+  return quotes.some(quote => [...quote.matchAll(/(?<![\w.,-])(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?![\w,]|\.\d)/g)].some(match => {
+    if (!prefix.test(quote.slice(0, match.index)) && !suffix.test(quote.slice(match.index + match[0].length))) return false
+    const fraction = match[2] ?? ''
+    if (fraction.length > digits && /[1-9]/.test(fraction.slice(digits))) return false
+    const minor = BigInt(match[1].replaceAll(',', '')) * 10n ** BigInt(digits)
+      + BigInt(fraction.slice(0, digits).padEnd(digits, '0') || '0')
+    return minor === BigInt(amount)
+  }))
 }
 
 export function createConfiguredOfferGenerator(env: NodeJS.ProcessEnv = process.env): OfferGenerator {
