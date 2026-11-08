@@ -32,6 +32,14 @@ test('transport receipt atomically queues one reply and does not run interpretat
   const sent = await mail.transport.sendInquiry({ requestId: 'send', conversationId: 'conversation', inquiryId: 'inquiry', draftRevision: 1,
     to: 'venue@example.com', subject: 'Inquiry', text: 'Party' })
   expect(sent).toMatchObject({ status: 'accepted', threadId: 'thread' })
+  const echo = JSON.stringify({ type: 'event', event_id: 'self-send', event_type: 'message.received', message: {
+    inbox_id: 'inbox', message_id: 'sent', thread_id: 'thread', from: 'venue@example.com', to: ['venue@example.com'],
+    subject: 'Inquiry', text: 'Party', timestamp: new Date().toISOString(),
+  } })
+  expect(await mail.receiver.receive(echo)).toBe('processed')
+  expect(await mail.receiver.receive(echo)).toBe('duplicate')
+  expect((await db.repository.getById('conversation'))!.view.inquiry?.replies ?? []).toHaveLength(0)
+  expect(await db.repository.pendingReplyJobs(10, Date.now())).toHaveLength(0)
   const raw = JSON.stringify({ type: 'event', event_id: 'event', event_type: 'message.received', message: { inbox_id: 'inbox', message_id: 'reply',
     thread_id: 'thread', in_reply_to: 'sent', from: 'venue@example.com', to: ['planner@example.com'], subject: 'Re: Inquiry',
     text: 'Which time?', timestamp: new Date().toISOString() } })
