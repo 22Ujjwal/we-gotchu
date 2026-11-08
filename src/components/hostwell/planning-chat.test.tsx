@@ -419,3 +419,29 @@ test('a concurrent inquiry edit retains local text and requires explicit reconci
   expect(message).toHaveValue('Saved by another tab')
   expect(writes).toBe(1)
 })
+
+test('sending requires approval of the saved draft and locks the accepted message', async () => {
+  const user = userEvent.setup()
+  let saved = view({ selections: [venue], canSendInquiry: true, inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+    recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Event inquiry', text: 'Please confirm the price.',
+    contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z' } })
+  const commands: unknown[] = []
+  http(async request => {
+    if (request.method === 'GET') return Response.json(saved)
+    const command = await request.json(); commands.push(command)
+    saved = { ...saved, version: 3, inquiry: { ...saved.inquiry!, delivery: {
+      status: 'accepted', requestId: command.requestId, draftRevision: 1, approvedAt: '2026-11-08T10:00:00Z',
+      expiresAt: 1800000000000, messageId: 'mail-1', threadId: 'thread-1', acceptedAt: '2026-11-08T10:00:01Z',
+    } } }
+    return Response.json(saved)
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  const send = await screen.findByRole('button', { name: 'Approve and send inquiry' })
+  expect(send).toBeDisabled()
+  await user.click(screen.getByRole('checkbox', { name: /I approve sending this saved message/ }))
+  await user.click(send)
+  expect(await screen.findByText(/Email provider accepted your inquiry/)).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Approve and send inquiry' })).not.toBeInTheDocument()
+  expect(screen.getByRole('textbox', { name: 'Inquiry message' })).toHaveAttribute('readonly')
+  expect(commands).toEqual([{ kind: 'send_inquiry', requestId: expect.any(String), expectedVersion: 1, inquiryId: 'inquiry-a', expectedDraftRevision: 1 }])
+})
