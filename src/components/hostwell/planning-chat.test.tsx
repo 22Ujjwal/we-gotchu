@@ -509,3 +509,25 @@ test('a controlled accepted inquiry does not claim that real email was sent', as
   expect(await screen.findByText('Controlled test inquiry. No real email was sent.')).toBeVisible()
   expect(screen.queryByText(/Email provider accepted your inquiry/)).not.toBeInTheDocument()
 })
+
+test('checks uncertain email status using reads without resending the inquiry or refreshing research', async () => {
+  const paths: string[] = []
+  http(request => {
+    expect(request.method).toBe('GET')
+    const query = new URL(request.url).search
+    paths.push(query)
+    return Response.json(view({ inquiry: { id: 'inquiry-a', revision: 1, status: 'draft', venue,
+      recipient: 'venue@example.com', contactSourceUrl: null, subject: 'Inquiry', text: 'Please confirm.',
+      contextMessageIds: ['m1'], updatedAt: '2026-11-08T10:00:00Z', delivery: {
+        status: query === '?mail=1' ? 'accepted' : 'uncertain', requestId: 'send', draftRevision: 1,
+        approvedAt: '2026-11-08T10:00:00Z', expiresAt: 0,
+        ...(query === '?mail=1' ? { messageId: 'mail', acceptedAt: '2026-11-08T10:01:00Z' } : {}),
+      },
+    } }))
+  })
+  render(<ConnectedPlanningPage id="plan-a" />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Check send status' }))
+  expect(await screen.findByText(/Email provider accepted your inquiry/)).toBeVisible()
+  expect(paths).toEqual(['?saved=1', '?mail=1'])
+  expect(screen.queryByRole('button', { name: 'Approve and send inquiry' })).not.toBeInTheDocument()
+})

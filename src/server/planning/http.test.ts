@@ -53,3 +53,9 @@ it('routes saved-state restoration without refreshing the provider', async () =>
   expect(response.status).toBe(200)
   expect(service.getPlanning).toHaveBeenCalledWith(deps, 'plan', { savedOnly: true })
 })
+
+it('routes mail reconciliation separately from research and saved-only reads', async () => {
+  service.getPlanning.mockResolvedValue({ id: 'plan' })
+  expect((await planningGet(deps, 'plan', new Request('http://localhost/api/planning/plan?mail=1'))).status).toBe(200)
+  expect(service.getPlanning).toHaveBeenCalledWith(deps, 'plan', { reconcileMail: true })
+})
