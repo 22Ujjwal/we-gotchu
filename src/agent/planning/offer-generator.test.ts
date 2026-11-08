@@ -33,7 +33,7 @@ test.each([
   const result = () => validateSupplierOffer(current, { ...extracted, lines: [{ ...extracted.lines[0],
     unitAmount, deposit: { amount: null, treatment: 'unknown' }, sourceQuotes: [text],
   }] })
-  if (supported) expect(result()).toMatchObject({ lines: [{ unitAmount }] })
+  if (supported) expect(result()).toMatchObject({ lines: [{ unitAmount, delivery: null }] })
   else expect(result).toThrow('Offer amount is not in the quoted evidence.')
 })
 
