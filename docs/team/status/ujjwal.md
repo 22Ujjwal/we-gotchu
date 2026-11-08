@@ -1,81 +1,57 @@
 # Ujjwal's status
 
 Owner: Ujjwal.
-Updated: 2026-11-07T19:51:35-08:00
-Baseline: main at `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`, including merged #28, #29, and #30.
-Branch and PR: [chore/hosted-mcp-setup](https://github.com/22Ujjwal/we-gotchu/tree/chore/hosted-mcp-setup); hosting handoff [PR #33](https://github.com/22Ujjwal/we-gotchu/pull/33) is open. Transaction fix [#28](https://github.com/22Ujjwal/we-gotchu/pull/28) is merged.
-Availability: backend fixes merged; app and direct MCP ping deployed; shared account, database, and payment setup pending.
-Tested application commit: `a6afd9f7ccf410d613f1a2703b3515e09db9dc46`. Hosting branch changes only build configuration, ignore rules, and status documentation.
+Updated: 2026-11-07T21:12:00-08:00
+Baseline and hosted test commit: `5b180cc8c57c85c876852579cf448f9cbc7c627a`.
+Branch: [docs/neon-setup](https://github.com/22Ujjwal/we-gotchu/tree/docs/neon-setup).
+PR: [#43](https://github.com/22Ujjwal/we-gotchu/pull/43), status documentation only; not merged.
+Availability: backend, DOM harness (#39), and connected journey (#41) merged. Hosted database, sign-in, event persistence, and direct MCP verified. Successful research and Stripe remain pending.
 
-## Current result
+## Current hosted result
 
-Contracts and fixtures (#16), Clerk authentication (#17), standalone research (#18), the fixture-backed frontend (#19), and backend core (#20) are merged.
-The merged baseline remains TanStack Start with Bun; framework-migration PR #6 is closed without merging.
-Backend core includes authoritative storage, customer event APIs, Stripe handling, guarded MCP tools, simulated supplier adapters, and scripted execution hooks.
-
-Merged PR #28 fixes cancellation completing while Stripe creates Checkout: the approval transaction checks cancellation under the event lock, rejects approve with 409, and requests expiry of the unused session without saving approval or payment.
-A brief update after cancellation was requested is also refused with 409, so a canceled event can no longer return to research.
-PR #28 also adds a stronger refund regression: failed request, successful same-key retry, and duplicate delivery without extra refund or supplier work.
-Main contains the broader payment-handoff retry implementation, preserved during the PR #28 integration.
-
-The [transaction spec](../../../.scratch/specs/transactions.md) is published through the local tracker with Owner Ujjwal and Label ready-for-agent.
-It follows to-spec's structure and the existing approved fake-Stripe and service/database testing boundaries.
-The transaction brief and contract prose now match server-derived execution keys, cancellation during Checkout creation, and payment-handoff retry behavior.
+- App: https://we-gotchu.vercel.app
+- MCP: https://we-gotchu.vercel.app/api/mcp
+- Production deployment: `dpl_VBqk4P8Bf7xuYThecVACzXsjN6cQ`, READY, serving the full baseline SHA above (rechecked 2026-11-08T05:01Z).
+- Neon: `we-gotchu-db`, Free (`free_v3`), iad1; production DATABASE_URL configured. Neon Auth disabled because customer authentication uses Clerk.
+- No application code, public contract, or migration is changed by this handoff.
 
 ## Runtime evidence
 
-At the tested commit:
+### Neon and MCP: live-verified
 
-- Typecheck passed.
-- All 213 application tests across 15 files passed with the standard test command run alone.
-- Prior integrated baseline passed all 25 standalone coordination tests; those tools are unchanged in this hosting increment.
-- An earlier concurrent run hit database-initialization hook timeouts in three suites; the standalone rerun passed without changing source, test settings, or timeout limits.
-- Production client/server build passed and left the shared generated route repair unchanged.
-- Historical PR #28 regression evidence: cancellation returned a Checkout URL before the fix; both focused suites passed afterward (41 tests).
-- The refund regression passed against main's existing retry implementation.
+Both migrations, `0000_init` and `0001_research_checkpoint`, are applied. A fresh read-only check matched ledger timestamps and SHA-256 hashes to the committed SQL, found all nine application tables and the `runs.research_checkpoint` JSONB column, and confirmed the execution-key, run-idempotency, Checkout-session, and plan-revision uniqueness constraints. No new migration was needed or executed in this checkpoint.
 
-Neon is implemented but hosted migration/runtime remain unverified here.
-Stripe evidence uses controlled test providers; hosted test Checkout, webhook, and refunds remain unverified.
-Public MCP is live at https://we-gotchu.vercel.app/api/mcp. Direct bearer-authenticated initialize, tools/list, and ping passed on 2026-11-08 (UTC), including after deploying current main. An unauthenticated request returned 401. Naive-session connectivity remains unverified.
-Supplier commits and cancellations use simulated adapters. Scripted execution is a labeled fallback.
-Local Clerk keys are present; the handoff records temporary accountless development keys. A claimed shared Clerk application and its access list remain unconfirmed. Deployed sign-in has not been verified.
-The app is deployed at https://we-gotchu.vercel.app under Vercel project we-gotchu, linked to the repository and account 22ujjwal. Home and /sign-in return HTTP 200; this is page availability, not a completed customer sign-in. The shared Clerk account claim/access list remains pending; the deployment currently uses existing development keys.
-No live supplier transaction, completed customer sign-in, shared Clerk account claim, or hosted database migration is claimed.
+Earlier provisioning verification wrote/read a probe event within a transaction, rolled back, and confirmed its absence. The browser-created research event was subsequently persisted in Neon.
+
+Fresh hosted checks: home/sign-in pages HTTP 200; unauthenticated MCP HTTP 401; bearer-authenticated initialize, tools/list, and ping pass; authenticated get_event for a nonexistent ID returns event_not_found, confirming a hosted database read. Opening MCP with a browser GET is not the authenticated JSON-RPC POST test. Naive-to-MCP session connectivity remains unverified.
+
+### Clerk and research journey: mixed
+
+Actual deployed Google/Clerk sign-in completed and authenticated event creation returned a persisted event URL. Reload restored that same event and its displayed date, timezone, location, guest count, budget, and failed research result. The existing Clerk application was claimed through the official CLI after the account owner completed OAuth consent. It is linked as `we-gotchu`, application `app_3LnoH2aBDyPqxoQM3Fx6a8UaWet`, development instance `ins_3LnoH25CGx4pNuuU52o92MpTOYM`. CLI identity confirms Ujjwal; team membership remains unverified. Local and deployed public frontend domains both remain `enough-airedale-6136.clerk.accounts.dev`. The separately visible `yc-naive-we-gotchu` / `immune-lark-2628` application is a different instance and was not substituted. The claim preserved the existing database and provider configuration. No Clerk production upgrade or key rotation was performed.
+
+The agreed Birthday brief (20 guests, San Francisco, December 12 2026 at 18:00 America/Los_Angeles, USD 500, paper plates, maximum cancellation loss USD 0) was saved. Continuous polling reached terminal **failed**, with no usable candidates and no bookable Plan. This is a failed research run, not an acceptable partial result. No Naive session ID was saved for that run. Tony is handling the research automation fix; this branch does not modify his code.
+
+Editing/revising to 30 guests and Oakland, restoration of every editable answer, and live stale-result isolation are still unverified. Repeat those checks after Tony's correction is deployed. Do not infer successful research from successful persistence or provider authentication.
+
+MONID_API_KEY authenticated successfully against the read-only Monid wallet endpoint (HTTP 200); no balance or key is published. NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL are configured in production. Earlier authenticated catalogue verification confirmed `z-ai/glm-5.3-flash` supports immediate execution. The existing $0.50 session cap remains unchanged. Provider configuration alone does not establish a completed hosted Naive research journey.
+
+### Stripe: test configuration verified; payment flow pending
+
+The saved Stripe test key authenticated against the intended `yc-hack-naive sandbox` account. Test webhook `we_1UZOSrC2U49BZm5fucPTMPSx` is enabled at `https://we-gotchu.vercel.app/api/stripe/webhook` for `checkout.session.completed` and `checkout.session.expired`. STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are saved in ignored local configuration and Vercel production; no secret values are recorded here.
+
+Production was redeployed to activate the configuration. The production alias subsequently reports READY deployment `dpl_G4tjbi12Ex646NpF71mYAJJDnpa5`, full SHA `2e1976edb73875e9d8eb3bd18b5a168becc0be42`; the earlier research evidence above remains tied to its original commit. Hosted webhook checks passed: unsigned request HTTP 400 invalid_signature; correctly signed synthetic setup.verification event HTTP 200 ignored; replay HTTP 200 duplicate. This creates only a probe entry in the webhook deduplication ledger, with no payment or event changes.
+
+These probes validate signing configuration and duplicate handling, not Stripe-origin delivery or a completed payment. Test Checkout, Stripe-delivered payment events, and refunds remain unverified. No plan approval, Checkout creation, purchase, or supplier commitment was performed. Supplier execution/cancellation remain simulated adapters; real Naive execution starters remain unwired.
 
 ## Contracts and dependencies
 
-Contract version: 0.4. This branch changes no public schema and adds no migration.
-Tony and Leo consume the same event/action inputs and existing responses; the merged 409 closes a canceled-event race.
-The exact generated route repair from [#26](https://github.com/22Ujjwal/we-gotchu/pull/26) is now merged on main and integrated here. No independent route repair was generated.
-Deployment configuration [#21](https://github.com/22Ujjwal/we-gotchu/pull/21) is now merged and integrated here.
-Tony's research [#24](https://github.com/22Ujjwal/we-gotchu/pull/24), supplier evidence [#25](https://github.com/22Ujjwal/we-gotchu/pull/25), and coordination tooling #23 are now merged and integrated here. Their hosted application path still requires verification.
-Root CI [#27](https://github.com/22Ujjwal/we-gotchu/pull/27) is merged; its standalone coordination checks are included in local integration verification.
-Leo's merged frontend still needs verification against real event, progress, and Checkout responses.
-No teammate approval is inferred from tests, merges, or this status file.
+Contract 0.4 is unchanged. Transaction fixes (#28), hosting (#33), DOM harness (#39), and frontend integration (#41) are merged. Tony/Leo can use the deployed authenticated event APIs and Neon persistence; no database migration blocks their integration. Controlled API/DOM tests are available in `docs/testing/dom-tests.md`. Historical local test counts belong to their original commits; no new full-suite result is claimed for this documentation checkpoint. The 25 coordination tests and git diff --check passed for this update.
 
 ## Next step and blockers
 
-PR #28 and prerequisite PRs #21 and #23 through #27 are merged. Current main also includes #29 and #30. The current-main app was built and deployed; finish the remaining hosted account and credential setup next.
-Configure DATABASE_URL, a test-mode STRIPE_SECRET_KEY, NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL in the ignored .env.local; all five were missing in the latest check. The MCP bearer and Clerk keys were present. Apply both database migrations before deploying real research.
-After configuring and migrating Neon, configure the Stripe webhook and verify a real Naive ping and the hosted test-payment flow. Direct public MCP authentication and ping are verified already.
-Real execution and cancellation session starters remain unwired: AGENT_MODE=naive selects placeholder hooks. Keep the working scripted fallback explicitly labeled until real starters are implemented and verified.
-The real research integration intentionally returns partial evidence with unknown final costs and no bookable Plan. A payment/booking rehearsal needs verified costs and terms or the explicitly labeled simulated research path. Coordinate frontend API wiring, Checkout return URLs, continuous research polling, and mode labels with Leo.
+1. Tony: supply the corrected research commit and deployment readiness. Reuse the agreed brief, then revise only guest count and city. Verify a terminal evidence-backed result, reload, saved answers, and isolation from earlier research. No additional credentials or brief are needed from Tony.
+2. Ujjwal: confirm team membership for the now-claimed existing Clerk application. Ownership claim and customer sign-in are verified separately; no teammate access is inferred.
+3. Ujjwal: Stripe test configuration and synthetic signature checks now pass. Stripe-origin delivery and an explicitly scoped test-payment rehearsal remain separate from research; do not claim a completed payment from the setup probe.
+4. Continue small, reversible commits; report verified, failed, simulated, and pending outcomes separately. No real bookings or supplier commitments during these tests.
 
-The original local fixes and handoff are preserved in stash `8de106d6fd9a61ca772b059646c753759c0188b3`; no stash was dropped. The original deployment branch remains at its previous commit.
-Hacking ends at 11:00 AM Pacific on November 8, 2026. Prioritize one verified event flow with explicit live, test, and simulated labels.
-
-## Hosted setup handoff
-
-Production app: https://we-gotchu.vercel.app
-MCP endpoint: https://we-gotchu.vercel.app/api/mcp
-Vercel account: 22ujjwal; project scope: ujjwal-guptas-projects-0fa3ab48.
-Production environment contains the existing Clerk development keys, MCP bearer, and APP_URL. Secret values are not recorded here.
-The explicit Vercel build command uses the verified Vite/Nitro build rather than the detected standalone nitro build.
-
-Remaining: complete shared Clerk account signup/claim and confirm members; supply the intended Neon connection and Stripe test key; run database migrations; configure the Stripe webhook; complete deployed sign-in; test a real Naive session separately. Real research additionally needs NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL.
-
-Current production deployment: `dpl_6DF759cX1FR8Hff39C2hhfC7vYDm`, serving Git main `6f2597989a1b738293f18972312d4d7ddd2f5db9` after PR #32. Vercel reports READY; this automatic Git build supersedes the earlier prebuilt deployment. Refreshed app/sign-in page and direct MCP checks pass. The 213-test local verification above applies to `a6afd9f`, not this newer source.
-
-Production environment names were rechecked: APP_URL, VITE_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, and MCP_BEARER_TOKEN only. DATABASE_URL, Stripe credentials/webhook secret, NAIVE_API_KEY, MONID_API_KEY, and NAIVE_MODEL are not configured. Neither database migration has been applied by this session. Shared Clerk claim/membership and completed login remain unverified.
-
-Leo can wire the existing EventView and poll GET /api/events/{id}?afterSequence=N; hosted end-to-end verification awaits auth, database, and provider setup. Polls advance research stages and must continue until a terminal result. Tony should confirm the shared provider workspace/model, provision research credentials securely, and provide one agreed test brief and expected outcome. Real research completion and Naive-to-MCP connectivity remain separately unverified.
+The untracked HANDOFF-CODEX.md and original stash `8de106d6fd9a61ca772b059646c753759c0188b3` are preserved.
