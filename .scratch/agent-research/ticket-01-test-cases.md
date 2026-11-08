@@ -1,10 +1,10 @@
 # Ticket 01 test cases
 
 Status: implementation verification recorded in the research workflow README.
-The controlled suite covers ten workflow cases; supplier-detail and full ranking cases remain later tickets.
+The controlled suite has 15 workflow tests; supplier-detail and full ranking cases remain later tickets.
 Owner: Tony.
 Parent: [Research a complete brief using real sources](issues/01-research-complete-brief.md).
-Use the agreed shared schemas and test runner when the foundation lands rather than defining competing types here.
+Use the merged shared schemas and test runner rather than defining competing types here.
 
 ## Test boundary
 
@@ -55,6 +55,6 @@ The first ticket already rejects unsupported conclusions; later tickets must not
 
 ## Dependencies still open
 
-Ujjwal supplies the reviewed shared schemas, test runner, and integration entry point.
-Resolve the research-result versus bookable-plan distinction and missing-input lifecycle in the proposed contract before encoding those shapes.
-This document does not approve the polling design, change the shared contract, or claim ticket 01 has started implementation.
+Ujjwal's PR #16 merged the shared schemas, fixtures, and test runner, and the workflow uses contract 0.4.
+The database-backed startResearch and advanceResearch entry point remains ticket 05.
+This document does not approve the polling design or change the shared contract.
