@@ -252,5 +252,7 @@ The successful proof used limit 100; it did not retry an uncertain write.
 Older proof scripts requesting 1000 events need pagination before their event capture can be relied on.
 
 The existing named team and paused browser conversation were left unchanged.
-Tony was asked whether the demo should switch to native public research or retain direct Monid pending provider support.
-No switch, new team test, Terra session, push or deployment was performed while that choice remained pending.
+Tony chose to retain direct Monid and wait for Naive support.
+The native-tool proof remains evidence of an alternative, not the accepted product configuration.
+No switch, new team test, Terra session, push or deployment was performed.
+The next live flow test waits for a supported public Monid research configuration from Naive.
