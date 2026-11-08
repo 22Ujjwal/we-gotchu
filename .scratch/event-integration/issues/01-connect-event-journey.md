@@ -5,7 +5,8 @@ Status: ready-for-agent
 Label: ready-for-agent
 Owner: Tony.
 Assignee: unclaimed.
-Blocked by: Leo-provided route/UI-test changes or explicit scoped agreement; Ujjwal-coordinated rendered-UI test dependencies and root configuration.
+Blocked by: Ujjwal-coordinated rendered-UI test dependencies and root configuration.
+Tony explicitly authorizes functional route and API wiring in existing frontend files while preserving Leo's design.
 Live verification additionally requires completed Clerk sign-in/access, database configuration and migrations, research workspace/model credentials, and an agreed test brief.
 Checkout verification also requires Stripe configuration.
 No outstanding research implementation ticket blocks the API wiring itself.

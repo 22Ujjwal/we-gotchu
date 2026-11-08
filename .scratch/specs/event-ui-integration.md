@@ -57,7 +57,7 @@ Do not add a second backend or make browser calls directly to supplier providers
 Keep event identity in a reloadable URL without embedding credentials or sensitive brief data.
 Use /events/$eventId as the canonical event route, matching the backend Checkout return addresses /events/{eventId}?checkout=success and ?checkout=canceled.
 This route does not exist at the baseline.
-Request Leo to add a route adapter reusing the existing event presentation, or explicitly agree to Tony making that scoped route edit, before implementation.
+Tony explicitly authorizes the integration implementer to add this route adapter and wire the existing screens to the API without changing Leo's design.
 Coordinate generated route updates through Ujjwal's existing route-generation tooling.
 No event-list endpoint is assumed.
 - Send partial brief changes to PATCH /api/events/:id/brief with expectedBriefRevision and changes.
@@ -138,10 +138,11 @@ The implementation ticket is [Connect and verify the existing event journey](../
 
 ## Coordination prerequisites
 
-Tony owns this integration task, but that does not reassign Leo's route/component ownership or Ujjwal's root configuration ownership.
-No agreement from either owner is recorded here.
-Before touching those files, obtain a concrete owner-provided commit or explicit scoped agreement through Tony.
-The requested frontend work is the canonical event route and any missing existing-design states, not a redesign.
+Tony owns this integration task and explicitly authorizes functional route and API wiring in the existing frontend files.
+This is a scoped exception to the repository rule requiring owner-provided frontend edits; it does not claim Leo approved the change or transfer frontend design ownership.
+Leo owns design and any new presentation states.
+Send Tony a prompt for Leo if existing screens cannot represent a required state without design work.
+Ujjwal's root configuration coordination remains required.
 The requested root work is the minimal rendered-UI test setup.
 
 Droid's deployment handoff reports production at 6f2597989a1b738293f18972312d4d7ddd2f5db9, reachable app/sign-in pages, and passing bearer-authenticated MCP initialize/list/ping plus unauthenticated rejection.
