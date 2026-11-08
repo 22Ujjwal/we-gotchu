@@ -1,3 +1,4 @@
+import type { ResearchCheckpoint } from '../../agent/checkpoint'
 import { bigint, bigserial, boolean, check, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import type { Attempt, Brief, Plan, ResearchResult } from '../../contracts'
@@ -40,6 +41,7 @@ export const runs = pgTable(
     lastSequence: integer('last_sequence').notNull().default(0),
     state: text('state').notNull(),
     advancingUntil: ts('advancing_until'),
+    researchCheckpoint: jsonb('research_checkpoint').$type<ResearchCheckpoint>(),
     correctionsUsed: integer('corrections_used').notNull().default(0),
     createdAt: ts('created_at').notNull(),
   },

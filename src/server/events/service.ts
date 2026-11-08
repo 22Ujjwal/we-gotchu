@@ -95,7 +95,7 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
     const step = await deps.research.advanceResearch({ event, run: claimed })
     if (step.status !== 'done') return
     lastSequence = step.lastSequence
-    const published = await deps.store.publishResearchResult(step.result)
+    const published = await deps.store.publishResearchResult(step.result, claimed.advancingUntil)
     if (!published.ok) {
       console.warn('[research] result not stored', published.reason)
       return
@@ -129,7 +129,7 @@ async function advanceRun(deps: Deps, event: Event, run: Run): Promise<void> {
   } catch (err) {
     console.error('[research] advance failed', err)
   } finally {
-    await deps.store.releaseRunAdvance(run.runId, lastSequence)
+    await deps.store.releaseRunAdvance(run.runId, lastSequence, claimed.advancingUntil)
   }
 }
 

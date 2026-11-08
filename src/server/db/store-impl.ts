@@ -1,3 +1,4 @@
+import { createResearchCheckpointStore } from './research-checkpoints'
 import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core'
@@ -176,6 +177,7 @@ export function createStore(db: Db): Store {
     (await db.select().from(attempts).where(eq(attempts.eventId, eventId)).orderBy(asc(attempts.seq))).map(toAttempt)
 
   return {
+    researchCheckpoints: createResearchCheckpointStore(db),
     async createEvent({ customerId, brief }) {
       const eventId = newId('evt')
       const now = new Date()
@@ -361,11 +363,11 @@ export function createStore(db: Db): Store {
       return r ? toRun(r) : null
     },
 
-    async releaseRunAdvance(runId, lastSequence) {
+    async releaseRunAdvance(runId, lastSequence, lease) {
       await db
         .update(runs)
         .set({ advancingUntil: null, lastSequence: sql`greatest(${runs.lastSequence}, ${lastSequence})` })
-        .where(eq(runs.id, runId))
+        .where(and(eq(runs.id, runId), lease ? eq(runs.advancingUntil, new Date(lease)) : undefined))
     },
 
     async recordCorrection(runId) {
@@ -387,7 +389,7 @@ export function createStore(db: Db): Store {
       return rows.length > 0
     },
 
-    async publishResearchResult(input) {
+    async publishResearchResult(input, lease) {
       const result = ResearchResult.parse(input)
       const nextStatus = EVENT_STATUS_FOR_OUTCOME[result.outcome]
       type R = 'stale_brief' | 'run_not_active' | 'duplicate' | 'not_found'
@@ -398,7 +400,7 @@ export function createStore(db: Db): Store {
           const [e] = await tx
             .update(events)
             .set({ status: nextStatus ?? sql`${events.status}` })
-            .where(and(eq(events.id, result.eventId), eq(events.briefRevision, result.briefRevision)))
+            .where(and(eq(events.id, result.eventId), eq(events.briefRevision, result.briefRevision), isNull(events.cancelRequestedAt)))
             .returning({ id: events.id })
           if (!e) throw new Abort<R>('stale_brief')
           // 2. The run must be this event's research run, still running, and for
@@ -413,6 +415,8 @@ export function createStore(db: Db): Store {
                 eq(runs.phase, 'research'),
                 eq(runs.state, 'running'),
                 eq(runs.briefRevision, result.briefRevision),
+                lease ? eq(runs.advancingUntil, new Date(lease)) : undefined,
+                lease ? gt(runs.advancingUntil, new Date()) : undefined,
               ),
             )
             .returning({ id: runs.id })
