@@ -176,3 +176,7 @@ Verified: 741 application tests, 31 tooling tests, typecheck, build and independ
 ### Local live verification update
 
 Clerk sign-in, research-only creation, a real partial proposal and browser-reload restoration now verified on `02d4fe5`. El Lopo venue lead and paper plates displayed with explicit unknowns; missing photo did not block the proposal. Live image recovery and changed-brief behavior were not exercised. No provider commitments or payment actions. [Detailed evidence and limits](../../testing/ui-integration-verification.md). Branch remains local; no push or PR.
+
+### UI cleanup and photo-source diagnosis
+
+Local branch only. `12c7e32` removes repeated planning narration and centers content; `f2aaa17` fixes decorated-name image extraction only when the page corroborates business and city. 758 combined tests, typecheck/build passed before the final small copy sweep. Live Pearl rooftop extraction and image bytes verified; final in-page image render and new mobile captures remain unverified. A subsequent planner name-only revision returned uncertain; no blind resend. [Verification details](../../testing/ui-integration-verification.md). No push/deploy.

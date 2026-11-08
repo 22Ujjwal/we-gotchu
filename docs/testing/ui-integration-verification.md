@@ -55,3 +55,15 @@ Conversation: `/planning/planning_6579677d-6e9a-4e21-afc2-e2afbce9cf32`. The rea
 Browser Reload restored the same URL, proposal and supply details. Photo not available remained visible without preventing use of the proposal. No successful live image or transient-error recovery was observed; bounded retry recovery remains supported by controlled regression tests. Browser inspection and screenshot capture intermittently timed out, so exact completion latency and a final proposal screenshot are unavailable. An earlier live saving-screen screenshot and accessibility observations were returned in the session. No network capture was available to establish exact request counts.
 
 No revised brief, supplier contact, approval, Checkout, purchase, payment, hosted migration or deployment was performed in this run. Local app remains running for user inspection. This supersedes the prior sign-in-pending note; structured homepage submission and changed-brief behavior remain outside this run.
+
+## UI copy and image matching cleanup — 2026-11-08
+
+User-directed cleanup removes repeated ready/activity/footer explanations, centers single supply cards with the change form, and presents a short summary/question with complete original wording under Details. Recovery remains visible and centered; empty operator panels are omitted; actual approval controls remain. Conversation history is collapsed below the primary flow. The homepage assistant shortcut is removed; receipt history uses Activity.
+
+Implementation milestones: `12c7e32` (UI) and `f2aaa17` (caption corroboration). Final combined suite before the small homepage/receipt copy sweep: 758 application tests, typecheck and build passed. Focused copy-sweep checks are recorded in the session.
+
+Native Chrome screenshots confirmed centered supply/form alignment and compact summary/recovery. Routine Research activity and footer narration are absent. No new mobile capture was completed. The Pearl comparison completed using the real planner; a subsequent request to simplify its name ended uncertain and was not resent. The earlier saved proposal remains available. This provider outcome is separate from the UI/image fixes.
+
+The exact saved name `The Pearl — San Francisco (budget mismatch on published rates)` failed original matching. The fix requires a page title matching the business plus a caption corroborating business and city, then admits only business-matched room captions. Metadata extraction and URL/DNS/template/logo guards remain unchanged. Root and reviewer each verified one live rooftop image from the official brochure; root downloaded and visually inspected it at `.scratch/verification/ui-integration/pearl-live-rooftop.webp`. Final in-page rendering after the extractor fix was not confirmed because browser interactions were interrupted by tab changes. No claim of four photos: this page yields one.
+
+No supplier outreach, purchase, payment, hosted change or push. Live research-only prompts and public source/image reads occurred.
