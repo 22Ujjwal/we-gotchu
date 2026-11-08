@@ -138,3 +138,68 @@ test.each(['throw', 'identity', 'stall'])('detail %s failure still ranks discove
   expect(result.candidates).toEqual(candidates)
   expect(JSON.stringify(result)).not.toContain('secret provider error')
 })
+
+const detailTime = new Date().toISOString()
+function listing(id = 'plates', minor = 500, currency = 'USD') {
+  const sourceUrl = 'https://api.trychannel3.com/v1/products/plates'
+  return {
+    ...candidates[2], candidateId: id, name: 'Paper plates', evidenceMode: 'live' as const,
+    sources: [{ url: sourceUrl, tool: 'monid:channel3/v1/products/{product_id}', stage: 'detail' as const, retrievedAt: detailTime }],
+    observedAt: detailTime, quantityInfo: undefined,
+    verification: {
+      listingPrice: { status: 'known' as const, sourceUrl, note: `Retailer example.com lists ${minor / 100} ${currency} for one offered product, ${minor} minor units. Not a delivered total or quote.` },
+      packSize: { status: 'known' as const, sourceUrl, note: 'Product key_features: Includes 8 plates. Listing evidence only; required packs are not calculated.' },
+    },
+  }
+}
+const runListings = (items = [listing()], budget = 50000) => researchEvent({ ...input, brief: { ...input.brief, budget } }, {
+  discover: async () => ({ candidates: items, sourceChecks: [] }),
+  recommend: async () => ({ candidateIds: items.map(c => c.candidateId) }),
+})
+
+test('workflow rounds packs before estimating a sourced listing subtotal and preserves provenance', async () => {
+  const item = { ...listing(), affiliateDisclosure: 'Retailer affiliate link.' }
+  const result = await runListings([item])
+  expect(result.candidates[0].quantityInfo).toEqual({ needed: 20, packSize: 8, packs: 3 })
+  expect(result.candidates[0].priceEstimate).toBe(1500)
+  expect(result.candidates[0].priceProvenance).toBe('supplier_listing')
+  expect(result.candidates[0].sources).toEqual(item.sources)
+  expect(result.candidates[0].verification).toEqual(item.verification)
+  expect(result.candidates[0].affiliateDisclosure).toBe(item.affiliateDisclosure)
+  expect(result.budgetFit).toBe('unknown')
+  expect(result.budgetBasis).toContain('1500')
+  expect(result.recommendations[0].unchecked.join(' ')).toContain('one per guest')
+})
+
+test('compatible selected subtotal proves over even with missing venue, tax and delivery costs', async () => {
+  const result = await runListings([listing()], 1000)
+  expect(result.budgetFit).toBe('over')
+  expect(result.budgetBasis).toContain('1500')
+})
+
+test.each(['EUR', 'XXX'])('incompatible or unsupported %s listing cannot support a budget claim', async currency => {
+  const result = await runListings([listing('plates', 500, currency)], 100)
+  expect(result.budgetFit).toBe('unknown')
+  expect(result.candidates[0].priceEstimate).toBeNull()
+})
+
+test('fresh unrelated source does not revive stale listing evidence', async () => {
+  const item = listing()
+  item.sources[0].retrievedAt = '2020-01-01T00:00:00.000Z'
+  const result = await runListings([item], 100)
+  expect(result.candidates[0].priceEstimate).toBeNull()
+  expect(result.budgetFit).toBe('unknown')
+  expect(result.recommendations[0].unchecked.join(' ')).toContain('stale')
+})
+
+test('ranking preserves model choices while comparing alternatives without summing them', async () => {
+  const items = [listing('expensive', 1000), listing('cheap', 100)]
+  const result = await researchEvent(input, {
+    discover: async () => ({ candidates: items, sourceChecks: [] }),
+    recommend: async () => ({ candidateIds: ['cheap', 'expensive'] }),
+  })
+  expect(result.recommendations.map(r => r.candidateId)).toEqual(['cheap', 'expensive'])
+  expect(result.budgetBasis).toContain('300')
+  expect(result.budgetBasis).not.toContain('3300')
+  expect(result.recommendations[1].unmet.join(' ')).toContain('2700')
+})
