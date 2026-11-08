@@ -25,3 +25,13 @@ test('signed out event screen hides event data and returns to the canonical even
   expect(screen.getByRole('link', { name: 'Sign in to view your event' })).toHaveAttribute('href', '/sign-in?redirect_url=%2Fevents%2Fevent-private')
   expect(fetch).not.toHaveBeenCalled()
 })
+
+test('unsupported saved timezone reports an edit error without losing the event view', async () => {
+  const view = structuredClone(planReadyEvent)
+  view.event.brief.timezone = 'Unsupported/Timezone'
+  vi.mocked(fetch).mockResolvedValue(Response.json(view))
+  render(<EventPage eventId={view.event.eventId} identity="alice" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit brief' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('timezone')
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(view.event.brief.eventType)
+})
