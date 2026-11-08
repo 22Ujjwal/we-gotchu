@@ -162,7 +162,7 @@ ${receiptRow(esc(totalLabel.toUpperCase()), esc(total), { strong: true })}
   return { subject, text, html }
 }
 
-export function buildQuoteReadyEmail(input: QuoteReady, appUrl: string): QuoteReadyEmail {
+export function buildQuoteReadyEmail(input: EmailInput, appUrl: string): QuoteReadyEmail {
   const count = input.plan.actions.length
   return render(input, appUrl, {
     subject: `We're done: your ${count} ${count === 1 ? 'quote is' : 'quotes are'} in`,

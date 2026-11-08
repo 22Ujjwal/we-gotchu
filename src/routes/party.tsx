@@ -38,7 +38,7 @@ function PreviewPartyPage() {
   const venue = bookedVenueId ? findVenue(bookedVenueId) : undefined
   const { arranging } = Route.useSearch()
   const [emailTo, setEmailTo] = useState<string | null>(null)
-  // The "It's happening!" email links back to /party; the page itself stays put.
+  // Arrange sends the "Your quotes are in" email; the page itself stays put.
   useEffect(() => {
     if (!arranging || !venue) return
     const order = buildOrder(venue, addOns, selected)
@@ -54,14 +54,15 @@ function PreviewPartyPage() {
       return
     }
     // One key per booking, so a reload or a double effect never emails twice.
-    const key = sessionStorage.getItem('demo-all-set-key') ?? crypto.randomUUID()
-    sessionStorage.setItem('demo-all-set-key', key)
+    const key = sessionStorage.getItem('demo-quotes-key') ?? crypto.randomUUID()
+    sessionStorage.setItem('demo-quotes-key', key)
     let live = true
-    fetch('/api/demo/all-set', {
+    fetch('/api/demo/quotes-ready', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         key,
+        venueId: venue.id,
         brief: contractBrief,
         items: [
           ...order.lines.map((l) => ({
