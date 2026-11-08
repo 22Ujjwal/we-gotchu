@@ -50,10 +50,10 @@ The first research result can contain one venue rather than three, and source ph
 Email wording is natural; controlled-recipient routing and sandbox execution remain configured internally.
 No real supplier booking or purchase has been verified.
 
-The pre-push full application suite reports 654 passing tests and 17 failures: 15 UI tests and two server tests.
-The UI tests largely reference the previous layout and controls.
-The HTTP contract and background runtime tests also need reconciliation.
-These failures must be resolved before treating this branch as merge-ready.
+The current application suite passes 673 tests.
 Typecheck, the build and all 31 local tooling tests pass.
-The focused planning, reply and mail-storage checks passed before that full run.
+Supplier package terms now support included extras, retaining the supplier reply as evidence.
+Offer preparation resumes from saved interpreted replies after an extraction failure.
+The controlled complete quote produced a USD 300 offer and an accepted customer review email in the local recovery run.
+That run required replaying an incomplete saved incoming receipt, so it does not establish uninterrupted end-to-end behavior.
 Local evidence and credentials are deliberately not included in this handoff.

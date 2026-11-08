@@ -32,8 +32,11 @@ NODE_ENV=development ~/.local/bin/agent-process run --name local-reply-worker --
 ```
 
 The runner calls the existing authenticated local endpoint sequentially, waiting five seconds between responses.
-Each endpoint invocation claims at most one durable reply job and can call the real interpretation model.
-It never sends mail and never opens the database itself.
+Each endpoint invocation resumes a pending arrangement and claims up to five durable reply jobs.
+It can call the real interpretation and offer models.
+The endpoint can also continue authorized supplier coordination and send customer notifications.
+Use it only for the approved arrangement and recipients.
+The runner never opens the database itself.
 The output reports invocation number and claimed job count only.
 A processed count is not proof of successful interpretation; inspect the saved reply status and original evidence afterward.
 A failed or uncertain request stops the runner without retrying it.
