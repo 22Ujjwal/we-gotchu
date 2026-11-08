@@ -131,6 +131,8 @@ describe('payment rules', () => {
     expect(paymentCoversApproval({ ...payment, state: 'pending' }, approval, now)).toMatchObject({ reason: 'unpaid' })
     expect(paymentCoversApproval(payment, { ...approval, revokedAt: '2026-11-08T01:06:00.000Z' }, now)).toMatchObject({ reason: 'revoked' })
     expect(paymentCoversApproval(payment, approval, new Date('2026-11-08T02:00:00.000Z'))).toMatchObject({ reason: 'expired' })
+    expect(paymentCoversApproval({ ...payment, paidAt: now.toISOString() }, approval, new Date('2026-11-08T02:00:00.000Z'))).toEqual({ ok: true })
+    expect(paymentCoversApproval({ ...payment, paidAt: approval.expiresAt }, approval, now)).toMatchObject({ reason: 'expired' })
     expect(paymentCoversApproval({ ...payment, amount: 1 }, approval, now)).toMatchObject({ reason: 'amount_mismatch' })
     expect(paymentCoversApproval({ ...payment, currency: 'eur' }, approval, now)).toMatchObject({ reason: 'amount_mismatch' })
   })
