@@ -49,7 +49,16 @@ export function createNeonPlanningRepository(databaseUrl: string) {
   return createPlanningRepository(neonDb(databaseUrl).db)
 }
 
-export async function createTestPlanningRepository(dataDir?: string) {
+export function createTestPlanningRepository(dataDir?: string) {
+  return openPglitePlanningRepository(dataDir)
+}
+
+// Only the explicit development runtime uses this path; Neon never migrates on startup.
+export function createLocalPlanningRepository(dataDir: string) {
+  return openPglitePlanningRepository(dataDir)
+}
+
+async function openPglitePlanningRepository(dataDir?: string) {
   const [{ PGlite }, { drizzle }, { migrate }] = await Promise.all([
     import('@electric-sql/pglite'), import('drizzle-orm/pglite'), import('drizzle-orm/pglite/migrator'),
   ])

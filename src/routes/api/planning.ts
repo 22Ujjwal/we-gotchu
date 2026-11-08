@@ -6,7 +6,7 @@ import { getPlanningDeps } from '../../server/planning/runtime'
 export const Route = createFileRoute('/api/planning')({
   server: {
     handlers: {
-      POST: ({ request }) => handle(() => planningCollectionPost(getPlanningDeps(), request)),
+      POST: ({ request }) => handle(async () => planningCollectionPost(await getPlanningDeps(), request)),
     },
   },
 })
