@@ -59,10 +59,22 @@ const tools = [
   { name: 'save_venue_inquiry', description: 'Save a concise venue inquiry. For an existing customer-authorized controlled arrangement, the application also sends it to the configured test recipient. This tool cannot create approval or book or pay. Preserve a supplied recipient, or use a published venue email supported by contactSourceUrl and an exact contactQuote; otherwise leave recipient empty.', inputSchema: z.toJSONSchema(saveInput), annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true } },
 ]
 
+function parseToolCall(name: string, raw: unknown) {
+  switch (name) {
+    case 'read_selected_event': return { name, input: readInput.parse(raw) } as const
+    case 'confirm_vendor_booking': return { name, input: readInput.parse(raw) } as const
+    case 'save_venue_inquiry': return { name, input: saveInput.parse(raw) } as const
+    case 'submit_supplier_offer': return { name, input: offerInput.parse(raw) } as const
+    case 'record_supplier_reply': return { name, input: replyInput.parse(raw) } as const
+    case 'send_vendor_message': return { name, input: vendorInput.parse(raw) } as const
+    default: throw new Error('Unknown company tool.')
+  }
+}
+
 export function createCompanyTools(repository: PlanningRepository, secret: string, onPrepared?: (record: PlanningRecord) => Promise<void>, followupMail?: { transport: SupplierMailTransport; recipient: string }, offerActions?: { save: ReturnType<typeof createOfferRepository>['save']; onSaved: (record: PlanningRecord) => Promise<void> }, vendorActions?: { verifyPayment: (record: PlanningRecord) => Promise<boolean>; onConfirmed: (record: PlanningRecord) => Promise<void> }) {
   async function call(name: string, raw: unknown) {
-    const input = ['read_selected_event', 'confirm_vendor_booking'].includes(name) ? readInput.parse(raw) : name === 'save_venue_inquiry' ? saveInput.parse(raw) : name === 'submit_supplier_offer' ? offerInput.parse(raw) : name === 'record_supplier_reply' ? replyInput.parse(raw) : name === 'send_vendor_message' ? vendorInput.parse(raw) : null
-    if (!input) throw new Error('Unknown company tool.')
+    const tool = parseToolCall(name, raw)
+    const input = tool.input
     const scope = readInquiryToolAccess(input.access, secret)
     const record = await repository.getById(scope.conversationId)
     const inquiry = record?.view.inquiry
@@ -72,7 +84,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       || !record.view.selections.some(option => option.kind === 'venue' && option.id === inquiry.venue.id)) {
       throw new Error('The selected event changed. Stop this preparation and keep the saved customer state.')
     }
-    if (name === 'read_selected_event') {
+    if (tool.name === 'read_selected_event') {
       if (inquiry.revision !== scope.revision) throw new Error('The draft has changed. Do not overwrite it.')
       return { brief: record.view.brief, requirements: record.view.messages.filter(message => message.role === 'user').map(message => message.text),
         selections: record.view.selections, inquiry: { recipient: inquiry.recipient, subject: inquiry.subject, text: inquiry.text },
@@ -82,9 +94,9 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
         controlled: !!record.view.arrangement?.controlled,
         instruction: record.view.arrangement?.controlled ? 'The customer requested a controlled arrangement. Preserve the supplied recipient. Write natural supplier correspondence without test labels. The service handles the authorized test email. No real reservation, purchase or payment is authorized.' : 'Prepare an inquiry only. No supplier contact, reservation, purchase or payment is authorized.' }
     }
-    if (name === 'record_supplier_reply') {
+    if (tool.name === 'record_supplier_reply') {
       if (!scope.replyId || inquiry.revision !== scope.revision) throw new Error('The selected reply changed.')
-      const interpretation = replyInput.parse(input).interpretation
+      const interpretation = tool.input.interpretation
       await recordSupplierReply(repository, { customerId: record.customerId, conversationId: record.id, inquiryId: inquiry.id },
         scope.replyId, interpretation)
       const saved = await repository.getById(record.id)
@@ -92,8 +104,8 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       if (reply?.status !== 'ready') throw new Error('The selected reply could not be recorded. Supply exact excerpts from the original message.')
       return { saved: true, interpretation: reply.interpretation }
     }
-    if (name === 'send_vendor_message') {
-      const note = vendorInput.parse(input)
+    if (tool.name === 'send_vendor_message') {
+      const note = tool.input
       if (!followupMail || !record.view.arrangement?.controlled || inquiry.recipient !== followupMail.recipient
         || inquiry.revision !== scope.revision || note.subject.includes(input.access) || note.text.includes(input.access)) throw new Error('The selected vendor message is not authorized.')
       const payment = record.verifiedPayment
@@ -115,7 +127,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       }
       return { sendStatus: result?.status ?? 'uncertain' }
     }
-    if (name === 'confirm_vendor_booking') {
+    if (tool.name === 'confirm_vendor_booking') {
       const reply = inquiry.replies?.at(-1)
       if (!scope.replyId || !vendorActions || !await vendorActions.verifyPayment(record)
         || reply?.interpretation?.kind !== 'confirmation' || !reply.interpretation.facts.length) throw new Error('The selected reply does not establish vendor confirmation.')
@@ -123,10 +135,10 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       const current = await repository.getById(record.id)
       return { confirmed: current?.vendorBooking?.confirmedReplyId === scope.replyId }
     }
-    if (name === 'submit_supplier_offer') {
+    if (tool.name === 'submit_supplier_offer') {
       if (!offerActions || !scope.replyId || inquiry.revision !== scope.revision || record.view.paymentLink
         || !record.view.arrangement?.controlled) throw new Error('The selected event cannot accept an offer.')
-      const { offer: proposed } = offerInput.parse(input)
+      const { offer: proposed } = tool.input
       const request = { id: `company-offer:${scope.replyId}`, fingerprint: JSON.stringify(proposed) }
       if (record.requests[request.id]) {
         if (record.requests[request.id] !== request.fingerprint) throw new Error('The draft has changed. An offer is already saved for this reply.')
@@ -139,7 +151,7 @@ export function createCompanyTools(repository: PlanningRepository, secret: strin
       return { saved: true, offerId: offer.id, revision: offer.revision, missing: offer.missing }
     }
     if (scope.paymentId || !scope.replyId && inquiry.delivery) throw new Error('The selected event cannot save an inquiry with this access.')
-    const draft = saveInput.parse(input)
+    const draft = tool.input
     if ([draft.subject, draft.text, draft.recipient, draft.contactSourceUrl, draft.contactQuote].some(value => value?.includes(input.access))) throw new Error('Invalid draft access in customer content.')
     if (draft.recipient && draft.recipient !== inquiry.recipient && (!draft.contactSourceUrl || !draft.contactQuote?.toLowerCase().includes(draft.recipient.toLowerCase()))) {
       throw new Error('A recipient requires a published contact source and an exact excerpt containing the address. Otherwise leave it empty.')
