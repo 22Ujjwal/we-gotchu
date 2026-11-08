@@ -95,3 +95,17 @@ test('an unconfirmed mail send persists uncertainty and cannot be resent or edit
     inquiryId: draft.id, expectedDraftRevision: draft.revision, recipient: draft.recipient, subject: draft.subject, text: 'Changed' })).rejects.toMatchObject({ status: 409 })
   expect(deps.mail.sendInquiry).toHaveBeenCalledTimes(1)
 })
+
+test('a rejected inquiry can be replaced explicitly while its attempted message is retained', async () => {
+  let view = await selected()
+  view = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'draft', expectedVersion: view.version })
+  deps.mail = { sendInquiry: vi.fn(async () => ({ status: 'failed' as const, code: 'recipient_rejected', reason: 'Recipient rejected' })) }
+  const draft = view.inquiry!
+  view = await commandPlanning(deps, view.id, { kind: 'send_inquiry', requestId: 'rejected-send', expectedVersion: view.version, inquiryId: draft.id, expectedDraftRevision: 1 })
+  expect(view.inquiry?.delivery?.status).toBe('failed')
+  const replacement = await commandPlanning(deps, view.id, { kind: 'prepare_inquiry', requestId: 'replace-rejected', expectedVersion: view.version })
+  expect(replacement.inquiry?.id).not.toBe(draft.id)
+  expect(replacement.inquiry?.delivery).toBeUndefined()
+  expect((await db.repository.get('customer', view.id))?.inquiryHistory?.[0].delivery?.status).toBe('failed')
+  expect(deps.mail.sendInquiry).toHaveBeenCalledTimes(1)
+})
