@@ -5,7 +5,7 @@ Updated: 2026-11-07T19:30:58-08:00
 Baseline: origin/main at `ce2d672408be7defc30fad4d09db47b39ba28054`, integrated by merge commit `1d10df14c3f16ded59f290003985fde325f124d0`.
 Branch and PR: [fix/checkout-cancel-integration](https://github.com/22Ujjwal/we-gotchu/tree/fix/checkout-cancel-integration), [PR #28](https://github.com/22Ujjwal/we-gotchu/pull/28), open against main.
 Availability: backend core merged; this Checkout fix and specification are on branch.
-Tested commit: `1d10df14c3f16ded59f290003985fde325f124d0`, integrating main `ce2d672` and the original fix `cb29c30`. Subsequent changes update documentation and environment comments only.
+Tested commit: `429eb73`, which adds a refusal of brief updates after cancellation (409 `invalid_status`) on top of merge commit `1d10df1` (main `ce2d672` plus the original fix `cb29c30`). Later commits change documentation only.
 
 ## Current result
 
@@ -14,6 +14,7 @@ The merged baseline remains TanStack Start with Bun; framework-migration PR #6 i
 Backend core includes authoritative storage, customer event APIs, Stripe handling, guarded MCP tools, simulated supplier adapters, and scripted execution hooks.
 
 This branch fixes cancellation completing while Stripe creates Checkout: the approval transaction checks cancellation under the event lock, rejects approve with 409, and requests expiry of the unused session without saving approval or payment.
+A brief update after cancellation was requested is also refused with 409, so a canceled event can no longer return to research.
 It also adds a stronger refund regression: failed request, successful same-key retry, and duplicate delivery without extra refund or supplier work.
 Main already contains the broader payment-handoff retry implementation; this branch preserves it rather than replaying the superseded local refund patch.
 
@@ -26,7 +27,7 @@ The transaction brief and contract prose now match server-derived execution keys
 At the tested commit:
 
 - Typecheck passed.
-- All 203 application tests across 14 files passed with the standard test command run alone.
+- All 206 application tests across 14 files passed with the standard test command run alone.
 - All 25 standalone coordination tests passed.
 - An earlier concurrent run hit database-initialization hook timeouts in three suites; the standalone rerun passed without changing source, test settings, or timeout limits.
 - Production client/server build passed and left the shared generated route repair unchanged.
