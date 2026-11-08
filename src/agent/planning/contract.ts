@@ -25,22 +25,26 @@ export const planningCommandSchema = z.discriminatedUnion('kind', [
 ])
 export type PlanningCommand = z.infer<typeof planningCommandSchema>
 export type PlanningMessage = { id: string; role: 'user' | 'assistant'; text: string; createdAt: string }
+export const planningApprovalSchema = z.object({ id: text, tool: text, arguments: z.record(z.string(), z.unknown()) }).strict()
+export type PlanningApproval = z.infer<typeof planningApprovalSchema>
 export type PlanningView = {
   id: string
   version: number
-  status: 'working' | 'ready' | 'failed' | 'uncertain'
+  status: 'working' | 'ready' | 'failed' | 'uncertain' | 'blocked'
   messages: PlanningMessage[]
   proposal: PlanningProposal | null
   selections: PlanningOption[]
   progress: string | null
   error: string | null
+  approvals?: PlanningApproval[]
 }
 
 // Server-only implementations satisfy this interface; the browser only receives PlanningView.
 export interface PlanningAgent {
   start(input: { conversationId: string; requestId: string; message: string }): Promise<{ sessionId: string; sequence: number }>
   send(input: { sessionId: string; requestId: string; message: string; selections: PlanningOption[] }): Promise<{ sequence: number }>
+  confirm?(input: { sessionId: string; approvalId: string; decision: 'allow' | 'deny' }): Promise<void>
   read(input: { sessionId: string; afterSequence: number }): Promise<{
-    status: PlanningView['status']; sequence: number; proposal: PlanningProposal | null; progress: string | null; error: string | null
+    status: PlanningView['status']; sequence: number; proposal: PlanningProposal | null; progress: string | null; error: string | null; approvals?: PlanningApproval[]
   }>
 }

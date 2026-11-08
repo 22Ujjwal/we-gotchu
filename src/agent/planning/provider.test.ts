@@ -8,6 +8,7 @@ function setup() {
     create: vi.fn(async () => ({ id: 'session-1', last_seq: 0 })),
     send: vi.fn(async () => ({ accepted_seq: 30 })),
     get: vi.fn(async () => snapshot),
+    threads: vi.fn(async () => ({ data: [], has_more: false })),
     events: vi.fn(async () => ({ data: [] })),
   } }
   return { client, snapshot, agent: createPlanningAgent({ client, agentId: 'agent-1' }) }
