@@ -111,9 +111,9 @@ export function Receipt({
           {order.total !== null && !researchSources && <Row left="Service fee" right="0.00" />}
         </div>
         <Rule solid />
-        <div className="flex items-baseline justify-between font-bold">
-          <span className="text-[16px]">{`${order.total === null && !researchTotal ? 'TOTAL' : 'ESTIMATED TOTAL'} ${currency.toUpperCase()}`}</span>
-          <span className="text-[20px] leading-6">{researchTotal ?? (order.total === null ? 'Quote needed' : usd(order.total))}</span>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 font-bold">
+          <span className="whitespace-nowrap text-[16px]">{`${order.total === null && !researchTotal ? 'TOTAL' : 'ESTIMATED TOTAL'} ${currency.toUpperCase()}`}</span>
+          <span className="ml-auto text-right text-[20px] leading-6 tabular-nums">{researchTotal ?? (order.total === null ? 'Quote needed' : usd(order.total))}</span>
         </div>
         <Rule solid />
         {venue.freeCancellationUntil && (
