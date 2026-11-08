@@ -53,8 +53,16 @@ export async function handleStripeWebhook(deps: Deps, rawBody: string, signature
     throw new ApiError(400, 'invalid_signature', 'Stripe signature verification failed.')
   }
 
-  if (!(await deps.store.recordStripeEvent(event.id))) return 'duplicate'
+  // Process first and record the event id afterwards, so a crash mid-processing
+  // lets Stripe's retry run again. Every step below is idempotent on its own
+  // (conditional payment update, refund idempotency key), so a duplicate
+  // delivery that races in does no extra work.
+  const outcome = await dispatchStripeEvent(deps, event)
+  const fresh = await deps.store.recordStripeEvent(event.id)
+  return fresh ? outcome : 'duplicate'
+}
 
+async function dispatchStripeEvent(deps: Deps, event: { type: string; created: number; data: { object: unknown } }): Promise<WebhookOutcome> {
   if (event.type === 'checkout.session.completed') {
     return onCheckoutCompleted(deps, event.data.object as CheckoutSessionLike, new Date(event.created * 1000))
   }

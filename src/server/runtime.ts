@@ -3,6 +3,9 @@ import type { SupplierAdapter } from './execution/adapter'
 import type { ExecutionDeps } from './execution/execute'
 import { SimulatedSupplierAdapter, simulatedOptionsFromEnv } from './execution/simulated-adapter'
 import type { Store } from './store'
+import { createNeonStore } from './db/client'
+import { getDeps } from './events/deps'
+import { issueFinalRefund } from './payments/webhook'
 
 // Server runtime wiring. Server-only: never import from UI code.
 
@@ -10,6 +13,7 @@ let store: Store | null = null
 
 /** The configured Store. The integrator wires the Neon store here. */
 export function getStore(): Store {
+  if (!store && process.env.DATABASE_URL) store = createNeonStore(process.env.DATABASE_URL)
   if (!store) {
     throw new Error('No Store is configured. Wire the database store in src/server/runtime.ts (or call setStoreForTests in tests).')
   }
@@ -32,5 +36,12 @@ export function getSupplierAdapter(_action: PlannedAction): SupplierAdapter {
 }
 
 export function getExecutionDeps(): ExecutionDeps {
-  return { store: getStore(), adapterFor: getSupplierAdapter }
+  return {
+    store: getStore(),
+    adapterFor: getSupplierAdapter,
+    // When every commitment is canceled, issue the customer's refund once.
+    onAllCanceled: async (eventId) => {
+      await issueFinalRefund(getDeps(), eventId)
+    },
+  }
 }

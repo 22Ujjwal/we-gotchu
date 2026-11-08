@@ -2,6 +2,8 @@ import type { Event, Mode, ResearchInput, ResearchResult, Run } from '../../cont
 import type { Store } from '../store'
 import { createStripeAdapter, type StripeLike } from '../payments/stripe'
 import { simulatedResearchPort } from './simulatedResearch'
+import { getStore } from '../runtime'
+import { scriptedAgentHooks } from '../execution/scripted-agent'
 
 // Dependency wiring for the customer API and payment flow. Server-only.
 // Handlers take a Deps value so tests can swap in fakes without network calls.
@@ -88,8 +90,7 @@ export function setDepsForTests(deps: Deps | null): void {
 export function getDeps(): Deps {
   if (testDeps) return testDeps
   if (cached) return cached
-  const store = overrides.store
-  if (!store) throw new Error('Store is not configured: call configureDeps({ store }) from the server runtime wiring.')
+  const store = overrides.store ?? getStore()
   const secretKey = process.env.STRIPE_SECRET_KEY
   cached = {
     store,
@@ -99,7 +100,8 @@ export function getDeps(): Deps {
     research: overrides.research ?? simulatedResearchPort,
     requireCustomerId:
       overrides.requireCustomerId ?? (async () => (await import('../auth')).requireCustomerId()),
-    hooks: overrides.hooks ?? defaultHooks,
+    // The scripted agent drives execution and cancellation until Naive sessions are wired.
+    hooks: overrides.hooks ?? (process.env.AGENT_MODE === 'naive' ? defaultHooks : scriptedAgentHooks),
     config: overrides.config ?? {
       appUrl: process.env.APP_URL ?? 'http://localhost:3000',
       stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
