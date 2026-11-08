@@ -118,6 +118,12 @@ async function onCheckoutCompleted(deps: Deps, session: CheckoutSessionLike, pai
   const started = ['executing', 'booked', 'partially_booked', 'failed'].includes(current.status)
   const moved = !late && !current.cancelRequestedAt &&
     (started || await deps.store.setEventStatus(approval.eventId, ['awaiting_payment'], 'executing'))
+  if (!moved && !late && !current.cancelRequestedAt && current.status === 'awaiting_payment') {
+    // Another delivery or cancellation changed the event after our read. A lost
+    // conditional update is not refund authorization. Let Stripe retry against
+    // fresh state; do not acknowledge this delivery or invoke either handoff.
+    throw new Error('Payment event changed during handoff; retry delivery')
+  }
   if (!moved) {
     // An interrupted handoff may have already committed suppliers before cancel.
     const attempts = await deps.store.listAttempts(approval.eventId)

@@ -49,6 +49,37 @@ describe('stripe webhook', () => {
     expect(store.events.get(eventId)?.status).toBe('executing')
   })
 
+  it('retries a concurrent status-transition loser without refunding a valid payment', async () => {
+    const { deps, store, stripe, session, eventId, payment, confirmed } = await awaitingPayment()
+    const { payload, header } = signed('checkout.session.completed', session)
+    const getEvent = store.getEvent.bind(store)
+    let readers = 0
+    let release!: () => void
+    const bothRead = new Promise<void>((resolve) => { release = resolve })
+    vi.spyOn(store, 'getEvent').mockImplementation(async (id) => {
+      const snapshot = await getEvent(id)
+      if (snapshot?.status === 'awaiting_payment' && readers < 2) {
+        readers += 1
+        if (readers === 2) release()
+        await bothRead
+      }
+      return snapshot
+    })
+
+    const outcomes = await Promise.allSettled([
+      handleStripeWebhook(deps, payload, header),
+      handleStripeWebhook(deps, payload, header),
+    ])
+    expect(stripe.refundCalls).toHaveLength(0)
+    expect(confirmed).toHaveLength(1)
+    expect(outcomes.filter((result) => result.status === 'rejected')).toHaveLength(1)
+    expect(store.events.get(eventId)?.status).toBe('executing')
+    expect(store.payments.get(payment.paymentId)?.refundId).toBeNull()
+    expect(await handleStripeWebhook(deps, payload, header)).toBe('duplicate')
+    expect(confirmed).toHaveLength(1)
+    expect(stripe.refundCalls).toHaveLength(0)
+  })
+
   it('does not mark a mismatched amount as paid', async () => {
     const { deps, store, session, payment, confirmed } = await awaitingPayment()
     const { payload, header } = signed('checkout.session.completed', { ...session, amount_total: session.amount_total - 1 })
