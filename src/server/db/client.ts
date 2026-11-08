@@ -1,3 +1,4 @@
+import { createOfferRepository } from '../planning/offer-repository'
 import { createSupplierMailRepositories } from '../planning/mail-repository'
 import { createPlanningRepository } from '../planning/repository'
 import { fileURLToPath } from 'node:url'
@@ -52,7 +53,7 @@ export function createNeonPlanningRepository(databaseUrl: string) {
 
 export function createNeonPlanningStorage(databaseUrl: string) {
   const { db, pool } = neonDb(databaseUrl)
-  return { repository: createPlanningRepository(db), mail: createSupplierMailRepositories(db), close: () => pool.end() }
+  return { repository: createPlanningRepository(db), offers: createOfferRepository(db), store: createStore(db), mail: createSupplierMailRepositories(db), close: () => pool.end() }
 }
 
 export function createTestPlanningRepository(dataDir?: string) {
@@ -72,7 +73,7 @@ async function openPglitePlanningRepository(dataDir?: string) {
   try {
     const db = drizzle({ client, schema })
     await migrate(db, { migrationsFolder })
-    return { repository: createPlanningRepository(db), mail: createSupplierMailRepositories(db), close: () => client.close() }
+    return { repository: createPlanningRepository(db), offers: createOfferRepository(db), store: createStore(db), mail: createSupplierMailRepositories(db), close: () => client.close() }
   } catch (error) {
     await client.close()
     throw error
