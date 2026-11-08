@@ -7,5 +7,11 @@
       "feat/planning-offer-checkout": false,
       "feat/local-journey-rehearsal": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/planning/reply-jobs",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

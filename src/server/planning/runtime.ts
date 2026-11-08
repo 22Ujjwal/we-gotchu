@@ -1,3 +1,5 @@
+import { waitUntil } from '@vercel/functions'
+import { withReplyProcessing } from './reply-dispatch'
 import { createConfiguredPlanningAgent } from '../../agent/planning/provider'
 import { createConfiguredReplyInterpreter } from '../../agent/planning/reply-interpreter'
 import { requireCustomerId } from '../auth'
@@ -33,6 +35,9 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     }
     return mail
   }
+  const processReplies = async () => processReplyJobs(
+    (await getStorage()).repository, createConfiguredReplyInterpreter(env), 5,
+  )
   return {
     async getDeps(): Promise<PlanningDeps> {
       return { repository: (await getStorage()).repository, mail: (await getMail())?.transport, requireCustomerId,
@@ -42,11 +47,9 @@ export function createPlanningRuntime(env: NodeJS.ProcessEnv = process.env) {
     async getWebhook() {
       const configured = await getMail()
       if (!configured) throw new ApiError(503, 'mail_unavailable', 'Supplier mail is not configured.')
-      return configured.webhook
+      return withReplyProcessing(configured.webhook, processReplies, waitUntil)
     },
-    async processReplies() {
-      return processReplyJobs((await getStorage()).repository, createConfiguredReplyInterpreter(env))
-    },
+    processReplies,
     async close(): Promise<void> {
       const opened = await storage?.catch(() => undefined)
       await opened?.close()
