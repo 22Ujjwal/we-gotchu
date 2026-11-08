@@ -4,6 +4,14 @@ This is the implementation and verification handoff for Tony and Ujjwal.
 It supersedes earlier ownership notes that assigned all supplier inquiry work to Tony.
 It is a plan, not a claim that supplier email, offer conversion, or the complete hosted journey already works.
 
+## Current assignment
+
+The [local integration checkpoint](local-integration-checkpoint.md) records the current implementation and evidence.
+Tony now owns the remaining integration after the isolated mail transport handoff.
+The later instruction limits this assignment to local testing and separate stage PRs, with no deployment.
+The original ownership and hosted plan below remain historical planning context.
+The external mail reply test is explicitly deferred until another team-controlled recipient is available.
+
 ## Start here
 
 Ujjwal starts with [mail transport](ujjwal-mail.md) and the [shared interface](interfaces.md).

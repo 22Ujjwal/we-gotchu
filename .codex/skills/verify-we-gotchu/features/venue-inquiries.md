@@ -30,6 +30,10 @@ Record the request ID and provider message/thread references when available.
 Provider acceptance is not recipient delivery.
 Never resend an uncertain operation to obtain a clean result.
 
+For a live external reply, use a different explicitly approved team-controlled recipient.
+A self-send can prove acceptance and inbox receipt, but it cannot prove the independent reply journey.
+An incoming event with the exact outgoing message ID must not create a supplier reply or interpretation job.
+Record message.received separately from message.delivered; a delivery event does not enqueue reply interpretation.
 Deliver a controlled reply through the real signed webhook when the transport is integrated.
 Close the customer tab during reply processing, then reopen and inspect the saved reply and its original message.
 A supplier question needs a useful next action, not an invented quote.
@@ -52,3 +56,12 @@ The existing conversation supplies only the authenticated owner; its records are
 The helper prints the new controlled conversation URL and writes sanitized evidence under .scratch/verification/reply-proof-*.
 Start the browser server after the helper closes its database connection.
 Preserve evidence and controlled records after cleanup.
+
+## Local verification evidence
+
+The self-send at `c18416fd37145864717498b09446d2dc5bf302e7` produced a signed incoming receipt for the original outgoing message.
+The receipt completed as unmatched and created zero replies or jobs, as intended.
+A separate controlled reply produced a delivery event but no observed incoming-message webhook.
+Tony deferred the external reply test until a different team-controlled address is available.
+Do not replace this missing proof with a seeded fixture or another self-send.
+The temporary provider endpoints have been removed, so future verification needs new forwarding and private signing configuration.
