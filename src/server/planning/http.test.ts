@@ -36,3 +36,13 @@ describe('planning HTTP seam', () => {
     expect(service.createPlanning).not.toHaveBeenCalled()
   })
 })
+
+it('keeps technical review requests out of the customer response', async () => {
+  service.getPlanning.mockResolvedValue({ id: 'plan', approvals: [{ id: 'call', tool: 'internal', arguments: {} }], activity: [], status: 'blocked' })
+  const customer = await (await planningGet(deps, 'plan')).json()
+  expect(customer.approvals).toBeUndefined()
+  expect(customer.canReviewResearch).toBe(false)
+  const operator = await (await planningGet({ ...deps, allowResearchReview: true }, 'plan')).json()
+  expect(operator.approvals).toHaveLength(1)
+  expect(operator.canReviewResearch).toBe(true)
+})
