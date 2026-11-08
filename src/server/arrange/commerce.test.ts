@@ -118,3 +118,19 @@ it('replays event creation after a lost response without creating a second event
   expect(again.eventId).toBe(first.eventId)
   await expect(app.createEventForCustomer('same-customer', { ...brief, guests: 30 }, true, 'request-1')).rejects.toMatchObject({ code: 'key_conflict' })
 })
+
+it('never applies one provider payment event to two different customer events', async () => {
+  async function paymentForCurrentEvent() {
+    const proposed = await offer()
+    await app.ledger.approveOffer('maya', eventId, proposed.id, false)
+    const checkout = await app.ledger.authorizeCheckout('maya', eventId, proposed.id)
+    await app.ledger.recordCheckout(eventId, checkout.id, `cs_${eventId}`, 'https://checkout.stripe.com/test', Date.now() + 3600000)
+    return { providerEventId: 'evt_shared', checkoutId: `cs_${eventId}`, operationId: checkout.id, amountMinor: 230000, currency: 'EUR', paymentIntentId: `pi_${eventId}` }
+  }
+  await app.ledger.recordPayment(eventId, await paymentForCurrentEvent())
+  eventId = (await app.createEventForCustomer('maya', brief, true)).eventId
+  contactId = (await app.ledger.readEvent(eventId)).contacts[0].id
+  const secondPayment = await paymentForCurrentEvent()
+  await expect(app.ledger.recordPayment(eventId, secondPayment)).rejects.toMatchObject({ code: 'payment_event_conflict' })
+  expect((await app.ledger.readEvent(eventId)).commerce.payment).toBeUndefined()
+})
