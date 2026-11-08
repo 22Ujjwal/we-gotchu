@@ -104,6 +104,8 @@ export function correlateReply(reply: IncomingReply, candidates: InquiryReferenc
   if (!sender) return null
   const matches = candidates.filter(candidate => {
     if (candidate.inboxId !== reply.inboxId || mailbox(candidate.recipient) !== sender) return false
+    // A self-send can return the original message through the incoming webhook.
+    if (reply.messageId === candidate.messageId) return false
     if (reply.threadId && candidate.threadId && reply.threadId !== candidate.threadId) return false
     if (reply.inReplyTo) return reply.inReplyTo === candidate.messageId
     if (reply.references?.length) return reply.references.includes(candidate.messageId)
