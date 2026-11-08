@@ -103,5 +103,5 @@ it('finds completion across event pages even with more than a page of trailing e
   }))
   vi.mocked(client.sessions.events).mockImplementation(async (_id, query) => ({ data: rows.filter(row => row.seq > query.after_seq).slice(0, 50) }))
   expect(await agent.read({ sessionId: 'session-1', afterSequence: 30 })).toMatchObject({ status: 'ready', sequence: 141, proposal })
-  expect(client.sessions.events).toHaveBeenCalledTimes(6)
+  expect(client.sessions.events).toHaveBeenCalledTimes(5)
 })

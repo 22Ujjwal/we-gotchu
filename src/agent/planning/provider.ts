@@ -75,7 +75,8 @@ export function createPlanningAgent({ client, agentId, budgetMicroUsd = 500_000 
         const observed = page.data.filter(event => event.seq > cursor && event.seq <= session.last_seq)
         events.data.push(...observed)
         const next = Math.max(cursor, ...observed.map(event => event.seq))
-        if (!finished || next >= session.last_seq || page.data.length < 100) break
+        // Filtered events can leave short pages even when later events exist.
+        if (!finished || next >= session.last_seq) break
         if (next === cursor) throw new Error('Planning event pagination did not advance.')
         cursor = next
       }
