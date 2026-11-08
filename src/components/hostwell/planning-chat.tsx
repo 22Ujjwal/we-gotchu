@@ -1,4 +1,4 @@
-import { displayCopy, displayFactLabel } from '../../lib/hostwell/display-copy'
+import { displayCopy, displayFactLabel, displayFactValue } from '../../lib/hostwell/display-copy'
 import { usePlanningImages } from '../../lib/hostwell/planning-images'
 import { ProposalSummary } from './proposal-summary'
 import { PlanningArrangement } from './planning-arrangement'
@@ -74,11 +74,11 @@ function PlanningChat({ id, onCreated }: { id?: string; onCreated?: (id: string)
     photoCredit: <>{(venueImages[option.id] ?? []).map(image => <a key={image.url} href={image.attribution.url} target="_blank" rel="noreferrer" className="text-[13px] underline">Photo source: {displayCopy(image.attribution.text)}</a>)}</>,
     evidence: <details className="text-[15px] leading-6"><summary className="cursor-pointer underline">Budget sources and details</summary>
       <p className="mt-3">{displayCopy(option.why)}</p>
-      {option.facts.map((fact, index) => <p key={index} className="mt-2">{displayFactLabel(fact.label)}: {displayCopy(fact.value)} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></p>)}
+      {option.facts.map((fact, index) => <p key={index} className="mt-2">{displayFactLabel(fact.label)}: {displayFactValue(fact.value)} <a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="underline">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></p>)}
       {option.unknowns.length > 0 && <div className="mt-3"><p className="font-semibold">Still to confirm</p><ul className="list-disc pl-5">{option.unknowns.map((unknown, index) => <li key={index}>{displayCopy(unknown)}</li>)}</ul></div>}
     </details>,
     cardFeatures: option.facts.slice(0, 3).map(fact => ({ icon: (/capacity|seat|guest/i.test(fact.label) ? 'guests'
-      : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: `${displayFactLabel(fact.label)}: ${displayCopy(fact.value)}` })) }))
+      : /cancel|date|time/i.test(fact.label) ? 'calendar' : 'fee') as Feature['icon'], label: `${displayFactLabel(fact.label)}: ${displayFactValue(fact.value)}` })) }))
   const messageForm = <section aria-label={id ? 'Plan changes' : 'Event details'} className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
       {view && view.status !== 'ready' && <div className="mx-auto flex w-full max-w-[760px] flex-col items-center gap-3 text-center">{view.status !== 'uncertain' && <p role="status" aria-live="polite" className="text-stone">{view.status === 'working' ? view.progress || 'Looking into your event.'
         : view.status === 'blocked' ? "Research is paused for our team's review."
@@ -182,7 +182,7 @@ function PlanningOptionCard({ option, selected, disabled, onSelect }: { option: 
     <p className="text-[17px] leading-6">{displayCopy(option.why)}</p>
     <dl className="flex flex-col gap-3">{option.facts.map((fact, index) => <div key={index}>
       <dt className="text-[14px] text-stone">{displayFactLabel(fact.label)}</dt>
-      <dd className="text-[17px]">{displayCopy(fact.value)}</dd>
+      <dd className="text-[17px]">{displayFactValue(fact.value)}</dd>
       <dd><a className="text-[14px] underline" href={fact.sourceUrl} target="_blank" rel="noreferrer">{fact.basis === 'published' ? 'Published source' : 'Estimate source'}</a></dd>
     </div>)}</dl>
     {option.unknowns.length > 0 && <div><p className="text-[14px] font-semibold">Still to confirm</p>
