@@ -104,9 +104,9 @@ export function Receipt({
         ))}
         <Rule />
         <div className="flex flex-col gap-1">
-          <Row left="Subtotal" right={order.subtotal === null ? researchSources ? 'Pending' : 'Quote needed' : usd(order.subtotal)} />
+          <Row left={researchSources ? "Estimated subtotal" : "Subtotal"} right={order.subtotal === null ? researchSources ? 'Pending' : 'Quote needed' : usd(order.subtotal)} />
           {order.vat !== null && <Row left="VAT" right={usd(order.vat)} />}
-          {order.total !== null && <Row left="Service fee" right="0.00" />}
+          {order.total !== null && !researchSources && <Row left="Service fee" right="0.00" />}
         </div>
         <Rule solid />
         <div className="flex items-baseline justify-between font-bold">
