@@ -31,3 +31,12 @@ test('restores saved payment status without treating it as a real reservation', 
   expect(screen.getByText(/Supplier execution is simulated/)).toBeVisible()
   expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument()
 })
+
+test('offers replacement only after cancellation has no unsettled payment', async () => {
+  const canceled = { ...planReadyEvent, event: { ...planReadyEvent.event, status: 'canceled', cancelRequestedAt: '2026-11-08T12:00:00Z' } }
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(canceled))))
+  const release = vi.fn()
+  render(<PlanningPayment link={link} identity="customer" stale onRelease={release} />)
+  await userEvent.setup().click(await screen.findByRole('button', { name: 'Update offer after cancellation' }))
+  expect(release).toHaveBeenCalledTimes(1)
+})
