@@ -1,114 +1,140 @@
 # Bounded application research
 
 Ticket05 connects the application research port to hosted recommendation sessions.
-It does not run the long standalone workflow in the background or keep a request open until the hosted model finishes.
-Each application poll performs one bounded stage and saves private state through the database store.
-The request limit is ten seconds by default and cannot exceed ten seconds through integration options.
+Each application poll advances one bounded stage and saves private state through the database store.
+It does not detach work from a serverless request or wait for hosted model completion in a polling request.
+The default provider-step limit is ten seconds and cannot be increased beyond ten seconds through integration options.
 The default run deadline is two minutes, including time between customer polls.
-A customer must keep polling for later stages and cleanup to execute.
+The customer must keep polling for later stages and normal cleanup to execute.
 There is no independent worker or scheduler.
 
 ## State and evidence
 
 startResearch initializes a checkpoint and returns a null session ID because discovery precedes hosted session creation.
-Polling performs discovery, optional enrichment, definition creation, session creation, recommendation polling, optional correction, and cleanup in separate stages.
+Polling performs discovery, investigating, definition creation, session creation, recommendation polling, optional correction, and cleanup in separate stages.
 The hosted service performs model work between requests.
-The existing discovery adapter honors the request's abort signal; slow discovery can fail within this shorter application deadline.
-This integration does not make the existing Monid discovery loop resumable.
+The standalone researchEvent validator is reused with saved discovery and immediate recommendation callbacks, never with the long hosted recommend loop.
+Investigation uses the same validator, its enrichment identity checks, and its cooperative-abort grace period within the request deadline.
+It preserves accumulated detail evidence when the adapter returns after its bounded signal aborts.
+A provider that ignores cancellation still cannot hold the polling request indefinitely during discovery, investigation, or ranking.
+Slow sources can fail within the application deadline; this integration does not make Monid reads resumable.
 
-The private runs.research_checkpoint column retains the input identity, validated evidence, source checks, stage, definition and session IDs, processed snapshot sequence, correction acceptance sequence, deadline, and validated outcome.
-The checkpoint is absent from EventView and model prompts.
-Only normalized candidates and the brief enter the model prompt.
-The integration reuses researchEvent for input, candidate, ranking, and result validation with saved providers.
-It does not copy supplier extraction or semantic validation logic.
-A provisional discovery order is private checkpoint data and is never published as a model recommendation.
+The private runs.research_checkpoint column retains identity, evidence, source checks, stage, provider IDs, correction acceptance sequence, deadline, validated outcome, and cleanup confirmations.
+Its types live in src/server/research-checkpoint.ts and reuse Run field types.
+The Run columns remain authoritative for session identity, sequence, and correction count when a checkpoint is read.
+Checkpoint updates save the mirrors in the same conditional transaction.
+Private checkpoint fields are absent from EventView.
 
-IntegrationProviders.enrich accepts input, saved Discovery evidence, and an AbortSignal and returns Discovery.
-It runs after validated discovery in its own stage and before hosted ranking.
-The configured factory accepts the same optional function.
-Ticket02 can supply createDetailEnricher through this parameter or configureDeps without changing extraction code here.
-No default detail provider is wired in this branch because that implementation belongs to the independent ticket02 session.
+ResearchProviders['enrich'] is the single public enrichment type, and investigating is the shared stage name.
+The configured factory wires createDetailEnricher by default after discovery.
+It can also receive a controlled enrichment provider for tests.
+The adapter implementation comes from PR #25 at 4148d5504ae262afb96a3e96f3f7f44ad9c6b9a8, integrated as an unmerged dependency.
+No extraction or enrichment validation logic is copied into the integration.
+
+rankingCandidates removes detail notes, affiliate prose, and other free-text evidence fields from the candidate payload before the initial hosted submission.
+A corrective message reuses that projected session evidence and does not resend supplier text.
+Original evidence remains available in the result for the reader.
+Discovery names and source references remain in ranking input, so this is not a universal prompt-injection guarantee.
+A known verification.listingPrice is listing evidence only.
+It does not establish required quantities, delivered total, date availability, cancellation terms, or plan readiness.
 
 Provider snapshots use last_seq for ordered progress.
-The application records a safe milestone only when the provider sequence advances.
-It never forwards raw transcript events, private diagnostics, or credentials.
-Saving the checkpoint, updating Run.lastSequence, and appending visible progress happen in one database transaction.
-A duplicate snapshot can be revalidated after an interruption without appending the same milestone again.
-This is snapshot processing, not full provider transcript replay.
+The application records a safe milestone only when that sequence advances.
+It never forwards raw transcript events, provider credentials, or private diagnostics.
+Saving a checkpoint, updating Run.lastSequence, and appending progress happen in one transaction.
+Result publication also saves the final sequence for ports that do not use private checkpoints.
+A duplicate snapshot can be revalidated after an interruption without duplicating its milestone.
+This is snapshot processing, not full transcript replay.
 
 Idle alone never completes research.
 The integration requires an end_turn stop reason and validates structured output against saved evidence.
-Provider errors, intervention states, usage excess, timeouts, and malformed output preserve available evidence as partial or failed research.
-One malformed ranking can trigger one corrective message.
-The correction waits for a sequence strictly greater than accepted_seq before consuming the next output.
-Unsupported supplier claims cannot enter the recommendation through model output.
-The current discovery-only validator deliberately returns partial research with unknown final costs, including after valid ranking.
-The shared success outcome remains supported by the application contract, but this implementation does not manufacture a successful or bookable result.
-The application rejects incomplete briefs with its existing 422 response; the research port separately supports awaiting_input for invalid research input.
+One malformed ranking can trigger one corrective message under the existing canSendCorrection rule.
+The correction claim and uncertain-operation checkpoint are saved together under the lease, rather than through a second independent recordCorrection transaction.
+Polling waits for a sequence strictly greater than accepted_seq before accepting the next output.
+Repeated warnings are deduplicated.
+The current validator deliberately returns partial research with unknown final costs, including after valid ranking.
+The application contract still supports success, but the integration never invents a successful or bookable result.
+The application rejects incomplete briefs with its existing 422 response; the research port separately supports awaiting_input.
 
 ## Cancellation and uncertainty
 
-Every step checks the event revision, cancellation marker, active run, checkpoint version, and lease before provider work and before saving results.
-The database rejects stale checkpoint writes and stale result publication.
+cancelResearch accepts the Run, which exists before any hosted definition or session.
+Both explicit cancellation and brief replacement look up that run's checkpoint and clean known resources, including a definition created before a session.
+Every research step checks revision, cancellation, active state, checkpoint version, and lease before provider work and before saving results.
+Late responses cannot publish results for a canceled or replaced brief.
+A late provider resource is cleaned and its outcome recorded privately.
 An older request cannot release a replacement request's lease.
-Cancellation fences new steps before waiting for the hosted stop operation.
-A session returned after cancellation is stopped and its cleanup outcome is retained privately.
-If stopping a known session fails, customer progress reports that provider reconciliation is needed.
+Final research status changes also check the brief revision.
+
+Cleanup records session-stop and definition-deletion confirmations separately.
+A confirmed resource is not retried, and a later failure cannot erase its confirmation.
+An unconfirmed resource remains retryable.
+Cleanup sends the idempotent stop operation directly; a failed status GET cannot prevent it.
+The documented session_terminal conflict counts as stopped, and not_found on deletion counts as absent.
+Other provider errors remain failures.
+Failed cleanup is retained privately and reported through safe progress or outcome warnings.
 Cancellation never claims to cancel a supplier booking, purchase, or refund.
 
 Before provider creation or correction, the integration durably marks the operation uncertain.
-A replacement request does not blindly repeat that operation.
+An uncertain checkpoint takes precedence over an expired run deadline, so the reconciliation warning is not lost.
+Read-only discovery and detail failures are labeled as source failures instead.
+A replacement request does not blindly repeat uncertain provider creation or correction.
 Stable idempotency identities remain derivable from the stored run ID.
-An uncertain creation response can still leave an unknown remote resource, and an interrupted cleanup can still require operator reconciliation.
-Saved IDs and cleanup confirmations support that work, but automatic resource discovery, forced-disconnect recovery, and full crash recovery remain ticket06.
-No live crash-recovery claim is made here.
+Confirmed cleanup concerns known IDs; an uncertain creation may still have produced an unknown remote resource.
+Automatic resource discovery, forced-disconnect recovery, and full crash recovery remain ticket06.
+
+A running legacy record without a checkpoint terminates with a visible failed outcome and a restart instruction.
+The real provider never receives simulated session IDs from such records.
+A legacy real session ID can be stopped on cancellation, but its missing definition identity may require reconciliation.
 
 ## Configuration and owner review
 
-Ujjwal's review is required before merge.
-Tony authorized isolated backend changes for this PR, overriding the normal rule that the backend owner implements shared changes first.
+Ujjwal's ownership review remains required.
+No owner approval or exception is recorded here.
 The public shared schemas and contract version remain unchanged.
-The affected consumers are the application event service, production dependency wiring, the database store, and backend test stores.
-Leo consumes the existing EventView result, run, and progress fields without a frontend change.
+The affected consumers are the event service, dependency wiring, database store, and backend test stores.
+Leo still consumes the existing EventView result, run, and progress fields.
 
-The backend changes are deliberately limited to these needs.
-
-- Store gains optional researchCheckpoints methods, implemented by the database store.
-- ResearchPort.startResearch may return a null session ID until discovery completes.
-- Result publication and lease release accept the claimed lease timestamp as a fence.
-- Final research status updates also check the brief revision so an old request cannot stop a new run.
-- Checkpoint writes reject expired leases, stale revisions, and canceled events atomically.
-- Cancellation failures produce safe customer progress instead of only a server log.
-- Dependency wiring chooses real research by default and simulation only with RESEARCH_MODE=simulated.
-- Migration 0001 adds the private checkpoint column and its matching schema snapshot.
+The isolated backend changes are the optional checkpoint store, migration 0001, nullable startup session ID, run-based cancellation, configuration preflight, final-sequence publication, and lease/revision guards.
+The integration receives only checkpoint storage and progress writing, not the whole transaction store API.
+The composition root still selects the research implementation through ResearchPort.
 
 Apply the existing database migration command before deploying this code.
 Set NAIVE_API_KEY, MONID_API_KEY, and an explicitly selected NAIVE_MODEL on the server.
-Missing configuration fails instead of substituting synthetic data.
-This branch adds no dependency or root configuration changes.
-The generated route tree also required regeneration because the supplied base had an incomplete route declaration and would not typecheck.
-That repair is a separate commit and changes no handwritten frontend implementation.
+.env.example documents these and RESEARCH_MODE.
+Real research is the default; RESEARCH_MODE=simulated explicitly selects labeled synthetic research.
+Missing or invalid configuration returns research_not_configured before creating or replacing a run.
+It is not an uncertain provider-creation outcome.
+No dependencies, build configuration, or payment behavior were changed.
 
-## Verification and consumer examples
+PR #26 supplies the generated route repair at 60e20a03cc2cb9bf10782ab905e39d23836d2485.
+That exact commit is in this branch's ancestry and has no divergent route-file delta.
+The dependency order is PR #26, then PR #25, then PR #24, subject to their owner reviews.
+No PR merge is performed by this handoff.
 
-integration.test.ts exercises createEvent, getEventView, and cancel against the real database store with controlled providers.
-It also exercises the real Monid and hosted-session REST adapters against controlled HTTP responses through those application handlers.
-checkpoint.test.ts verifies atomic progress, lease replacement, cancellation, stale revisions, and result-publication fences against migrated PGlite storage.
-These are deterministic application-boundary checks, not authenticated hosted-service or Neon deployment evidence.
-No supplier contact or transaction occurred.
+## Verification and test examples
 
-integration.fixtures.ts contains synthetic examples for Leo covering running progress, missing input, partial research, failure, and cancellation.
-All candidate examples retain simulated evidence mode.
-These fixtures are never production fallbacks.
+integration.test.ts exercises createEvent, getEventView, updateBrief, and cancel against migrated PGlite storage.
+The combined configured-path test uses real discovery, detail, and hosted-session adapters with controlled HTTP responses.
+It verifies sourced detail evidence, ranking-input projection, correction, cleanup, and rejection of listing prices as final totals.
+Other boundary tests cover legacy records, deadline classification, duplicate progress, restored checkpoints, in-flight cancellation, and stale publication.
+checkpoint.test.ts verifies atomic progress, authoritative cursors, lease replacement, and monotonic cleanup confirmations.
+These checks are not authenticated hosted-service or deployed Neon application proof.
+No live provider mutations, supplier contacts, or transactions were performed during review fixes.
+
+integration.test-fixtures.ts contains synthetic contract examples used only by tests.
+Leo can inspect their shapes, but frontend code must not import src/agent.
+Moving examples into shared frontend fixtures remains a separate consumer-driven change requiring Ujjwal's coordination.
 
 Run the repository test, typecheck, and build scripts with Bun 1.4.4.
-The complete suite currently contains 159 tests across 13 files.
-The final PR handoff records the exact tested commit and remote check state.
-Live deployment, chosen-model quality, real application latency, and the combined ticket02 detail-provider path remain unverified.
+Exact final head, test count, and GitHub checks are recorded in PR #24 and the coordinator handoff.
+See docs/research/research-integration-review.md for all 18 comment dispositions and the matching Sol S1 finding.
+Live application latency, deployment, and model quality remain unverified.
+The historical ticket02 smoke is separate evidence and does not prove the combined application path.
 
 ## Provider references
 
-The implementation was checked against the [session API](https://usenaive.ai/docs/api/sessions.md) and [definition API](https://usenaive.ai/docs/api/agents.md) on 2026-11-07.
+The single-request client follows the [session API](https://usenaive.ai/docs/api/sessions.md) and [definition API](https://usenaive.ai/docs/api/agents.md).
+Both the standalone ranker and the durable integration use that client.
 Session creation starts hosted execution, message submission returns accepted_seq, and polling returns status, stop_reason, structured output, and last_seq.
-Cancel is idempotent for canceled sessions, but completed and failed sessions reject cancel with a terminal-state conflict.
-The integration avoids that call for a terminal snapshot.
+Cancel is idempotent for canceled sessions; completed and failed sessions return the documented terminal conflict.
