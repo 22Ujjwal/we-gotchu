@@ -4,9 +4,8 @@ We Gotchu helps a host plan an event, reserve a venue, and buy supplies through 
 One cancellation request coordinates the supplier cancellations and shows the resulting refund status.
 Planning is free; the customer pays the approved event costs.
 
-The repository contains planning documents and an existing TanStack Start application scaffold.
-The scaffold was added separately by the team; the documentation work does not verify its runtime behavior.
-See the preserved [scaffold guide](docs/scaffold-guide.md) for its original setup instructions.
+The repository contains planning documents and a Next.js scaffold in a bun workspace (apps/web, apps/worker, packages/*).
+See the [scaffold guide](docs/scaffold-guide.md) for setup and commands.
 The product scope is agreed, while the architecture and team contracts are drafts for team review.
 No live booking, payment, cancellation, or deployment has been verified.
 

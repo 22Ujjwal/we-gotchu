@@ -1,13 +1,12 @@
 # Stack and team proposal
 
-## Existing scaffold update
+## Scaffold
 
-The team has already added a TanStack Start scaffold under src on main.
-Preserve that implementation and its package manager.
-The earlier Next.js choice and apps/web paths below remain proposals, not migration instructions.
-Before editing, the developers must map the role boundaries to the existing src layout and agree on any framework change.
-Frontend owns UI routes and components; transactions owns server endpoints and shared configuration; agent workflow owns supplier and runtime modules.
-Coordinate shared route files through the transaction owner if UI and server code occupy the same file.
+The repository is a bun workspace with a Next.js app, matching the paths below.
+apps/web is the Next.js App Router app (UI under src/app, server endpoints under src/app/api), deployed to Vercel.
+apps/worker runs long-lived jobs outside Vercel requests.
+packages/contracts, db, transactions, agent, and suppliers hold the shared and owned modules.
+See the [scaffold guide](scaffold-guide.md) for commands.
 
 ## Original draft
 

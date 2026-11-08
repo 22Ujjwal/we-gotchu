@@ -1,0 +1,10 @@
+{
+  "name": "@we-gotchu/transactions",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": { "@we-gotchu/contracts": "workspace:*", "@we-gotchu/db": "workspace:*" }
+}

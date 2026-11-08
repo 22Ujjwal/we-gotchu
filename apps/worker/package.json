@@ -1,0 +1,15 @@
+{
+  "name": "@we-gotchu/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@we-gotchu/contracts": "workspace:*",
+    "@we-gotchu/transactions": "workspace:*",
+    "@we-gotchu/agent": "workspace:*"
+  }
+}
