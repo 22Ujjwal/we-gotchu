@@ -9,6 +9,7 @@ function fake({ failOpen = false, failReference = false } = {}) {
     calls.push([command, args]);
     if (command === 'git') {
       if (args[0] === 'rev-parse') return 'abc';
+      if (args[0] === 'ls-tree') return ['tony', 'leo', 'ujjwal', 'ferdinand', 'new-owner', 'README', 'template'].map(x => `docs/team/status/${x}.md`).join('\0');
       return 'Needs from Tony: inspect PR #16 and PR #16.\n';
     }
     if (args[0] === 'api') return 'main';
@@ -30,12 +31,29 @@ test('collector uses only explicit read commands, deduplicates references, hashe
   assert.equal(result.documents[0].sha256, createHash('sha256').update(result.documents[0].text).digest('hex'));
   assert.equal(result.documents[0].commit, 'abc');
   assert.equal(calls.filter(([cmd, args]) => cmd === 'gh' && args[1] === 'view').length, 1);
-  assert.ok(calls.every(([cmd, args]) => cmd === 'git' ? ['rev-parse', 'show'].includes(args[0]) : args[0] === 'api' || ['list', 'view'].includes(args[1])));
+  assert.ok(calls.every(([cmd, args]) => cmd === 'git' ? ['rev-parse', 'ls-tree', 'show'].includes(args[0]) : args[0] === 'api' || ['list', 'view'].includes(args[1])));
 });
 
 test('collection failures stay visible and never leak raw CLI errors', () => {
   const result = collect(fake({ failOpen: true, failReference: true }).execute);
   assert.equal(result.errors.length, 2);
-  assert.equal(result.documents.length, 11);
+  assert.equal(result.documents.length, 12);
   assert.ok(!JSON.stringify(result).includes('SECRET'));
+});
+
+
+test('discovers owner reports from committed paths and excludes the template', () => {
+  const result = collect(fake().execute);
+  assert.ok(result.documents.some(x => x.path === 'docs/team/status/new-owner.md'));
+  assert.ok(!result.documents.some(x => x.path === 'docs/team/status/template.md'));
+  assert.equal(result.documents.filter(x => x.path === 'docs/team/status/README.md').length, 1);
+});
+
+test('missing status inventory is reported rather than silently omitting owners', () => {
+  const { execute } = fake();
+  const result = collect((cmd, args) => {
+    if (args[0] === 'ls-tree') throw new Error('failure');
+    return execute(cmd, args);
+  });
+  assert.ok(result.errors.some(x => x.includes('status inventory')));
 });
