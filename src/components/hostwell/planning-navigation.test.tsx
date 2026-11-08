@@ -31,7 +31,7 @@ test('planning entry opens the saved planning URL and the same URL reload only r
       writes.push(JSON.parse(String(init.body)))
       return Response.json(saved, { status: 201 })
     }
-    expect(path).toBe('/api/planning/saved-plan')
+    expect(path).toBe('/api/planning/saved-plan?saved=1')
     return Response.json(saved)
   })
   const router = routerAt('/planning')
@@ -46,5 +46,5 @@ test('planning entry opens the saved planning URL and the same URL reload only r
   render(<RouterProvider router={routerAt('/planning/saved-plan')} />)
   expect(await screen.findByText('Which city?')).toBeVisible()
   expect(writes).toHaveLength(1)
-  expect(paths).toEqual(['/api/planning', '/api/planning/saved-plan', '/api/planning/saved-plan'])
+  expect(paths).toEqual(['/api/planning', '/api/planning/saved-plan?saved=1', '/api/planning/saved-plan?saved=1'])
 })

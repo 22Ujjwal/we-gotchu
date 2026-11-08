@@ -93,3 +93,23 @@ The provider did not expose the underlying validation reason, so this does not e
 Search Web Pages and several page fetches succeeded during the same run.
 The agent repeatedly tried rejected data requests and exceeded the prompt-only research allowance.
 The observation window ended without a proposal; cancellation was acknowledged.
+
+## Unconfirmed session requests on November 8
+
+These observations concern session request delivery, not a confirmed search-tool 429.
+The application uses SDK 0.12.3, a 45-second fetch deadline, and a 55-second service deadline.
+
+- At approximately 15:18:43 UTC, the Berlin customer sent one follow-up in conversation planning_3cb35532-fd17-43d3-a331-3b4754c0657d.
+  The application saved the customer message but returned uncertain status around 15:19:27 UTC, without a new assistant response.
+  A later read found session ses_jqbc31gj4v1mdcd0y61ewenmrw idle at sequence 89.
+  Reading events after sequence 80 returned HTTP 200 with request ID req_vcmj0zxh850q1tst64ztx5mr2t and the initial turn's completion, with no follow-up acceptance in that bounded page.
+- At 15:36:08 UTC, a fresh browser submission created conversation planning_57b5f280-a878-4be8-a0d4-51db4c07e375.
+  The application POST returned 201 at 15:36:53.559 UTC, but the saved conversation was uncertain with no proposal or provider session available in the customer response.
+  A subsequent SDK sessions.list read returned successfully in 879 milliseconds with has_more false and no matching conversation metadata.
+
+The observed delays are consistent with the configured fetch deadline, but the application did not retain the underlying exception or response headers for these writes.
+No HTTP status, provider error code, or provider request ID was captured for the failed writes.
+Neither result proves that the provider rejected the request, and neither write was resent.
+The browser evidence is retained locally under .scratch/verification/berlin-homepage-3b36b22 and .scratch/verification/automatic-inquiry-da6d045.
+
+Support question: can you check session creation and message acceptance around these UTC times, and advise how to reconcile an uncertain create or send using the original idempotency key?

@@ -1,6 +1,6 @@
 ---
 name: verify-we-gotchu
-description: Verify the real local We Gotchu web app, including planning submission, sourced proposals, reload and the existing event screens, with recorded evidence.
+description: Verify the real local We Gotchu web app, including planning submission, sourced proposals, reload, venue inquiries and supplier replies, and the existing event screens, with recorded evidence.
 ---
 
 # Verify We Gotchu
@@ -8,7 +8,7 @@ description: Verify the real local We Gotchu web app, including planning submiss
 ## Launch
 
 Read package.json and .github/workflows/ci.yml; use the installed Bun version that supports the frozen lockfile.
-Run `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test --maxWorkers 2`, `node --test tools/team-coordination/*.test.mjs` and `bun run build` before a shipping check.
+Run `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test --maxWorkers 2`, `node --test tools/team-coordination/*.test.mjs tools/local-rehearsal/*.test.mjs` and `bun run build` before a shipping check.
 Do not confuse these checks with live provider verification.
 Use the existing ignored .env.local without printing its contents.
 Local planning needs Clerk configuration, NAIVE_API_KEY, NAIVE_PLANNING_AGENT_ID and PLANNING_LOCAL_DB_DIR=.scratch/local-planning-db.
@@ -34,8 +34,10 @@ Do not change authentication to get a passing result.
 
 Use the feature map in features/README.md.
 Prefer snapshot roles and labels over coordinates.
-For stage one, follow the homepage link named Plan with our research assistant to /planning.
-Enter a complete natural-language brief in the textbox named Tell us about your event, and submit exactly once.
+For the structured homepage path, fill the event brief and submit Find venues exactly once.
+Verify that the request creates a planning conversation through /api/planning and opens /planning/$id.
+The /planning page also accepts a natural-language brief in Tell us about your event.
+Test the entry point requested for the demo; a passing chat submission does not prove the structured homepage is connected.
 Observe the saved /planning/$id URL and the real proposal without injecting fixture responses.
 Target 90 seconds; stop observing after 180 seconds and report a miss rather than creating another conversation.
 Do not approve provider actions, send supplier mail, book or purchase as part of this research check.
@@ -69,3 +71,14 @@ The existing tools/agent-research-proof/planning.ts runs a live SDK proof with a
 It can spend provider credits and is not a dry run.
 Its success proves the SDK path only, not the browser flow.
 Use the real browser recipe above for product acceptance.
+
+The controlled supplier-reply helper is `tools/planning-reply-proof/run.ts`.
+Its exact invocation and limitations are in features/venue-inquiries.md.
+It creates a new labeled test conversation without changing the source conversation, calls the real interpretation model, and never sends email.
+Passing its controlled reply ID instead of the source ID retries interpretation of the same saved reply after failure.
+Run it only with the local database server stopped, then start the application to inspect the result through its actual UI.
+
+The local payment preflight is `tools/local-rehearsal/payment-preflight.mjs`.
+Run `NODE_ENV=development bun --env-file=.env.local tools/local-rehearsal/payment-preflight.mjs` before sandbox payment checks.
+It rejects duplicate environment assignments, missing local mode and non-test Stripe keys without printing values.
+A passing preflight does not prove provider access or matching webhook signing secrets.

@@ -26,7 +26,10 @@ import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as ApiDemoQuotesReadyRouteImport } from './routes/api/demo.quotes-ready'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 import { Route as ApiPlanningIdRouteImport } from './routes/api/planning.$id'
+import { Route as ApiPlanningReplyJobsRouteImport } from './routes/api/planning.reply-jobs'
+import { Route as ApiPlanningToolsRouteImport } from './routes/api/planning.tools'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
+import { Route as ApiSupplierMailWebhookRouteImport } from './routes/api/supplier-mail.webhook'
 import { Route as ApiEventsIdApproveRouteImport } from './routes/api/events.$id.approve'
 import { Route as ApiEventsIdBriefRouteImport } from './routes/api/events.$id.brief'
 import { Route as ApiEventsIdCancelRouteImport } from './routes/api/events.$id.cancel'
@@ -119,9 +122,24 @@ const ApiPlanningIdRoute = ApiPlanningIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiPlanningRoute,
 } as any)
+const ApiPlanningReplyJobsRoute = ApiPlanningReplyJobsRouteImport.update({
+  id: '/reply-jobs',
+  path: '/reply-jobs',
+  getParentRoute: () => ApiPlanningRoute,
+} as any)
+const ApiPlanningToolsRoute = ApiPlanningToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => ApiPlanningRoute,
+} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSupplierMailWebhookRoute = ApiSupplierMailWebhookRouteImport.update({
+  id: '/api/supplier-mail/webhook',
+  path: '/api/supplier-mail/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEventsIdApproveRoute = ApiEventsIdApproveRouteImport.update({
@@ -176,7 +194,10 @@ export interface FileRoutesByFullPath {
   '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
+  '/api/planning/reply-jobs': typeof ApiPlanningReplyJobsRoute
+  '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -202,7 +223,10 @@ export interface FileRoutesByTo {
   '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
+  '/api/planning/reply-jobs': typeof ApiPlanningReplyJobsRoute
+  '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -229,7 +253,10 @@ export interface FileRoutesById {
   '/api/demo/quotes-ready': typeof ApiDemoQuotesReadyRoute
   '/api/events/$id': typeof ApiEventsIdRouteWithChildren
   '/api/planning/$id': typeof ApiPlanningIdRouteWithChildren
+  '/api/planning/reply-jobs': typeof ApiPlanningReplyJobsRoute
+  '/api/planning/tools': typeof ApiPlanningToolsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/supplier-mail/webhook': typeof ApiSupplierMailWebhookRoute
   '/api/events/$id/approve': typeof ApiEventsIdApproveRoute
   '/api/events/$id/brief': typeof ApiEventsIdBriefRoute
   '/api/events/$id/cancel': typeof ApiEventsIdCancelRoute
@@ -257,7 +284,10 @@ export interface FileRouteTypes {
     | '/api/demo/quotes-ready'
     | '/api/events/$id'
     | '/api/planning/$id'
+    | '/api/planning/reply-jobs'
+    | '/api/planning/tools'
     | '/api/stripe/webhook'
+    | '/api/supplier-mail/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -283,7 +313,10 @@ export interface FileRouteTypes {
     | '/api/demo/quotes-ready'
     | '/api/events/$id'
     | '/api/planning/$id'
+    | '/api/planning/reply-jobs'
+    | '/api/planning/tools'
     | '/api/stripe/webhook'
+    | '/api/supplier-mail/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -309,7 +342,10 @@ export interface FileRouteTypes {
     | '/api/demo/quotes-ready'
     | '/api/events/$id'
     | '/api/planning/$id'
+    | '/api/planning/reply-jobs'
+    | '/api/planning/tools'
     | '/api/stripe/webhook'
+    | '/api/supplier-mail/webhook'
     | '/api/events/$id/approve'
     | '/api/events/$id/brief'
     | '/api/events/$id/cancel'
@@ -335,6 +371,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   ApiDemoQuotesReadyRoute: typeof ApiDemoQuotesReadyRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiSupplierMailWebhookRoute: typeof ApiSupplierMailWebhookRoute
   EventsEventIdReceiptsReceiptIdRoute: typeof EventsEventIdReceiptsReceiptIdRoute
   EventsEventIdReceiptsIndexRoute: typeof EventsEventIdReceiptsIndexRoute
 }
@@ -460,11 +497,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlanningIdRouteImport
       parentRoute: typeof ApiPlanningRoute
     }
+    '/api/planning/reply-jobs': {
+      id: '/api/planning/reply-jobs'
+      path: '/reply-jobs'
+      fullPath: '/api/planning/reply-jobs'
+      preLoaderRoute: typeof ApiPlanningReplyJobsRouteImport
+      parentRoute: typeof ApiPlanningRoute
+    }
+    '/api/planning/tools': {
+      id: '/api/planning/tools'
+      path: '/tools'
+      fullPath: '/api/planning/tools'
+      preLoaderRoute: typeof ApiPlanningToolsRouteImport
+      parentRoute: typeof ApiPlanningRoute
+    }
     '/api/stripe/webhook': {
       id: '/api/stripe/webhook'
       path: '/api/stripe/webhook'
       fullPath: '/api/stripe/webhook'
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/supplier-mail/webhook': {
+      id: '/api/supplier-mail/webhook'
+      path: '/api/supplier-mail/webhook'
+      fullPath: '/api/supplier-mail/webhook'
+      preLoaderRoute: typeof ApiSupplierMailWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events/$id/approve': {
@@ -555,10 +613,14 @@ const ApiPlanningIdRouteWithChildren = ApiPlanningIdRoute._addFileChildren(
 
 interface ApiPlanningRouteChildren {
   ApiPlanningIdRoute: typeof ApiPlanningIdRouteWithChildren
+  ApiPlanningReplyJobsRoute: typeof ApiPlanningReplyJobsRoute
+  ApiPlanningToolsRoute: typeof ApiPlanningToolsRoute
 }
 
 const ApiPlanningRouteChildren: ApiPlanningRouteChildren = {
   ApiPlanningIdRoute: ApiPlanningIdRouteWithChildren,
+  ApiPlanningReplyJobsRoute: ApiPlanningReplyJobsRoute,
+  ApiPlanningToolsRoute: ApiPlanningToolsRoute,
 }
 
 const ApiPlanningRouteWithChildren = ApiPlanningRoute._addFileChildren(
@@ -582,6 +644,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   ApiDemoQuotesReadyRoute: ApiDemoQuotesReadyRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiSupplierMailWebhookRoute: ApiSupplierMailWebhookRoute,
   EventsEventIdReceiptsReceiptIdRoute: EventsEventIdReceiptsReceiptIdRoute,
   EventsEventIdReceiptsIndexRoute: EventsEventIdReceiptsIndexRoute,
 }

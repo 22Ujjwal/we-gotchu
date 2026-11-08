@@ -1,0 +1,63 @@
+import { createHash } from 'node:crypto'
+import { SendRejected, type MailProvider } from '../email/supplier-inquiries/types'
+import type { PlanningRecord, PlanningRepository } from './repository'
+
+// Reserve the exact content before sending so a restart never blindly repeats an email.
+export async function sendCustomerNotification(repository: PlanningRepository, provider: MailProvider,
+  record: PlanningRecord, key: string, email: { subject: string; text: string }): Promise<void> {
+  const to = record.view.arrangement?.customerEmail
+  if (!to) return
+  const notification = { to, ...email, status: 'uncertain' as const }
+  let reserved = false
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const current = await repository.get(record.customerId, record.id)
+    if (!current || current.notifications?.[key] || current.view.arrangement?.id !== record.view.arrangement?.id) return
+    const saved = await repository.compareAndSet(current, { ...current,
+      notifications: { ...current.notifications, [key]: notification } })
+    if (saved) { reserved = true; break }
+  }
+  if (!reserved) return
+  let result: NonNullable<PlanningRecord['notifications']>[string] = notification
+  try {
+    const sent = await provider.send({ to, ...email }, `arrange-customer-${createHash('sha256').update(key).digest('hex')}`)
+    result = { ...notification, status: 'accepted', messageId: sent.messageId }
+  } catch (error) {
+    if (error instanceof SendRejected) result = { ...notification, status: 'failed' }
+  }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const current = await repository.get(record.customerId, record.id)
+    if (!current) return
+    if (await repository.compareAndSet(current, { ...current,
+      notifications: { ...current.notifications, [key]: result } })) return
+  }
+}
+
+export function arrangementAcknowledgment(record: PlanningRecord) {
+  const venue = record.view.selections.find(option => option.kind === 'venue')
+  return {
+    subject: 'We are arranging your event',
+    text: [
+      `We received your request for ${venue?.name ?? 'your selected setting'}.`,
+      'We are checking availability, the selected extras and the final price with the supplier.',
+      ...record.view.selections.filter(option => option.kind === 'supply').map(option => `Selected extra: ${option.name}`),
+      'We will send you the details to approve before payment. Nothing is booked or charged.',
+    ].join('\n\n'),
+  }
+}
+
+export function offerReadyEmail(record: PlanningRecord, total: number, appUrl: string) {
+  const offer = record.view.offer!
+  const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(total / 100)
+  return {
+    subject: 'Your arrangement is ready to review',
+    text: [
+      'We have the supplier terms for your selected arrangement. Please review them before approving.',
+      ...offer.lines.map(line => `${line.option.name}: ${line.quantityDescription}. Cancellation: ${line.cancellationTerms}`),
+      `Complete quoted total: ${money}.`,
+      ...offer.lines.filter(line => (line.deposit.amount ?? 0) > 0).map(line =>
+        `Deposit for ${line.option.name}: ${line.deposit.amount! / 100} ${offer.currency.toUpperCase()}, ${line.deposit.treatment} in the quoted price.`),
+      `Review your offer: ${appUrl.replace(/\/$/, '')}/planning/${encodeURIComponent(record.id)}`,
+      'Nothing has been booked or charged. Approve the offer on the website before proceeding to sandbox payment.',
+    ].join('\n\n'),
+  }
+}

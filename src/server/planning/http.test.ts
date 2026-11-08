@@ -1,3 +1,4 @@
+import { ApiError } from '../events/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PlanningDeps } from './service'
 import { planningCollectionPost, planningGet, planningPost } from './http'
@@ -15,14 +16,14 @@ describe('planning HTTP seam', () => {
     const body = { requestId: 'create', message: 'Party' }
     const created = await planningCollectionPost(deps, request(body))
     expect(created.status).toBe(201)
-    expect(await created.json()).toEqual({ ...view, canReviewResearch: false })
+    expect(await created.json()).toEqual({ ...view, canReviewResearch: false, canArrange: false })
     expect(service.createPlanning).toHaveBeenCalledWith(deps, body)
     service.commandPlanning.mockResolvedValue(view)
     const command = { kind: 'select', requestId: 'select', expectedVersion: 3, optionId: 'cups' }
     expect((await planningPost(deps, 'conversation', request(command))).status).toBe(200)
     expect(service.commandPlanning).toHaveBeenCalledWith(deps, 'conversation', command)
     service.getPlanning.mockResolvedValue(view)
-    expect(await (await planningGet(deps, 'conversation')).json()).toEqual({ ...view, canReviewResearch: false })
+    expect(await (await planningGet(deps, 'conversation')).json()).toEqual({ ...view, canReviewResearch: false, canArrange: false })
   })
 
   it('returns the existing error envelope for authentication and invalid JSON', async () => {
@@ -45,4 +46,28 @@ it('keeps technical review requests out of the customer response', async () => {
   const operator = await (await planningGet({ ...deps, allowResearchReview: true }, 'plan')).json()
   expect(operator.approvals).toHaveLength(1)
   expect(operator.canReviewResearch).toBe(true)
+})
+
+it('routes saved-state restoration without refreshing the provider', async () => {
+  service.getPlanning.mockResolvedValue({ id: 'plan', status: 'ready' })
+  const response = await planningGet(deps, 'plan', new Request('http://localhost/api/planning/plan?saved=1'))
+  expect(response.status).toBe(200)
+  expect(service.getPlanning).toHaveBeenCalledWith(deps, 'plan', { savedOnly: true })
+})
+
+it('routes mail reconciliation separately from research and saved-only reads', async () => {
+  service.getPlanning.mockResolvedValue({ id: 'plan' })
+  expect((await planningGet(deps, 'plan', new Request('http://localhost/api/planning/plan?mail=1'))).status).toBe(200)
+  expect(service.getPlanning).toHaveBeenCalledWith(deps, 'plan', { reconcileMail: true })
+})
+
+it('dispatches saved reply retries independently of the customer connection', async () => {
+  service.commandPlanning.mockResolvedValue({ id: 'plan' })
+  const dispatch = vi.fn()
+  const body = { kind: 'retry_reply', requestId: 'retry', expectedVersion: 1, inquiryId: 'inquiry', replyId: 'reply' }
+  expect((await planningPost(deps, 'plan', request(body), dispatch)).status).toBe(200)
+  expect(dispatch).toHaveBeenCalledTimes(1)
+  service.commandPlanning.mockRejectedValue(new ApiError(409, 'stale', 'The plan changed.'))
+  expect((await planningPost(deps, 'plan', request(body), dispatch)).status).toBe(409)
+  expect(dispatch).toHaveBeenCalledTimes(1)
 })

@@ -1,15 +1,19 @@
 import { z } from 'zod'
-import { planningOptionSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
+import { arrangementSchema, planningBriefSchema, planningCreateSchema } from '../../agent/planning/contract'
+import { selectedOfferSchema, planningPaymentLinkSchema } from '../../agent/planning/offer-contract'
+import { planningInquirySchema, planningOptionSchema, planningProposalSchema, planningApprovalSchema, planningActivitySchema, type PlanningCommand, type PlanningView } from '../../agent/planning/contract'
 
 const viewSchema: z.ZodType<PlanningView> = z.object({
   id: z.string().min(1), version: z.number().int().nonnegative(),
+  brief: planningBriefSchema.optional(), arrangement: arrangementSchema.optional(),
   status: z.enum(['working', 'ready', 'failed', 'uncertain', 'blocked']),
   messages: z.array(z.object({ id: z.string(), role: z.enum(['user', 'assistant']), text: z.string(), createdAt: z.string() })),
-  proposal: planningProposalSchema.nullable(), selections: z.array(planningOptionSchema),
+  proposal: planningProposalSchema.nullable(), inquiry: planningInquirySchema.optional(), selections: z.array(planningOptionSchema),
   progress: z.string().nullable(), error: z.string().nullable(), approvals: z.array(planningApprovalSchema).optional(),
-  activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(),
+  activity: z.array(planningActivitySchema).optional(), canReviewResearch: z.boolean().optional(), canSendInquiry: z.boolean().optional(), canArrange: z.boolean().optional(),
+  offer: selectedOfferSchema.optional(), paymentLink: planningPaymentLinkSchema.optional(),
 })
-export type PlanningCreate = { requestId: string; message: string }
+export type PlanningCreate = z.infer<typeof planningCreateSchema>
 export class PlanningApiError extends Error {
   constructor(readonly status: number, readonly uncertain: boolean) {
     super(uncertain ? 'We could not confirm whether your request was saved. Your draft is kept. Please check the saved status before taking any further action.'
@@ -36,7 +40,7 @@ export function createPlanningApi() {
   const path = (id: string) => `/api/planning/${encodeURIComponent(id)}`
   return {
     create: (body: PlanningCreate, signal: AbortSignal) => request('/api/planning', signal, body),
-    read: (id: string, signal: AbortSignal) => request(path(id), signal),
+    read: (id: string, signal: AbortSignal, savedOnly = false, reconcileMail = false) => request(`${path(id)}${savedOnly ? '?saved=1' : reconcileMail ? '?mail=1' : ''}`, signal),
     command: (id: string, body: PlanningCommand, signal: AbortSignal) => request(path(id), signal, body),
   }
 }
