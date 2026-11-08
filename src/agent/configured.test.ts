@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { CONTRACT_VERSION } from '../contracts'
 import { MemoryStore } from '../server/events/testFakes'
 import { createConfiguredResearch } from './configured'
-import { researchBriefFixture } from './integration.fixtures'
+import { researchBriefFixture } from './integration.test-fixtures'
 
 test('missing configuration never falls back to simulated research', async () => {
   const port = createConfiguredResearch(new MemoryStore(), {})

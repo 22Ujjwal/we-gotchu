@@ -1,6 +1,6 @@
 import { CONTRACT_VERSION, planReadyEvent, researchResultFixture, type ResearchResult } from '../contracts'
 
-// Consumer examples only. These are synthetic and never used by production wiring.
+// Test-only contract examples. Do not import server research modules into the frontend.
 export const researchBriefFixture = { ...planReadyEvent.event.brief }
 export const discoveryFixture = {
   candidates: researchResultFixture.candidates.map(candidate => ({

@@ -5,7 +5,7 @@ import type { Store } from '../server/store'
 import { createEvent, getEventView, cancel, updateBrief } from '../server/events/service'
 import { makeDeps } from '../server/events/testFakes'
 import { createResearchIntegration } from './integration'
-import { discoveryFixture, researchBriefFixture, researchConsumerFixtures } from './integration.fixtures'
+import { discoveryFixture, researchBriefFixture, researchConsumerFixtures } from './integration.test-fixtures'
 import type { ResearchSession } from './session'
 
 let store: Store
