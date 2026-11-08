@@ -4,7 +4,7 @@ Owner: Ujjwal.
 Updated: 2026-11-07T21:34:11-08:00
 Baseline and hosted test commit: `5b180cc8c57c85c876852579cf448f9cbc7c627a`.
 Branch: [fix/payment-retry-guards](https://github.com/22Ujjwal/we-gotchu/tree/fix/payment-retry-guards).
-PR: [#48](https://github.com/22Ujjwal/we-gotchu/pull/48), on branch and not deployed; earlier hosted handoff #43 is merged.
+PR: [#49](https://github.com/22Ujjwal/we-gotchu/pull/49), backend retry/sandbox follow-ups on branch; #48 and earlier hosted handoff #43 are merged.
 Availability: backend, DOM harness (#39), and connected journey (#41) merged. Hosted database, sign-in, event persistence, and direct MCP verified. Stripe sandbox delivery is verified; successful research and a full test-payment/refund flow remain pending.
 
 ## Current hosted result
