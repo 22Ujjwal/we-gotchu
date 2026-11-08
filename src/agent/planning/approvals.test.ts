@@ -39,3 +39,14 @@ test('unrelated external writes and questions remain blocked without a research 
   expect(result.approvals ?? []).toEqual([])
   expect(client.sessions.confirmTool).not.toHaveBeenCalled()
 })
+
+test('read-only reconciliation distinguishes a closed call from a still-pending call', async () => {
+  const { agent, child, client } = setup()
+  const first = await agent.read({ sessionId: 'lead', afterSequence: 0 })
+  const approvalId = first.approvals![0].id
+  expect((await agent.read({ sessionId: 'lead', afterSequence: 0, approvalId })).confirmation).toEqual({ id: approvalId, state: 'pending' })
+  child.pending_actions = []
+  child.stop_reason = 'end_turn'
+  expect((await agent.read({ sessionId: 'lead', afterSequence: 0, approvalId })).confirmation).toEqual({ id: approvalId, state: 'closed' })
+  expect(client.sessions.confirmTool).not.toHaveBeenCalled()
+})

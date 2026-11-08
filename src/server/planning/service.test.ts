@@ -231,3 +231,24 @@ it('does not resend an uncertain confirmation or allow a forged approval ID', as
   expect((await commandPlanning(deps, view.id, command)).status).toBe('uncertain')
   expect(agent.confirm).toHaveBeenCalledTimes(1)
 })
+
+it('reconciles a closed confirmation without replaying it and exposes the current team pause', async () => {
+  let view = await create()
+  const approvals = [{ id: 'old', tool: 'monid.monid_inspect', arguments: {} }]
+  vi.mocked(agent.read).mockResolvedValue({ status: 'blocked', sequence: 9, proposal: null, progress: null, error: null, approvals })
+  view = await getPlanning(deps, view.id)
+  agent.confirm = vi.fn(async () => { throw new Error('Lost acknowledgement') })
+  const command = { kind: 'confirm', requestId: 'one-decision', expectedVersion: view.version, approvalId: 'old', decision: 'allow' }
+  view = await commandPlanning(deps, view.id, command)
+  expect(view.status).toBe('uncertain')
+  vi.mocked(agent.read).mockResolvedValue({ status: 'blocked', sequence: 9, proposal: null, progress: null, error: null,
+    approvals: [{ ...approvals[0], id: 'next' }], confirmation: { id: 'old', state: 'closed' },
+    activity: [{ name: 'Supplies research', status: 'blocked', detail: 'Waiting for our team to review a research request.' }] })
+  view = await getPlanning(deps, view.id)
+  expect(agent.read).toHaveBeenLastCalledWith({ sessionId: 'session-1', afterSequence: 1, approvalId: 'old' })
+  expect(view.status).toBe('blocked')
+  expect(view.approvals?.[0].id).toBe('next')
+  expect(view.activity?.[0].status).toBe('blocked')
+  expect(agent.confirm).toHaveBeenCalledTimes(1)
+  expect((await db.repository.get('alice', view.id))?.pending).toBeNull()
+})
