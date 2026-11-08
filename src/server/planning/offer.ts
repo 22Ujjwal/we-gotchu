@@ -3,7 +3,7 @@ import { CONTRACT_VERSION, Plan } from '../../contracts'
 import type { PlanningOption } from '../../agent/planning/contract'
 
 export { selectedOfferSchema, type SelectedOffer } from '../../agent/planning/offer-contract'
-import { selectedOfferSchema, type SelectedOffer } from '../../agent/planning/offer-contract'
+import { calculateOfferCosts, selectedOfferSchema, type SelectedOffer } from '../../agent/planning/offer-contract'
 
 type Input = {
   offer: SelectedOffer; selections: PlanningOption[]; contextMessageIds: string[];
@@ -29,21 +29,9 @@ export function buildSelectedOfferPlan(input: Input): Result {
   }
   if (offer.lines.filter(line => line.option.kind === 'venue').length !== 1) return fail('Select exactly one venue.')
 
-  const amounts: number[] = []
-  for (const line of offer.lines) {
-    if (line.unitAmount === null || line.tax === null || line.delivery === null || line.fees === null
-      || line.deposit.amount === null || line.deposit.treatment === 'unknown' || !line.cancellationTerms) {
-      return fail(`${line.option.name} has unknown required costs or cancellation terms.`)
-    }
-    const subtotal = line.unitAmount * line.units
-    if (line.deposit.treatment === 'included' && line.deposit.amount > subtotal) return fail('The included deposit exceeds the quoted subtotal.')
-    const amount = subtotal + line.tax + line.delivery + line.fees
-      + (line.deposit.treatment === 'additional' ? line.deposit.amount : 0)
-    if (!Number.isSafeInteger(amount)) return fail('The offer amount is too large.')
-    amounts.push(amount)
-  }
-  const total = amounts.reduce((sum, amount) => sum + amount, 0)
-  if (!Number.isSafeInteger(total) || total > offer.brief.budget) return fail('The complete offer exceeds the event budget.')
+  const costs = calculateOfferCosts(offer)
+  if (!costs.ok) return costs
+  const { amounts, total } = costs
   const venue = offer.lines.find(line => line.option.kind === 'venue')!
   const actionId = (optionId: string) => `${input.planId}:${optionId}`
   const plan = Plan.safeParse({
