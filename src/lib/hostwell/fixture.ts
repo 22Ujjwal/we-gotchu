@@ -60,7 +60,7 @@ const candleLine: ReceiptLine = {
   qty: 24,
   item: 'Beeswax candle',
   amount: 52,
-  notes: ['@ $2.17 · Kerzenhaus'],
+  notes: ['@ 2.17 · Kerzenhaus'],
 }
 const deliveryLine: ReceiptLine = { qty: 1, item: 'Delivery to venue', amount: 6.9 }
 
@@ -78,7 +78,7 @@ export const venues: Array<Venue> = [
     total: 768.2,
     cardFeatures: [
       { icon: 'guests', label: 'Seats 28' },
-      { icon: 'fee', label: '$8 fee after 1 Dec' },
+      { icon: 'fee', label: '€8 fee after 1 Dec' },
     ],
     description:
       'A converted factory floor wrapped around a courtyard garden, with tall steel windows, long oak tables and plenty of plants. Warm and loud in the best way.',
@@ -164,7 +164,7 @@ export const venues: Array<Venue> = [
 export type AddOn = {
   id: string
   label: string
-  /** Gross price in USD (VAT included). Null for free-text requests. */
+  /** Gross price in EUR (VAT included). Null for free-text requests. */
   price: number | null
   included?: boolean
 }
@@ -178,8 +178,8 @@ export const addOns: Array<AddOn> = [
 
 export const VAT_RATE = 0.19
 
-export function usd(n: number) {
-  return `$${n.toFixed(2)}`
+export function eur(n: number) {
+  return n.toFixed(2)
 }
 
 /** "7pm" → "19:00"; anything unrecognised is returned as typed. */
