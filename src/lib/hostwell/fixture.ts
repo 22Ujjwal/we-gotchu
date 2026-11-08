@@ -35,7 +35,7 @@ export type Feature = {
 export type ReceiptLine = {
   qty: number
   item: string
-  amount: number | 'incl.'
+  amount: number | string
   notes?: Array<string>
   noteAmount?: string
 }
@@ -47,7 +47,8 @@ export type Venue = {
   /** Cover photo; also photos[0]. */
   photo: string
   photos: Array<string>
-  total: number
+  /** Null when the price is not known yet. */
+  total: number | null
   cardFeatures: Array<Feature>
   description: string
   detailFeatures: Array<Feature>

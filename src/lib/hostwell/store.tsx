@@ -72,7 +72,8 @@ export type Order = {
   lines: Array<ReceiptLine>
   requests: Array<string>
   subtotal: number
-  vat: number
+  /** Null when the amounts already include tax. */
+  vat: number | null
   total: number
 }
 

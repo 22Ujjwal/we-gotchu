@@ -96,7 +96,7 @@ export function Receipt({
         <Rule />
         <div className="flex flex-col gap-1">
           <Row left="Subtotal" right={usd(order.subtotal)} />
-          <Row left="VAT" right={usd(order.vat)} />
+          {order.vat !== null && <Row left="VAT" right={usd(order.vat)} />}
           <Row left="Service fee" right="0.00" />
         </div>
         <Rule solid />
@@ -105,12 +105,16 @@ export function Receipt({
           <span className="text-[20px] leading-6">{usd(order.total)}</span>
         </div>
         <Rule solid />
-        <Row
-          left="Free cancellation"
-          right={venue.freeCancellationUntil}
-          muted
-        />
-        <Rule />
+        {venue.freeCancellationUntil && (
+          <>
+            <Row
+              left="Free cancellation"
+              right={venue.freeCancellationUntil}
+              muted
+            />
+            <Rule />
+          </>
+        )}
         <p className="m-0 text-center">*** {greeting} ***</p>
         <div className="flex flex-col items-center gap-1.5 pt-1">
           <svg width="240" height="44" viewBox="0 0 240 44" aria-hidden>

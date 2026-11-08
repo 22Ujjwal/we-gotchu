@@ -1,15 +1,16 @@
 import { useUser } from '@clerk/tanstack-react-start'
-import { localPreview } from '#/lib/local-preview'
-import { BriefIntake } from '#/components/hostwell/brief-intake'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DateTimePicker } from '#/components/hostwell/date-time-picker'
-import { ReceiptLoader } from '#/components/hostwell/receipt-loader'
 import type { ScheduleField } from '#/components/hostwell/date-time-picker'
+import { ReceiptLoader } from '#/components/hostwell/receipt-loader'
 import { Button, Header } from '#/components/hostwell/ui'
+import { briefFromPreview } from '#/lib/hostwell/brief-adapter'
+import { EventApiError, createEventApi } from '#/lib/hostwell/event-api'
 import type { Brief } from '#/lib/hostwell/fixture'
 import { useHostwell } from '#/lib/hostwell/store'
+import { localPreview } from '#/lib/local-preview'
 
 export const Route = createFileRoute('/')({ component: BriefPage })
 
@@ -28,26 +29,74 @@ function BriefPage() {
   return localPreview ? <PreviewBriefPage /> : <ConnectedBriefPage />
 }
 
+// Preview has no real research run, so play the loader once, then move on.
+function PreviewBriefPage() {
+  const navigate = useNavigate()
+  return <BriefFlow onSearch={async () => {}} onLoaderDone={() => navigate({ to: '/settings' })} />
+}
+
+const savedBrief = 'arrange:brief'
+
 function ConnectedBriefPage() {
   const { user, isLoaded } = useUser()
   const navigate = useNavigate()
-  return <div className="flex min-h-screen flex-col">
-    <Header step="brief" />
-    <main className="flex flex-1 flex-col items-center justify-center px-5 pt-10 pb-8 lg:px-12">
-      {isLoaded ? <BriefIntake identity={user?.id ?? null}
-        onCreated={eventId => void navigate({ to: '/events/$eventId', params: { eventId } })} />
-        : <p role="status">Loading sign-in...</p>}
-    </main>
-  </div>
+  const [locked, setLocked] = useState(false)
+  return (
+    <BriefFlow
+      disabled={!isLoaded || locked}
+      onSearch={async (draft) => {
+        if (!user) {
+          // Keep the answers across the sign-in redirect.
+          sessionStorage.setItem(savedBrief, JSON.stringify(draft))
+          window.location.assign('/sign-in?redirect_url=%2F')
+          return new Promise<never>(() => {})
+        }
+        const brief = briefFromPreview(draft)
+        try {
+          const { event } = await createEventApi().create(brief)
+          sessionStorage.removeItem(savedBrief)
+          await navigate({ to: '/events/$eventId', params: { eventId: event.eventId } })
+        } catch (error) {
+          if (!(error instanceof EventApiError) || error.status === 0 || error.status >= 500 ||
+              error.code === 'invalid_response' || error.code === 'outcome_unknown') {
+            setLocked(true)
+            throw new Error('We could not tell if your event was created. Please do not submit again.')
+          }
+          throw error
+        }
+      }}
+    />
+  )
 }
 
-function PreviewBriefPage() {
+function BriefFlow({
+  onSearch,
+  onLoaderDone,
+  disabled = false,
+}: {
+  onSearch: (brief: Brief) => Promise<void>
+  onLoaderDone?: () => void
+  disabled?: boolean
+}) {
   const { brief, setBrief } = useHostwell()
-  const navigate = useNavigate()
   const [draft, setDraft] = useState(brief)
   const [step, setStep] = useState(0)
   const [scheduleField, setScheduleField] = useState<ScheduleField | null>(null)
   const [searching, setSearching] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(savedBrief)
+    if (!saved || localPreview) return
+    try {
+      const restored = { ...brief, ...(JSON.parse(saved) as Brief) }
+      setDraft(restored)
+      setBrief(restored)
+      setStep(sentences.length - 1)
+    } catch {
+      sessionStorage.removeItem(savedBrief)
+    }
+  }, [])
 
   const sentence = sentences[step]
   const last = step === sentences.length - 1
@@ -57,18 +106,22 @@ function PreviewBriefPage() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!complete) return
+    if (!complete || disabled) return
     setBrief(draft)
-    if (last) setSearching(true)
-    else setStep(step + 1)
+    setError('')
+    if (!last) return setStep(step + 1)
+    setSearching(true)
+    onSearch(draft).catch((cause: unknown) => {
+      setSearching(false)
+      setError(cause instanceof Error ? cause.message : 'Something went wrong. Please try again.')
+    })
   }
 
-  // Preview has no real research run, so play the loader once, then move on.
   if (searching)
     return (
       <div className="flex min-h-screen flex-col">
         <Header step="setting" />
-        <ReceiptLoader onDone={() => navigate({ to: '/settings' })} />
+        <ReceiptLoader onDone={onLoaderDone} />
       </div>
     )
 
@@ -127,9 +180,14 @@ function PreviewBriefPage() {
             )}
           </div>
 
+          {error && (
+            <p role="alert" className="m-0 text-center font-body text-[17px] leading-6 text-body">
+              {error}
+            </p>
+          )}
           <Button
             type="submit"
-            disabled={!complete}
+            disabled={!complete || disabled}
             className="w-full py-[17px] text-[18px] leading-[22px] font-bold lg:w-auto lg:px-14"
           >
             {last ? 'Find venues' : 'Next'}

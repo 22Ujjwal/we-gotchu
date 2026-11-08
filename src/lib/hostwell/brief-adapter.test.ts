@@ -1,33 +1,48 @@
-import { expect, test } from 'vitest'
-import { briefFromDraft, draftFromBrief, emptyDraft, formatMoney } from './brief-adapter'
+import { afterEach, expect, test, vi } from 'vitest'
+import { planReadyEvent } from '../../contracts/fixtures'
+import { briefFromPreview, previewFromBrief, settingsFromView } from './brief-adapter'
+import { defaultBrief } from './fixture'
 
-const draft = { ...emptyDraft, occasion: 'Birthday', guests: '24', date: '2026-12-12',
-  from: '19:00+01:00', timezone: 'Europe/Berlin', area: 'Berlin', budget: '900.50',
-  currency: 'EUR', canLose: '10', needs: 'candles, paper plates' }
+const typed = {
+  ...defaultBrief,
+  occasion: 'Franz’s 30th birthday', guests: '24', date: 'Sat 12 Dec 2026', from: '7pm', till: '11pm',
+  area: 'Kreuzberg', budget: '900', canLose: '10', needs: 'table candles and paper plates', vibe: 'cosy',
+}
 
-test('maps explicit form values to the shared brief and restores them without losing answers', () => {
-  const brief = briefFromDraft(draft)
-  expect(brief).toEqual({ eventType: 'Birthday', headcount: 24, startsAt: '2026-12-12T18:00:00.000Z',
-    timezone: 'Europe/Berlin', location: 'Berlin', budget: 90050, currency: 'eur',
-    maximumCancellationLoss: 1000, supplyNeeds: ['candles', 'paper plates'] })
-  expect(briefFromDraft(draftFromBrief(brief))).toEqual(brief)
+afterEach(() => { vi.unstubAllEnvs() })
+
+test('maps the fill-in brief to dollars in minor units and the browser timezone', () => {
+  const brief = briefFromPreview(typed)
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  expect(brief).toEqual({
+    eventType: 'Franz’s 30th birthday', location: 'Kreuzberg', headcount: 24,
+    startsAt: new Date(2026, 11, 12, 19, 0).toISOString(), timezone: zone,
+    budget: 90000, currency: 'usd', maximumCancellationLoss: 1000,
+    supplyNeeds: ['table candles', 'paper plates'],
+  })
+  expect(previewFromBrief(brief)).toMatchObject({
+    occasion: typed.occasion, guests: '24', date: 'Sat 12 Dec 2026', from: '7pm', area: 'Kreuzberg',
+    budget: '900', canLose: '10', needs: 'table candles, paper plates',
+  })
 })
 
 test.each([
-  { date: 'Sat 12 Dec' }, { date: '2026-02-30' }, { from: '7pm' },
-  { from: '19:00+02:00' }, { timezone: '' }, { currency: '' }, { currency: 'ZZZ' },
-  { budget: 'EUR900' }, { budget: '1.001' }, { guests: '2.5' }, { guests: '' },
-])('rejects ambiguous or invalid values %j instead of guessing', patch => {
-  expect(() => briefFromDraft({ ...draft, ...patch })).toThrow()
+  [{ guests: 'twenty' }, 'guests'],
+  [{ guests: '2.5' }, 'guests'],
+  [{ budget: 'lots' }, 'dollars'],
+  [{ date: '' }, 'date'],
+])('rejects %j without guessing', (patch, message) => {
+  expect(() => briefFromPreview({ ...typed, ...patch })).toThrow(message)
 })
 
-test('uses currency minor units rather than assuming two decimal places', () => {
-  expect(briefFromDraft({ ...draft, currency: 'JPY', budget: '900', canLose: '10' }).budget).toBe(900)
-  expect(briefFromDraft({ ...draft, currency: 'KWD', budget: '1.234' }).budget).toBe(1234)
-  expect(formatMoney(1234, 'KWD')).toContain('1.234')
-})
-
-test('restores the saved instant even during a repeated daylight saving hour', () => {
-  const brief = briefFromDraft({ ...draft, date: '2026-10-25', from: '02:30+01:00' })
-  expect(briefFromDraft(draftFromBrief(brief))).toEqual(brief)
+test('features the planned venue first with the plan as its receipt', () => {
+  const settings = settingsFromView(planReadyEvent)
+  expect(settings.venues.map((v) => v.name)).toEqual(['Harbor Loft (simulated)', 'Garden Room (simulated)'])
+  expect(settings.planned?.id).toBe('cand_venue_a')
+  expect(settings.approvable).toBe(true)
+  const order = settings.order(settings.planned!)
+  expect(order.total).toBe(planReadyEvent.plan!.total / 100)
+  expect(order.lines).toHaveLength(planReadyEvent.plan!.actions.length)
+  expect(order.vat).toBeNull()
+  expect(settings.venues[1].total).toBeNull()
 })
