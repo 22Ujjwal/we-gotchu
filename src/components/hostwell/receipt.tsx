@@ -50,10 +50,12 @@ export function Receipt({
   order,
   brief,
   currency = 'usd',
+  researchSources,
 }: {
   venue: Pick<Venue, 'freeCancellationUntil'>
   order: Order
   brief: Brief
+  researchSources?: Record<string, Array<{ label: string; value: string; sourceUrl: string }>>
   currency?: string
 }) {
   const usd = (amount: number) => amount.toFixed(paymentFractionDigits(currency))
@@ -82,6 +84,10 @@ export function Receipt({
               left={`${l.qty} x ${l.item}`}
               right={typeof l.amount === 'number' ? usd(l.amount) : l.amount}
             />
+            {researchSources?.[l.item]?.map(source => <div key={source.sourceUrl + source.label} className="mt-2 text-[13px] leading-5 text-receipt-muted">
+              <p>{source.value}</p>
+              <a href={source.sourceUrl} target="_blank" rel="noreferrer" className="underline">{source.label} source</a>
+            </div>)}
             {l.notes?.map((n, i) => (
               <Row
                 key={n}
@@ -98,14 +104,14 @@ export function Receipt({
         ))}
         <Rule />
         <div className="flex flex-col gap-1">
-          <Row left="Subtotal" right={order.subtotal === null ? 'Quote needed' : usd(order.subtotal)} />
+          <Row left="Subtotal" right={order.subtotal === null ? researchSources ? 'Pending' : 'Quote needed' : usd(order.subtotal)} />
           {order.vat !== null && <Row left="VAT" right={usd(order.vat)} />}
           {order.total !== null && <Row left="Service fee" right="0.00" />}
         </div>
         <Rule solid />
         <div className="flex items-baseline justify-between font-bold">
           <span className="text-[16px]">{`${order.total === null ? 'TOTAL' : 'ESTIMATED TOTAL'} ${currency.toUpperCase()}`}</span>
-          <span className="text-[20px] leading-6">{order.total === null ? 'Quote needed' : usd(order.total)}</span>
+          <span className="text-[20px] leading-6">{order.total === null ? researchSources ? 'Pending' : 'Quote needed' : usd(order.total)}</span>
         </div>
         <Rule solid />
         {venue.freeCancellationUntil && (

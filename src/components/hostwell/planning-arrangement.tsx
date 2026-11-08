@@ -1,3 +1,4 @@
+import { researchPrice } from '../../lib/hostwell/research-price'
 import { displayCopy, displayFactValue } from '../../lib/hostwell/display-copy'
 import type { PlanningVenueImage } from '../../lib/hostwell/planning-images'
 import { useState } from 'react'
@@ -37,14 +38,16 @@ export function PlanningArrangement({ view, disabled, submit, onBack, customerEm
       </label>)}
       {!supplies.size && <p className="text-stone">Ask for any extras in the message below the settings.</p>}
     </div>
+  const researchSources = offer ? undefined : Object.fromEntries(view.selections.map(option => [displayCopy(option.name),
+    researchPrice(option).facts.map(fact => ({ label: fact.basis === 'estimate' ? 'Estimate' : 'Published price',
+      value: displayFactValue(fact.value), sourceUrl: fact.sourceUrl }))]))
   const receipt = <div className="flex flex-col gap-5">
-      <Receipt currency={offer?.currency} venue={{ freeCancellationUntil: '' }} brief={view.brief ?? defaultBrief}
+      <Receipt researchSources={researchSources} currency={offer?.currency} venue={{ freeCancellationUntil: '' }} brief={view.brief ?? defaultBrief}
         order={{ lines: offer ? offer.lines.map((line, index) => ({ qty: line.units, item: displayCopy(line.option.name),
           amount: costs?.ok ? costs.amounts[index] / 10 ** paymentFractionDigits(offer.currency) : 'Quote needed' }))
-          : view.selections.map(option => ({ qty: 1, item: displayCopy(option.name), amount: 'Quote needed',
-            notes: option.facts.filter(fact => fact.basis === 'published' && /price|cost|subtotal|hire/i.test(fact.label))
-              .slice(0, 1).map(fact => `Published ${fact.label.toLowerCase().replace(/^published\s+/, '')}: ${displayFactValue(fact.value).replace(/[.]+$/, '')}. Final quote pending.`) })),
+          : view.selections.map(option => ({ qty: 1, item: displayCopy(option.name), amount: researchPrice(option).amount })),
           requests: [], subtotal: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : null, vat: null, total: costs?.ok ? costs.total / 10 ** paymentFractionDigits(offer!.currency) : null }} />
+      {!offer && <p className="text-[14px] text-stone">Published prices and estimates may come from third-party sources. Availability, tax, delivery and final charges still need confirmation.</p>}
     </div>
   const action = <div className="flex flex-col gap-4">
       {arrangement?.controlled && <p className="font-semibold">Controlled supplier rehearsal. No real venue will be contacted.</p>}
