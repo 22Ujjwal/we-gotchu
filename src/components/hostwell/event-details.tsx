@@ -1,5 +1,6 @@
 import { assessPlanForApproval, type Candidate, type EventView } from '../../contracts'
 import { formatMoney } from '../../lib/hostwell/brief-adapter'
+import { ReceiptLoader } from './receipt-loader'
 import { Button, Guests, MetaLine } from './ui'
 
 function SourceLink({ url, children }: { url: string; children: React.ReactNode }) {
@@ -51,6 +52,7 @@ export function EventDetails({ view, pending, onApprove, onCancel, onEdit }: {
       {view.run?.state === 'unknown' && <p>Research outcome is unknown. Do not restart automatically; reconciliation is needed.</p>}
       {event.status === 'researching' && <p>Research advances while this page is open. Returning after its time limit may require a revised brief; background completion is not guaranteed.</p>}
     </div>
+    {event.status === 'researching' && !currentResult && <ReceiptLoader />}
     <section aria-label="Research results" className="flex w-full flex-col items-center gap-5 lg:gap-12 lg:pt-2">
       {currentResult && <div className="w-full max-w-[900px] text-[16px] leading-6 text-body">
         <p>Research: {result.outcome.replaceAll('_', ' ')}. Budget fit: {result.budgetFit}.</p>

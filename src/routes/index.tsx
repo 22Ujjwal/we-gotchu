@@ -5,6 +5,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DateTimePicker } from '#/components/hostwell/date-time-picker'
+import { ReceiptLoader } from '#/components/hostwell/receipt-loader'
 import type { ScheduleField } from '#/components/hostwell/date-time-picker'
 import { Button, Header } from '#/components/hostwell/ui'
 import type { Brief } from '#/lib/hostwell/fixture'
@@ -19,7 +20,7 @@ type Sentence = Array<string | { key: Key; label: string; optional?: boolean; pl
 const sentences: Array<Sentence> = [
   ["I'm planning ", { key: 'occasion', label: 'Occasion', placeholder: 'Franz’s 30th birthday' }, ' for ', { key: 'guests', label: 'Number of guests', placeholder: '24' }, ' people.'],
   ["It's on ", { key: 'date', label: 'Date', placeholder: 'Sat 12 Dec' }, ' from ', { key: 'from', label: 'Start time', placeholder: '7pm' }, ' till ', { key: 'till', label: 'End time', placeholder: '11pm' }, ', in ', { key: 'area', label: 'Area', placeholder: 'Kreuzberg or Neukölln' }, '.'],
-  ["I'll spend up to ", { key: 'budget', label: 'Budget', placeholder: '€900' }, ', and can lose ', { key: 'canLose', label: 'Acceptable cancellation loss', placeholder: '$10' }, ' if plans change.'],
+  ["I'll spend up to $", { key: 'budget', label: 'Budget in dollars', placeholder: '900' }, ', and can lose $', { key: 'canLose', label: 'Acceptable cancellation loss in dollars', placeholder: '10' }, ' if plans change.'],
   ["We'll need ", { key: 'needs', label: 'What you need', placeholder: 'table candles' }, ', and the vibe should be ', { key: 'vibe', label: 'Vibe', optional: true, placeholder: 'cosy? fancy?' }],
 ]
 
@@ -46,6 +47,7 @@ function PreviewBriefPage() {
   const [draft, setDraft] = useState(brief)
   const [step, setStep] = useState(0)
   const [scheduleField, setScheduleField] = useState<ScheduleField | null>(null)
+  const [searching, setSearching] = useState(false)
 
   const sentence = sentences[step]
   const last = step === sentences.length - 1
@@ -57,9 +59,18 @@ function PreviewBriefPage() {
     e.preventDefault()
     if (!complete) return
     setBrief(draft)
-    if (last) navigate({ to: '/settings' })
+    if (last) setSearching(true)
     else setStep(step + 1)
   }
+
+  // Preview has no real research run, so play the loader once, then move on.
+  if (searching)
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header step="setting" />
+        <ReceiptLoader onDone={() => navigate({ to: '/settings' })} />
+      </div>
+    )
 
   return (
     <div className="flex min-h-screen flex-col">
